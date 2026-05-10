@@ -1,58 +1,68 @@
 # 项目状态
 
-## 最新更新：2026-05-11
+## 最新更新：2026-05-11 00:40
 
 ### 当前阶段
-- **Week 1 完成**：项目骨架 + 云服务器配置
+- **Week 1 完成**，**Week 2 自动化执行中**
+
+### 正在自动运行（无需人工干预）
+
+服务器上两个 screen 会话：
+
+| 会话名 | 任务 | 状态 |
+|---|---|---|
+| `init`  | 下载 5513 只股票 2019 年至今日线数据（MCP） | 运行中，预计 ~03:30 完成 |
+| `chain` | 等 init 完成 → 数据校验 → 09:00 → Track A 回测 | 等待中 |
+
+查看进度：
+```bash
+tail -20 logs/init_history_full.log   # 下载进度
+cat logs/tomorrow_chain.log           # 链条状态
+cat logs/validate_data.log            # 校验结果（init后生成）
+grep -A20 '总体指标' logs/backtest_a.log  # 回测结果（09:00后生成）
+```
 
 ### 已完成
-- [x] 本地项目骨架（40个文件，12个单元测试全通过）
-- [x] Git 仓库：github.com/SawyerXL/quant（私有）
-- [x] 云服务器配置：47.116.166.139（Ubuntu 24.04，Python 3.12）
-- [x] SSH 免密登录（本地 Mac → 服务器）
-- [x] Python 虚拟环境 + 所有依赖安装完成
-- [x] 恒生聚源 MCP 接口接通（FinQuery工具可用）
-- [x] cron 定时任务配置（17:00 数据更新 / 14:50 信号生成）
-- [x] 历史数据初始化（init_history.py）**正在运行中**
 
-### 正在进行
-- [ ] **init_history.py 后台运行中**（screen session: init）
-  - 下载 5513 只股票 2019-2024 日线数据（用 MCP 恒生聚源）
-  - 命令：`screen -r init` 查看 / `tail -f logs/init_history_full.log` 看日志
-  - 预计完成：约 2026-05-11 02:00
+**基础设施（Week 1）**
+- [x] 项目代码骨架（40个文件，12个单元测试全通过）
+- [x] GitHub 私有仓库：github.com/SawyerXL/quant
+- [x] 云服务器 47.116.166.139（Ubuntu 24.04，Python 3.12）
+- [x] SSH 免密登录 / cron 定时任务 / Claude Code 安装
+- [x] 恒生聚源 MCP 接口接通并验证
+- [x] 发现并解决：阿里云 IP 被东方财富封锁 → 改用 MCP 拉数据
+- [x] 三份 Word 方案文档（项目方案目录）
+- [x] 数据校验脚本 validate_data.py
+- [x] Track A 回测脚本 run_backtest_a.py（纯 pandas/numpy，不依赖 vectorbt）
+- [x] 自动化链条脚本 tomorrow_chain.sh 已在服务器后台运行
 
 ### 待办（按优先级）
-- [ ] 确认历史数据下载完成，校验数据质量
-- [ ] Track A 多因子策略完整回测（2019-2024）
-- [ ] 金标准测试（等权沪深300，验证回测引擎）
-- [ ] QMT 券商开通确认
+- [ ] 查看回测结果（明天白天自动完成）
+- [ ] 根据回测结果决定是否进入模拟盘
+- [ ] 确认 QMT 券商账户开通状态
+- [ ] Windows 交易服务器采购
 - [ ] Track B 三位一体策略实现（strategies/trinity/）
-- [ ] Windows 服务器（QMT交易执行）
-
-### 关键参数
-- MCP KEY：在 .env 文件里（不进 git）
-- 数据存储：/root/quant/data_store/daily/{year}/{code}.parquet
-- 虚拟环境：/root/quant/.venv（激活：source .venv/bin/activate）
-- 日志目录：/root/quant/logs/
 
 ---
 
-## 架构决策备忘（快速参考）
+## 关键技术决策（快速参考）
 
 **策略**：双轨
-- Track A：多因子月度选股，60万，8周上实盘，目标年化15-20%
-- Track B：三位一体强势股，30万，20周上实盘，目标年化25%+
+- Track A：多因子月度选股，60万，8周上实盘，目标年化≥15%，最大回撤≤25%，夏普≥1.0
+- Track B：三位一体强势股，30万，20周上实盘，目标年化≥25%
 
 **数据源**：
-- 云服务器用 MCP（东方财富封锁阿里云IP，Akshare在云上不可用）
-- 本地开发用 Akshare 或 MCP 均可
-- 切换方式：改 .env 里的 DATA_SOURCE
+- 云服务器：MCP 恒生聚源（阿里云 IP 被东方财富封锁，Akshare 无法用）
+- 本地开发：Akshare 或 MCP 均可
+- 切换方式：改 .env 里 DATA_SOURCE
 
 **复权方式**：前复权 qfq（价格接近实际市价）
 
-**关键风控**：
+**回测实现**：纯 pandas/numpy（vectorbt 1.0.0 API 与设计时不同，待验证）
+
+**风控红线**：
 - 单股仓位 Track A ≤5% / Track B ≤8%
-- 单笔订单上限 5万（防错单）
+- 单笔订单上限 5万
 - 账户回撤熔断 25%
 - 涨停不买，跌停不卖
 
@@ -61,10 +71,12 @@
 ## 历史更新
 
 ### 2026-05-10
-- 完成项目骨架搭建（全部基础文件）
-- 接通恒生聚源 MCP 接口，实现 MCPSource
-- 发现阿里云IP被东方财富封锁，改用MCP拉历史数据
+- 完成项目骨架搭建
+- 接通恒生聚源 MCP，实现 MCPSource
+- 发现阿里云 IP 被东方财富封锁，改用 MCP
 
 ### 2026-05-11
 - 云服务器配置完成
-- 历史数据初始化开始运行
+- 历史数据初始化开始（MCP，5513只，2019至今）
+- 部署 validate_data.py + run_backtest_a.py
+- 设置自动化链条（init → 校验 → 回测），明天全天自动运行
