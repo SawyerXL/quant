@@ -20,7 +20,7 @@ def industry_zscore(factor: pd.Series, industry: pd.Series) -> pd.Series:
     df = pd.DataFrame({"factor": factor, "industry": industry})
     def _norm(g):
         return zscore(g["factor"])
-    return df.groupby("industry").apply(_norm).reset_index(level=0, drop=True).rename(factor.name)
+    return df.groupby("industry").apply(_norm, include_groups=False).reset_index(level=0, drop=True).rename(factor.name)
 
 
 def winsorize(s: pd.Series, pct: float = 0.01) -> pd.Series:
