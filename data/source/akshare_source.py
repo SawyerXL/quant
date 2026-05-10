@@ -1,0 +1,207 @@
+import akshare as ak
+import pandas as pd
+from loguru import logger
+from .base import DataSource
+
+
+class AkshareSource(DataSource):
+    """Akshare 数据源实现。免费，覆盖广，作为 MCP 到位前的主数据源。"""
+
+    # ------------------------------------------------------------------
+    # 日线行情
+    # ------------------------------------------------------------------
+    def get_daily(self, code: str, start: str, end: str) -> pd.DataFrame:
+        """
+        code 传 '000001' 格式（不带市场后缀）。
+        使用前复权(qfq)：历史价格向下调整使当前价接近实际交易价，
+        适合动量/技术因子计算和直观校验。
+        注意：分红除权后历史价格会重新调整，同一股票不同时间拉取的历史价格可能略有差异。
+        """
+        try:
+            df = ak.stock_zh_a_hist(
+                symbol=code,
+                period="daily",
+                start_date=start.replace("-", ""),
+                end_date=end.replace("-", ""),
+                adjust="qfq",   # 前复权：当前价接近实际价格
+            )
+            df = df.rename(columns={
+                "日期": "date", "开盘": "open", "最高": "high",
+                "最低": "low",  "收盘": "close", "成交量": "volume",
+                "成交额": "amount", "涨跌幅": "pct_chg",
+            })
+            df["date"] = df["date"].astype(str)
+            df["code"] = code
+            return df[["date", "code", "open", "high", "low",
+                        "close", "volume", "amount", "pct_chg"]].sort_values("date")
+        except Exception as e:
+            logger.warning(f"get_daily {code} failed: {e}")
+            return pd.DataFrame()
+
+    def get_daily_all(self, date: str) -> pd.DataFrame:
+        """
+        全A股截面行情。akshare 分批拉取效率较低，建议离线后用 Parquet 读取。
+        此方法用于增量补数据场景。
+        """
+        try:
+            df = ak.stock_zh_a_spot_em()
+            df = df.rename(columns={
+                "代码": "code", "名称": "name", "最新价": "close",
+                "涨跌幅": "pct_chg", "成交量": "volume", "成交额": "amount",
+                "今开": "open", "最高": "high", "最低": "low",
+            })
+            df["date"] = date
+            return df[["date", "code", "name", "open", "high", "low",
+                        "close", "volume", "amount", "pct_chg"]]
+        except Exception as e:
+            logger.warning(f"get_daily_all {date} failed: {e}")
+            return pd.DataFrame()
+
+    # ------------------------------------------------------------------
+    # 分时行情（Track B）
+    # ------------------------------------------------------------------
+    def get_intraday(self, code: str, freq: str, start: str, end: str) -> pd.DataFrame:
+        freq_map = {"1min": "1", "5min": "5", "15min": "15", "30min": "30", "60min": "60"}
+        try:
+            df = ak.stock_zh_a_hist_min_em(
+                symbol=code,
+                start_date=f"{start} 09:30:00",
+                end_date=f"{end} 15:00:00",
+                period=freq_map.get(freq, "5"),
+                adjust="hfq",
+            )
+            df = df.rename(columns={
+                "时间": "datetime", "开盘": "open", "最高": "high",
+                "最低": "low", "收盘": "close", "成交量": "volume",
+            })
+            return df[["datetime", "open", "high", "low", "close", "volume"]]
+        except Exception as e:
+            logger.warning(f"get_intraday {code} {freq} failed: {e}")
+            return pd.DataFrame()
+
+    # ------------------------------------------------------------------
+    # 涨跌停（Track B）
+    # ------------------------------------------------------------------
+    def get_limit_up_list(self, date: str) -> pd.DataFrame:
+        try:
+            df = ak.stock_zt_pool_em(date=date.replace("-", ""))
+            df = df.rename(columns={
+                "代码": "code", "名称": "name",
+                "涨停时间": "limit_up_time",
+                "几天几板": "consecutive_days",
+                "炸板次数": "open_times",
+                "涨停封单量": "bid_volume",
+                "涨停封单额": "bid_amount",
+            })
+            df["final_status"] = "limit_up"
+            df["date"] = date
+            return df
+        except Exception as e:
+            logger.warning(f"get_limit_up_list {date} failed: {e}")
+            return pd.DataFrame()
+
+    # ------------------------------------------------------------------
+    # 龙虎榜（Track B）
+    # ------------------------------------------------------------------
+    def get_dragon_tiger(self, date: str) -> pd.DataFrame:
+        try:
+            df = ak.stock_lhb_detail_em(start_date=date, end_date=date)
+            df = df.rename(columns={
+                "代码": "code", "名称": "name",
+                "上榜原因": "reason",
+                "净买额": "net_amount",
+                "买入额": "buy_amount",
+                "卖出额": "sell_amount",
+            })
+            df["date"] = date
+            return df
+        except Exception as e:
+            logger.warning(f"get_dragon_tiger {date} failed: {e}")
+            return pd.DataFrame()
+
+    # ------------------------------------------------------------------
+    # 财务数据（Track A）
+    # ------------------------------------------------------------------
+    def get_financial(self, code: str) -> pd.DataFrame:
+        try:
+            # 利润表（获取ROE、毛利率等）
+            df = ak.stock_financial_report_sina(
+                stock=f"sh{code}" if code.startswith("6") else f"sz{code}",
+                symbol="利润表",
+            )
+            df = df.rename(columns={"报告期": "report_date"})
+            df["code"] = code
+            return df
+        except Exception as e:
+            logger.warning(f"get_financial {code} failed: {e}")
+            return pd.DataFrame()
+
+    # ------------------------------------------------------------------
+    # 指数成分股（Track A，避免生存者偏差关键）
+    # ------------------------------------------------------------------
+    def get_index_components(self, index_code: str, date: str) -> list[str]:
+        """
+        akshare 只能拿到当前成分股，无历史快照。
+        生产环境建议用 Tushare Pro 的 index_weight 接口获取历史成分。
+        此处返回当前成分股，回测时须注意。
+        """
+        try:
+            index_map = {
+                "000300": "沪深300",
+                "000905": "中证500",
+                "000906": "中证800",
+            }
+            name = index_map.get(index_code, index_code)
+            df = ak.index_stock_cons(symbol=index_code)
+            return df["品种代码"].tolist()
+        except Exception as e:
+            logger.warning(f"get_index_components {index_code} failed: {e}")
+            return []
+
+    # ------------------------------------------------------------------
+    # 交易日历
+    # ------------------------------------------------------------------
+    def get_trade_calendar(self, start: str = "2019-01-01", end: str = None) -> list[str]:
+        try:
+            df = ak.tool_trade_date_hist_sina()
+            dates = df["trade_date"].astype(str).tolist()
+            dates = [d for d in dates if d >= start]
+            if end:
+                dates = [d for d in dates if d <= end]
+            return sorted(dates)
+        except Exception as e:
+            logger.warning(f"get_trade_calendar failed: {e}")
+            return []
+
+    # ------------------------------------------------------------------
+    # 股票基本信息
+    # ------------------------------------------------------------------
+    def get_stock_info(self) -> pd.DataFrame:
+        try:
+            df = ak.stock_info_a_code_name()
+            df = df.rename(columns={"code": "code", "name": "name"})
+            return df
+        except Exception as e:
+            logger.warning(f"get_stock_info failed: {e}")
+            return pd.DataFrame()
+
+    # ------------------------------------------------------------------
+    # 资金流向（Track B）
+    # ------------------------------------------------------------------
+    def get_capital_flow(self, code: str, date: str) -> pd.DataFrame:
+        try:
+            df = ak.stock_individual_fund_flow(
+                stock=code,
+                market="sh" if code.startswith("6") else "sz",
+            )
+            df = df.rename(columns={
+                "日期": "date",
+                "主力净流入-净额": "main_net",
+                "超大单净流入-净额": "big_net",
+                "小单净流入-净额": "small_net",
+            })
+            df["date"] = df["date"].astype(str)
+            return df[df["date"] == date]
+        except Exception as e:
+            logger.warning(f"get_capital_flow {code} {date} failed: {e}")
+            return pd.DataFrame()

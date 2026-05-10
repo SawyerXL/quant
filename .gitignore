@@ -1,0 +1,41 @@
+# 环境与密钥（绝不提交）
+.env
+*.key
+secrets/
+credentials/
+
+# 数据文件（体积大）
+data_store/
+logs/
+*.parquet
+*.h5
+*.feather
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# 系统
+Thumbs.db
+.mcp.json
