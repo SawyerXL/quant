@@ -30,7 +30,7 @@ from data.storage import load_daily, load_meta
 FORMULA          = os.getenv("FORMULA", "I")      # I(默认) / H/F/A~E 见注释
 UNIVERSE         = os.getenv("UNIVERSE", "800")   # "800" / "1800"(800+1000)
 BACKTEST_START   = "2019-01-01"
-BACKTEST_END     = "2024-12-31"
+BACKTEST_END     = os.getenv("BACKTEST_END", "")   # 空字符串=自动取最新交易日
 N_HOLDINGS       = 30
 COMMISSION       = 0.00125     # 单边 0.125%
 MIN_BARS         = 250         # 预热期
@@ -345,15 +345,21 @@ def calc_metrics(nav: pd.Series) -> dict:
 
 
 def main():
+    global BACKTEST_END
+    cal_df = load_meta("trade_calendar")
+    if cal_df.empty:
+        logger.error("交易日历缺失")
+        return
+
+    # BACKTEST_END 为空时自动取交易日历最新日期
+    if not BACKTEST_END:
+        BACKTEST_END = sorted(cal_df["trade_date"].tolist())[-1]
+
     logger.info("=" * 60)
     logger.info(f"Track A 回测  公式:{FORMULA}  股票池:{UNIVERSE}  {BACKTEST_START}→{BACKTEST_END}")
     logger.info(f"流动性门槛: {LIQUIDITY_THRESH}万元/日（20日均）")
     logger.info("=" * 60)
 
-    cal_df = load_meta("trade_calendar")
-    if cal_df.empty:
-        logger.error("交易日历缺失")
-        return
     trade_calendar = [d for d in cal_df["trade_date"].tolist()
                       if BACKTEST_START <= d <= BACKTEST_END]
 
@@ -403,7 +409,8 @@ def main():
     nav = run_backtest(panel, rebalance_dates, amount_panel, regime)
 
     logger.info("── 分年度表现 ──")
-    for year in range(2019, 2025):
+    end_year = int(BACKTEST_END[:4])
+    for year in range(2019, end_year + 1):
         yn = nav[nav.index.year == year]
         if len(yn) < 2:
             continue
