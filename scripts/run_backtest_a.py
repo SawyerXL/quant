@@ -34,6 +34,10 @@ N_HOLDINGS       = 30
 COMMISSION       = 0.00125   # 单边 0.125%
 MIN_BARS         = 250       # 预热期
 LIQUIDITY_THRESH = 1000      # 流动性门槛：20日均成交额 > 1000万元
+MA_PERIOD        = 200       # 大势过滤：CSI 800 指数均线周期
+REGIME_BEAR_THR  = 0.98      # 跌破 MA × 0.98 → 进入空仓
+REGIME_BULL_THR  = 1.02      # 收复 MA × 1.02 → 恢复建仓（防止频繁进出）
+USE_REGIME       = os.getenv("USE_REGIME", "1") == "1"  # 默认开启
 
 logger.add("logs/backtest_a.log", rotation="1 day", retention="30 days")
 
@@ -59,6 +63,39 @@ def load_panels(codes: list, start: str, end: str) -> tuple[pd.DataFrame, pd.Dat
     amount_panel = pd.DataFrame(amounts).sort_index()
     logger.info(f"价格矩阵: {price_panel.shape[0]} 天 × {price_panel.shape[1]} 只股票")
     return price_panel, amount_panel
+
+
+def build_regime_series(start: str, end: str) -> pd.Series:
+    """
+    返回每日市场状态：True=牛市可建仓，False=熊市空仓。
+    用 CSI 800 收盘价 / MA200 + 2% 迟滞带，避免频繁进出。
+    """
+    idx_df = load_meta("csi800_index")
+    if idx_df.empty:
+        logger.warning("缺少 csi800_index 数据，大势过滤关闭")
+        return pd.Series(dtype=bool)
+
+    idx_df["date"] = pd.to_datetime(idx_df["date"])
+    close = idx_df.set_index("date")["close"].sort_index()
+    close = pd.to_numeric(close, errors="coerce").dropna()
+
+    ma = close.rolling(MA_PERIOD).mean()
+    ratio = close / ma
+
+    # 带迟滞的状态机：初始假设牛市
+    is_bull = pd.Series(True, index=close.index)
+    state = True
+    for dt, r in ratio.items():
+        if pd.isna(r):
+            pass
+        elif state and r < REGIME_BEAR_THR:
+            state = False          # 跌破下轨 → 切换熊市
+        elif not state and r > REGIME_BULL_THR:
+            state = True           # 收复上轨 → 切换牛市
+        is_bull[dt] = state
+
+    # 截取回测区间
+    return is_bull.loc[start:end]
 
 
 def _zscore(s: pd.Series) -> pd.Series:
@@ -181,9 +218,11 @@ def run_backtest(
     panel: pd.DataFrame,
     rebalance_dates: list,
     amount_panel: pd.DataFrame | None = None,
+    regime: pd.Series | None = None,
 ) -> pd.Series:
     """
     向量化回测主函数。
+    regime: 每日布尔 Series，True=牛市，False=熊市空仓。
     返回：每日组合净值序列（初始=1.0）
     """
     all_dates = panel.index
@@ -195,15 +234,25 @@ def run_backtest(
         date_str = str(date.date())
 
         if date_str in rebalance_set and i >= MIN_BARS:
-            score = compute_score(panel, date, amount_panel)
-            if len(score) >= N_HOLDINGS:
-                new_holdings = score.nlargest(N_HOLDINGS).index.tolist()
+            # 大势过滤：熊市状态则清仓，不再选股
+            in_bull = True
+            if regime is not None and date in regime.index:
+                in_bull = bool(regime.loc[date])
+
+            if not in_bull:
                 if current_holdings:
-                    sell_set = set(current_holdings) - set(new_holdings)
-                    buy_set  = set(new_holdings) - set(current_holdings)
-                    turnover = (len(sell_set) + len(buy_set)) / (2 * N_HOLDINGS)
-                    portfolio_returns.iloc[i] -= turnover * COMMISSION * 2
-                current_holdings = new_holdings
+                    logger.debug(f"{date_str} 熊市信号，清仓")
+                current_holdings = []
+            else:
+                score = compute_score(panel, date, amount_panel)
+                if len(score) >= N_HOLDINGS:
+                    new_holdings = score.nlargest(N_HOLDINGS).index.tolist()
+                    if current_holdings:
+                        sell_set = set(current_holdings) - set(new_holdings)
+                        buy_set  = set(new_holdings) - set(current_holdings)
+                        turnover = (len(sell_set) + len(buy_set)) / (2 * N_HOLDINGS)
+                        portfolio_returns.iloc[i] -= turnover * COMMISSION * 2
+                    current_holdings = new_holdings
 
         if current_holdings and i > 0:
             prev_prices = panel.iloc[i - 1][current_holdings].dropna()
@@ -273,8 +322,23 @@ def main():
     rebalance_dates = get_monthly_rebalance_dates(trade_calendar)
     logger.info(f"调仓月数: {len(rebalance_dates)}")
 
+    # ── 大势过滤 ────────────────────────────────────
+    regime = None
+    if USE_REGIME:
+        regime = build_regime_series(BACKTEST_START, BACKTEST_END)
+        if not regime.empty:
+            bull_days = int(regime.sum())
+            total_days = len(regime)
+            logger.info(f"大势过滤: 开启 | 牛市天数 {bull_days}/{total_days} "
+                        f"({bull_days/total_days:.0%})")
+        else:
+            logger.warning("大势过滤: 数据缺失，已关闭")
+            regime = None
+    else:
+        logger.info("大势过滤: 关闭")
+
     logger.info("运行回测...")
-    nav = run_backtest(panel, rebalance_dates, amount_panel)
+    nav = run_backtest(panel, rebalance_dates, amount_panel, regime)
 
     logger.info("── 分年度表现 ──")
     for year in range(2019, 2025):
