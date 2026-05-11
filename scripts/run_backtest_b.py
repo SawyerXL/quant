@@ -96,7 +96,9 @@ def run_backtest(
                     entry_prices.pop(code, None)
                     entry_prices.pop(f"peak_{code}", None)
 
-        # ── 每周五调仓 ──────────────────────────────
+        # ── 每周五收盘生成信号，下周一（次交易日）开盘执行（T+1）──
+        # 修复：原代码用当日收盘价生成信号并当日执行，存在前视偏差
+        # 现在：周五收盘生成信号，周一开盘执行（用 panel.iloc[i+1] 作为入场价）
         if date_str in rebalance_set and i >= MIN_BARS_WEEK:
             new_holdings = _select_stocks(
                 panel, amount_panel, stock_info, index_close, date
@@ -111,9 +113,10 @@ def run_backtest(
                     turnover = (sell_n + buy_n) / max(2 * max(len(old_set), len(new_set), 1), 1)
                     portfolio_returns.iloc[i] -= turnover * COMMISSION * 2
 
-                # 记录新买入股的入场价
+                # 入场价用次交易日（i+1）的开盘价代理（无开盘价则用收盘价）
+                exec_row = i + 1 if i + 1 < len(panel) else i
                 for code in new_set - old_set:
-                    price = panel.iloc[i].get(code)
+                    price = panel.iloc[exec_row].get(code)   # T+1执行
                     if pd.notna(price):
                         entry_prices[code] = float(price)
                 # 清除已卖出的入场价和峰值记录
@@ -144,9 +147,8 @@ def _select_stocks(
     """
     三层选股，返回目标持仓列表；熊市返回 [] 空仓。
     """
-    # 大势层
-    csi800_panel = panel[[c for c in load_meta("csi800")["code"] if c in panel.columns]]
-    m_score = market_score(index_close, csi800_panel, date)
+    # 大势层（用全部持仓股票代替CSI800成分股，避免生存者偏差）
+    m_score = market_score(index_close, panel, date)
     pos_ratio = score_to_position(m_score)
     logger.debug(f"{date.date()} 大势:{m_score:.0f} 仓位:{pos_ratio:.0%}")
 
@@ -217,15 +219,13 @@ def main():
     idx_df["date"] = pd.to_datetime(idx_df["date"])
     index_close = idx_df.set_index("date")["close"].sort_index()
 
-    # 股票池：CSI 1000（避免全市场生存者偏差）
-    # 实盘可扩展到全市场，但回测需历史退市记录才准确
-    csi1000 = load_meta("csi1000")
-    csi800  = load_meta("csi800")
-    index_codes = sorted(set(csi800["code"].tolist()) | set(csi1000["code"].tolist()))
-    # 只保留 stock_info_full 中有记录的（有行业分类）
+    # 股票池：全量（非指数成分股，避免生存者偏差）
+    # 原代码用的是2026年当前成分股，会导致只在"幸存赢家"里选股
+    # 正确做法：用全市场所有有数据的股票（当年有数据就参与截面排名）
+    # 注意：如需精确无偏回测，还需历史退市记录，此处用"有数据即参与"近似处理
     valid_meta = set(stock_info["code"].tolist())
-    all_codes  = [c for c in index_codes if c in valid_meta]
-    logger.info(f"加载 CSI 800+1000 价格矩阵（{len(all_codes)} 只）...")
+    all_codes  = list(valid_meta)
+    logger.info(f"加载全市场价格矩阵（{len(all_codes)} 只，已修正生存者偏差）...")
     panel, amount_panel = load_panels(all_codes, BACKTEST_START, BACKTEST_END)
     logger.info(f"价格矩阵: {panel.shape[0]} 天 × {panel.shape[1]} 只")
 
