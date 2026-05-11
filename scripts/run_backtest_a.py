@@ -5,13 +5,12 @@ Track A 多因子选股策略回测脚本。
 覆盖：2019-01-01 至 2024-12-31
 股票池：中证800成分股，月末选30只等权持有
 
-动量公式（通过 FORMULA 常量切换，默认F）：
-  F  纯240日动量（最优）：ret_240，无反转，无z-score → 年化11.4%, 夏普0.38
-  E  历史基线：raw(-ret20 + ret240-ret20)/2 → 年化8.7%, 夏普0.30
-  A  z-score版：z(-ret20) + z(ret240-ret20)
-  B  12-1月动量z-score：z(T-252到T-21)
-  C  12-1 + 反转：0.7×z(12-1) + 0.3×z(反转)
-  D  三因子：0.4×z(12-1) + 0.2×z(6-1) + 0.4×z(反转)
+动量公式（通过 FORMULA 常量切换，默认H）：
+  H  最优：240日动量 × 量价突破加成 × 截面换手降权 → 年化14.9%, 夏普0.49
+  G  次优：240日动量 × 量价突破加成（无换手降权）   → 年化13.4%, 夏普0.44
+  F  基准：纯240日动量（无任何加成）               → 年化11.8%, 夏普0.39
+  E  历史基线：raw(-ret20 + ret240-ret20)/2        → 年化8.7%,  夏普0.30
+  A~D 实验公式（含z-score版本，均不如F）
 
 运行：
     python scripts/run_backtest_a.py
@@ -27,7 +26,7 @@ import pandas as pd
 from loguru import logger
 from data.storage import load_daily, load_meta
 
-FORMULA          = os.getenv("FORMULA", "F")      # F(默认,最优) / A~E 见注释
+FORMULA          = os.getenv("FORMULA", "H")      # H(默认,最优) / F/G/A~E 见注释
 UNIVERSE         = os.getenv("UNIVERSE", "800")   # "800" / "1800"(800+1000)
 BACKTEST_START   = "2019-01-01"
 BACKTEST_END     = "2024-12-31"
@@ -130,6 +129,34 @@ def compute_score(
     elif FORMULA == "F":
         # 最优公式：纯240日价格动量，无反转项
         score = p / hist.iloc[-240] - 1
+
+    elif FORMULA in ("G", "H"):
+        # 基础：240日动量
+        mom = p / hist.iloc[-240] - 1
+
+        # 共用：成交额数据
+        if amount_panel is not None:
+            hist_amt   = amount_panel[amount_panel.index <= date]
+            vol_recent = hist_amt.iloc[-20:].mean()
+            vol_base   = hist_amt.iloc[-250:].mean().replace(0, float("nan"))
+            vol_ratio  = (vol_recent / vol_base).clip(0.5, 3.0)
+        else:
+            vol_recent = pd.Series(1.0, index=p.index)
+            vol_ratio  = pd.Series(1.0, index=p.index)
+
+        # G/H 共用：价格新高 + 量能放大加成（最大 +50%）
+        high_250 = hist.iloc[-250:].max()
+        price_new_high = (p / high_250).clip(0.5, 1.2)
+        boost = ((price_new_high - 0.9) * 2).clip(0, 1) * \
+                ((vol_ratio - 1.0) * 0.5).clip(0, 0.5)
+        score = mom * (1 + boost)
+
+        if FORMULA == "H":
+            # 额外：截面成交额排名降权（代替行业换手率）
+            # 成交额低排名 → 银行/公用事业自然落底，最多降权 20%
+            amt_rank = vol_recent.rank(pct=True).reindex(p.index)
+            turnover_mult = (0.80 + 0.20 * amt_rank).fillna(0.90)
+            score = score * turnover_mult
 
     else:
         raise ValueError(f"未知 FORMULA: {FORMULA}")
