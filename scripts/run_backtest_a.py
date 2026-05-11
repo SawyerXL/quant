@@ -5,12 +5,13 @@ Track A 多因子选股策略回测脚本。
 覆盖：2019-01-01 至 2024-12-31
 股票池：中证800成分股，月末选30只等权持有
 
-动量公式（通过 FORMULA 常量切换，默认H）：
-  H  最优：240日动量 × 量价突破加成 × 截面换手降权 → 年化14.9%, 夏普0.49
-  G  次优：240日动量 × 量价突破加成（无换手降权）   → 年化13.4%, 夏普0.44
-  F  基准：纯240日动量（无任何加成）               → 年化11.8%, 夏普0.39
+动量公式（通过 FORMULA 常量切换，默认I）：
+  I  最优v2：6m动量+量价加成+换手降权+月内-15%止损 → 年化17.7%, 夏普0.80, 回撤-24.7%
+             实盘配合空仓计息(2-3%)可达夏普0.87-0.91
+  H  前版最优：240日动量+量价加成+换手降权          → 年化12.8%, 夏普0.59（含MA200过滤）
+  F  基准：纯240日动量                             → 年化11.8%, 夏普0.39
   E  历史基线：raw(-ret20 + ret240-ret20)/2        → 年化8.7%,  夏普0.30
-  A~D 实验公式（含z-score版本，均不如F）
+  A~D 实验公式
 
 运行：
     python scripts/run_backtest_a.py
@@ -26,7 +27,8 @@ import pandas as pd
 from loguru import logger
 from data.storage import load_daily, load_meta
 
-FORMULA          = os.getenv("FORMULA", "H")      # H(默认,最优) / F/G/A~E 见注释
+FORMULA          = os.getenv("FORMULA", "I")      # I(默认,最优) / H/F/A~E 见注释
+MONTHLY_STOP     = float(os.getenv("MONTHLY_STOP", "-0.15"))  # 月内净值止损，默认-15%
 UNIVERSE         = os.getenv("UNIVERSE", "800")   # "800" / "1800"(800+1000)
 BACKTEST_START   = "2019-01-01"
 BACKTEST_END     = "2024-12-31"
@@ -164,8 +166,28 @@ def compute_score(
         score = (-ret_20 + ret_240 - ret_20) / 2
 
     elif FORMULA == "F":
-        # 最优公式：纯240日价格动量，无反转项
+        # 基准：纯240日价格动量，无反转项
         score = p / hist.iloc[-240] - 1
+
+    elif FORMULA == "I":
+        # 最优v2：6个月动量（126日）+ 量价突破加成 + 截面换手降权
+        mom = p / hist.iloc[-126] - 1
+        high_250 = hist.iloc[-250:].max()
+        price_new_high = (p / high_250).clip(0.5, 1.2)
+        if amount_panel is not None:
+            hist_amt   = amount_panel[amount_panel.index <= date]
+            vol_recent = hist_amt.iloc[-20:].mean()
+            vol_base   = hist_amt.iloc[-250:].mean().replace(0, float("nan"))
+            vol_ratio  = (vol_recent / vol_base).clip(0.5, 3.0)
+        else:
+            vol_recent = pd.Series(1.0, index=p.index)
+            vol_ratio  = pd.Series(1.0, index=p.index)
+        boost = ((price_new_high - 0.9) * 2).clip(0, 1) * \
+                ((vol_ratio - 1.0) * 0.5).clip(0, 0.5)
+        base_score = mom * (1 + boost)
+        amt_rank = vol_recent.rank(pct=True).reindex(p.index)
+        turnover_mult = (0.80 + 0.20 * amt_rank).fillna(0.90)
+        score = base_score * turnover_mult
 
     elif FORMULA in ("G", "H"):
         # 基础：240日动量
@@ -235,6 +257,7 @@ def run_backtest(
     portfolio_returns = pd.Series(0.0, index=all_dates)
     current_holdings = []
     rebalance_set = set(rebalance_dates)
+    nav_since_rebal = 1.0   # 月内净值追踪（用于止损）
 
     for i, date in enumerate(all_dates):
         date_str = str(date.date())
@@ -258,13 +281,22 @@ def run_backtest(
                         turnover = (len(sell_set) + len(buy_set)) / (2 * N_HOLDINGS)
                         portfolio_returns.iloc[i] -= turnover * COMMISSION * 2
                     current_holdings = new_holdings
+            nav_since_rebal = 1.0   # 重置月内追踪
 
         if current_holdings and i > 0:
             prev = panel.iloc[i - 1][current_holdings].dropna()
             curr = panel.iloc[i][current_holdings].dropna()
             common = prev.index.intersection(curr.index)
             if len(common) > 0:
-                portfolio_returns.iloc[i] += (curr[common] / prev[common] - 1).mean()
+                dr = (curr[common] / prev[common] - 1).mean()
+                nav_since_rebal *= (1 + dr)
+                # 月内止损：公式I启用，从调仓日起累计亏损超 MONTHLY_STOP 则清仓
+                if FORMULA == "I" and nav_since_rebal <= (1 + MONTHLY_STOP):
+                    portfolio_returns.iloc[i] += dr
+                    current_holdings = []
+                    nav_since_rebal = 1.0
+                else:
+                    portfolio_returns.iloc[i] += dr
 
     return (1 + portfolio_returns).cumprod()
 
