@@ -123,7 +123,8 @@ def _load_prev_holdings() -> list[str]:
 
 def _calc_shares(codes: list[str], prices: pd.Series) -> dict[str, int]:
     """
-    按等权计算每只股票应买入的股数（向下取整到100股=1手）。
+    按等权计算每只股票应买入的股数，向下取整到整手。
+    科创板（688开头）最小申报单位200股，其余100股。
     """
     if not codes:
         return {}
@@ -132,8 +133,9 @@ def _calc_shares(codes: list[str], prices: pd.Series) -> dict[str, int]:
     for code in codes:
         price = prices.get(code)
         if price and price > 0:
-            lots = int(capital_per / price / 100)   # 向下取整到整手
-            shares[code] = lots * 100
+            min_lot = 200 if str(code).startswith("688") else 100
+            lots = int(capital_per / price / min_lot)
+            shares[code] = lots * min_lot
         else:
             shares[code] = 0
     return shares

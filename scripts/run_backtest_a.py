@@ -120,6 +120,7 @@ def compute_score(
     panel: pd.DataFrame,
     date: pd.Timestamp,
     amount_panel: pd.DataFrame | None = None,
+    stock_info: pd.DataFrame | None = None,
 ) -> pd.Series:
     """
     截面动量得分，公式由 FORMULA 常量控制。
@@ -193,8 +194,22 @@ def compute_score(
         boost = ((price_new_high - 0.9) * 2).clip(0, 1) * \
                 ((vol_ratio - 1.0) * 0.5).clip(0, 0.5)
         base_score = mom * (1 + boost)
-        amt_rank = vol_recent.rank(pct=True).reindex(p.index)
-        turnover_mult = (0.80 + 0.20 * amt_rank).fillna(0.90)
+        # 截面成交额排名（70%）+ 板块内成交额排名（30%，修正行业规模偏差）
+        cross_amt_rank = vol_recent.rank(pct=True).reindex(p.index)
+
+        # 板块内排名：行业越大成交额越高，用行业内百分位纠正失真
+        if stock_info is not None and "industry_l1" in stock_info.columns:
+            ind_map = stock_info.set_index("code")["industry_l1"]
+            sector_amt_rank = pd.Series(0.5, index=p.index)
+            for ind in ind_map.unique():
+                ind_codes = [c for c in ind_map[ind_map == ind].index if c in vol_recent.index]
+                if len(ind_codes) >= 3:
+                    sector_amt_rank[ind_codes] = vol_recent[ind_codes].rank(pct=True)
+            combined_rank = 0.70 * cross_amt_rank + 0.30 * sector_amt_rank.reindex(p.index)
+        else:
+            combined_rank = cross_amt_rank  # 无行业信息时退回纯截面排名
+
+        turnover_mult = (0.80 + 0.20 * combined_rank).fillna(0.90)
         score = base_score * turnover_mult
 
     elif FORMULA in ("G", "H"):
@@ -258,6 +273,7 @@ def run_backtest(
     rebalance_dates: list,
     amount_panel: pd.DataFrame | None = None,
     regime: pd.Series | None = None,
+    stock_info: pd.DataFrame | None = None,
 ) -> pd.Series:
     """
     向量化回测主函数（T+0：信号日=执行日=月末收盘）。
@@ -285,7 +301,7 @@ def run_backtest(
                     logger.debug(f"{date_str} 熊市信号，清仓")
                 current_holdings = []
             else:
-                score = compute_score(panel, date, amount_panel)
+                score = compute_score(panel, date, amount_panel, stock_info)
                 if len(score) >= N_HOLDINGS:
                     new_holdings = score.nlargest(N_HOLDINGS).index.tolist()
                     if current_holdings:
@@ -406,7 +422,11 @@ def main():
         logger.info("大势过滤: 关闭")
 
     logger.info("运行回测...")
-    nav = run_backtest(panel, rebalance_dates, amount_panel, regime)
+    stock_info = load_meta("stock_info_full")
+    if stock_info.empty:
+        logger.warning("stock_info_full 缺失，板块换手率权重将退化为纯截面排名")
+        stock_info = None
+    nav = run_backtest(panel, rebalance_dates, amount_panel, regime, stock_info)
 
     logger.info("── 分年度表现 ──")
     end_year = int(BACKTEST_END[:4])

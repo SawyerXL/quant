@@ -189,7 +189,9 @@ class Trader:
         total       = account["total_assets"]
 
         target_shares = {
-            code: int((total * w / current_price[code]) // MIN_LOT) * MIN_LOT
+            code: (lambda lot: int((total * w / current_price[code]) // lot) * lot)(
+                200 if str(code).startswith("688") else MIN_LOT
+            )
             for code, w in target_weights.items()
             if current_price.get(code)
         }

@@ -1,0 +1,888 @@
+2026-05-11 23:36:43.335 | INFO     | __main__:main:201 - ============================================================
+2026-05-11 23:36:43.336 | INFO     | __main__:main:202 - Track B 回测: 2021-01-01 → 2024-12-31
+2026-05-11 23:36:43.336 | INFO     | __main__:main:203 - 资金:300,000  行业:3  每行业:2  止损:-8%
+2026-05-11 23:36:43.337 | INFO     | __main__:main:204 - ============================================================
+2026-05-11 23:36:43.393 | INFO     | __main__:main:226 - 加载全市场价格矩阵（5515 只，已修正生存者偏差）...
+2026-05-11 23:39:06.574 | INFO     | scripts.run_backtest_a:load_panels:74 - 价格矩阵: 1011 天 × 5256 只股票
+2026-05-11 23:39:06.630 | INFO     | __main__:main:228 - 价格矩阵: 1011 天 × 5256 只
+2026-05-11 23:39:06.940 | INFO     | __main__:main:231 - 调仓周数: 203
+2026-05-11 23:39:06.941 | INFO     | __main__:main:233 - 运行回测（含止损检查，略慢）...
+2026-05-11 23:39:07.130 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 68.9  MA200=40.0 宽度=17.8 涨跌=11.1
+2026-05-11 23:39:07.131 | DEBUG    | __main__:_select_stocks:151 - 2021-03-05 大势:69 仓位:70%
+2026-05-11 23:39:07.488 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['钢铁', '石油石化', '环保']  (得分: ['80', '79', '70'])
+2026-05-11 23:39:07.956 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-03-05 股票池: 过滤后 3662 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:08.264 | DEBUG    | __main__:run_backtest:98 - 2021-03-09 追踪止损 600295: 高点=22.77 现价=20.49 回撤=-10.0%
+2026-05-11 23:39:08.265 | DEBUG    | __main__:run_backtest:98 - 2021-03-09 追踪止损 300839: 高点=26.50 现价=24.11 回撤=-9.0%
+2026-05-11 23:39:08.265 | DEBUG    | __main__:run_backtest:98 - 2021-03-09 追踪止损 603619: 高点=10.82 现价=9.80 回撤=-9.4%
+2026-05-11 23:39:08.266 | DEBUG    | __main__:run_backtest:98 - 2021-03-09 追踪止损 603126: 高点=10.74 现价=9.67 回撤=-10.0%
+2026-05-11 23:39:08.468 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 57.2  MA200=40.0 宽度=11.2 涨跌=6.0
+2026-05-11 23:39:08.469 | DEBUG    | __main__:_select_stocks:151 - 2021-03-12 大势:57 仓位:50%
+2026-05-11 23:39:08.842 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['钢铁', '煤炭', '环保']  (得分: ['86', '72', '71'])
+2026-05-11 23:39:09.300 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-03-12 股票池: 过滤后 3679 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:09.617 | DEBUG    | __main__:run_backtest:98 - 2021-03-17 追踪止损 603126: 高点=11.85 现价=10.72 回撤=-9.5%
+2026-05-11 23:39:09.810 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 53.5  MA200=40.0 宽度=11.8 涨跌=1.6
+2026-05-11 23:39:09.811 | DEBUG    | __main__:_select_stocks:151 - 2021-03-19 大势:53 仓位:50%
+2026-05-11 23:39:10.169 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['钢铁', '公用事业', '环保']  (得分: ['86', '82', '80'])
+2026-05-11 23:39:10.626 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-03-19 股票池: 过滤后 3684 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:10.937 | DEBUG    | __main__:run_backtest:98 - 2021-03-23 追踪止损 600516: 高点=9.97 现价=8.97 回撤=-10.0%
+2026-05-11 23:39:10.940 | DEBUG    | __main__:run_backtest:98 - 2021-03-24 追踪止损 600507: 高点=9.18 现价=8.44 回撤=-8.1%
+2026-05-11 23:39:10.940 | DEBUG    | __main__:run_backtest:98 - 2021-03-24 追踪止损 600744: 高点=7.36 现价=6.70 回撤=-9.0%
+2026-05-11 23:39:10.943 | DEBUG    | __main__:run_backtest:98 - 2021-03-25 追踪止损 000966: 高点=8.39 现价=7.65 回撤=-8.8%
+2026-05-11 23:39:10.947 | DEBUG    | __main__:run_backtest:98 - 2021-03-26 追踪止损 600292: 高点=9.24 现价=8.40 回撤=-9.1%
+2026-05-11 23:39:10.947 | DEBUG    | __main__:run_backtest:98 - 2021-03-26 追踪止损 600526: 高点=9.15 现价=8.20 回撤=-10.4%
+2026-05-11 23:39:11.137 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 58.3  MA200=40.0 宽度=12.0 涨跌=6.2
+2026-05-11 23:39:11.138 | DEBUG    | __main__:_select_stocks:151 - 2021-03-26 大势:58 仓位:50%
+2026-05-11 23:39:11.498 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['公用事业', '环保', '建筑装饰']  (得分: ['90', '81', '72'])
+2026-05-11 23:39:11.980 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-03-26 股票池: 过滤后 3689 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:12.291 | DEBUG    | __main__:run_backtest:98 - 2021-03-30 追踪止损 600526: 高点=8.25 现价=7.51 回撤=-9.0%
+2026-05-11 23:39:12.294 | DEBUG    | __main__:run_backtest:98 - 2021-03-31 追踪止损 000966: 高点=9.23 现价=8.31 回撤=-10.0%
+2026-05-11 23:39:12.297 | DEBUG    | __main__:run_backtest:98 - 2021-04-01 追踪止损 000027: 高点=12.13 现价=10.69 回撤=-11.9%
+2026-05-11 23:39:12.298 | DEBUG    | __main__:run_backtest:98 - 2021-04-01 追踪止损 002658: 高点=13.67 现价=12.30 回撤=-10.0%
+2026-05-11 23:39:12.490 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 62.2  MA200=40.0 宽度=11.9 涨跌=10.2
+2026-05-11 23:39:12.490 | DEBUG    | __main__:_select_stocks:151 - 2021-04-02 大势:62 仓位:70%
+2026-05-11 23:39:12.864 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['公用事业', '纺织服饰', '建筑装饰']  (得分: ['91', '76', '73'])
+2026-05-11 23:39:13.267 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-04-02 股票池: 过滤后 3698 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:13.583 | DEBUG    | __main__:run_backtest:98 - 2021-04-08 追踪止损 600509: 高点=8.62 现价=7.61 回撤=-11.7%
+2026-05-11 23:39:13.583 | DEBUG    | __main__:run_backtest:98 - 2021-04-08 追踪止损 000883: 高点=6.10 现价=5.53 回撤=-9.3%
+2026-05-11 23:39:13.584 | DEBUG    | __main__:run_backtest:98 - 2021-04-08 追踪止损 000928: 高点=8.55 现价=7.84 回撤=-8.3%
+2026-05-11 23:39:13.584 | DEBUG    | __main__:run_backtest:98 - 2021-04-08 追踪止损 000065: 高点=10.91 现价=9.73 回撤=-10.8%
+2026-05-11 23:39:13.793 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 59.2  MA200=35.1 宽度=12.8 涨跌=11.3
+2026-05-11 23:39:13.794 | DEBUG    | __main__:_select_stocks:151 - 2021-04-09 大势:59 仓位:50%
+2026-05-11 23:39:14.180 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['公用事业', '纺织服饰', '钢铁']  (得分: ['84', '79', '72'])
+2026-05-11 23:39:14.676 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-04-09 股票池: 过滤后 3708 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:15.018 | DEBUG    | __main__:run_backtest:98 - 2021-04-13 追踪止损 001896: 高点=11.24 现价=10.12 回撤=-10.0%
+2026-05-11 23:39:15.018 | DEBUG    | __main__:run_backtest:98 - 2021-04-13 追踪止损 002269: 高点=3.75 现价=3.26 回撤=-13.1%
+2026-05-11 23:39:15.019 | DEBUG    | __main__:run_backtest:98 - 2021-04-13 追踪止损 003016: 高点=12.64 现价=11.38 回撤=-10.0%
+2026-05-11 23:39:15.024 | DEBUG    | __main__:run_backtest:98 - 2021-04-15 追踪止损 000966: 高点=12.27 现价=10.35 回撤=-15.6%
+2026-05-11 23:39:15.238 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 43.1  MA200=20.4 宽度=13.6 涨跌=9.1
+2026-05-11 23:39:15.239 | DEBUG    | __main__:_select_stocks:151 - 2021-04-16 大势:43 仓位:50%
+2026-05-11 23:39:15.632 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['钢铁', '纺织服饰', '食品饮料']  (得分: ['74', '72', '68'])
+2026-05-11 23:39:16.132 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-04-16 股票池: 过滤后 3717 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:16.478 | DEBUG    | __main__:run_backtest:98 - 2021-04-21 追踪止损 000825: 高点=6.38 现价=5.83 回撤=-8.6%
+2026-05-11 23:39:16.693 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 72.3  MA200=40.0 宽度=11.5 涨跌=20.8
+2026-05-11 23:39:16.693 | DEBUG    | __main__:_select_stocks:151 - 2021-04-23 大势:72 仓位:70%
+2026-05-11 23:39:17.081 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['钢铁', '美容护理', '食品饮料']  (得分: ['88', '73', '70'])
+2026-05-11 23:39:17.525 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-04-23 股票池: 过滤后 3733 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:18.086 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 62.5  MA200=40.0 宽度=8.2 涨跌=14.3
+2026-05-11 23:39:18.087 | DEBUG    | __main__:_select_stocks:151 - 2021-04-30 大势:62 仓位:70%
+2026-05-11 23:39:18.479 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['美容护理', '医药生物', '煤炭']  (得分: ['84', '79', '67'])
+2026-05-11 23:39:18.977 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-04-30 股票池: 过滤后 3750 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:19.325 | DEBUG    | __main__:run_backtest:98 - 2021-05-06 追踪止损 300896: 高点=618.20 现价=564.50 回撤=-8.7%
+2026-05-11 23:39:19.540 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 39.6  MA200=21.4 宽度=8.1 涨跌=10.1
+2026-05-11 23:39:19.540 | DEBUG    | __main__:_select_stocks:151 - 2021-05-07 大势:40 仓位:30%
+2026-05-11 23:39:19.936 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['煤炭', '钢铁', '有色金属']  (得分: ['91', '87', '68'])
+2026-05-11 23:39:20.446 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-05-07 股票池: 过滤后 3757 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:20.801 | DEBUG    | __main__:run_backtest:98 - 2021-05-13 追踪止损 601015: 高点=9.72 现价=8.55 回撤=-12.0%
+2026-05-11 23:39:20.802 | DEBUG    | __main__:run_backtest:98 - 2021-05-13 追踪止损 000983: 高点=7.78 现价=7.00 回撤=-10.0%
+2026-05-11 23:39:20.802 | DEBUG    | __main__:run_backtest:98 - 2021-05-13 追踪止损 000825: 高点=8.13 现价=7.30 回撤=-10.2%
+2026-05-11 23:39:20.803 | DEBUG    | __main__:run_backtest:98 - 2021-05-13 追踪止损 601005: 高点=3.05 现价=2.78 回撤=-8.9%
+2026-05-11 23:39:20.803 | DEBUG    | __main__:run_backtest:98 - 2021-05-13 追踪止损 000807: 高点=15.47 现价=13.77 回撤=-11.0%
+2026-05-11 23:39:20.803 | DEBUG    | __main__:run_backtest:98 - 2021-05-13 追踪止损 601600: 高点=5.85 现价=5.31 回撤=-9.2%
+2026-05-11 23:39:21.015 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 72.2  MA200=40.0 宽度=12.1 涨跌=20.0
+2026-05-11 23:39:21.016 | DEBUG    | __main__:_select_stocks:151 - 2021-05-14 大势:72 仓位:70%
+2026-05-11 23:39:21.418 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['煤炭', '医药生物', '美容护理']  (得分: ['84', '76', '74'])
+2026-05-11 23:39:21.880 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-05-14 股票池: 过滤后 3762 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:22.245 | DEBUG    | __main__:run_backtest:98 - 2021-05-18 追踪止损 600196: 高点=69.71 现价=63.90 回撤=-8.3%
+2026-05-11 23:39:22.251 | DEBUG    | __main__:run_backtest:98 - 2021-05-20 追踪止损 600408: 高点=3.90 现价=3.55 回撤=-9.0%
+2026-05-11 23:39:22.252 | DEBUG    | __main__:run_backtest:98 - 2021-05-20 追踪止损 000983: 高点=6.74 现价=6.14 回撤=-8.9%
+2026-05-11 23:39:22.252 | DEBUG    | __main__:run_backtest:98 - 2021-05-20 追踪止损 603630: 高点=27.50 现价=24.74 回撤=-10.0%
+2026-05-11 23:39:22.473 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 64.8  MA200=40.0 宽度=10.0 涨跌=14.8
+2026-05-11 23:39:22.474 | DEBUG    | __main__:_select_stocks:151 - 2021-05-21 大势:65 仓位:70%
+2026-05-11 23:39:22.889 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['美容护理', '医药生物', '煤炭']  (得分: ['82', '80', '66'])
+2026-05-11 23:39:23.409 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-05-21 股票池: 过滤后 3772 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:24.008 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 75.1  MA200=40.0 宽度=14.5 涨跌=20.6
+2026-05-11 23:39:24.009 | DEBUG    | __main__:_select_stocks:151 - 2021-05-28 大势:75 仓位:70%
+2026-05-11 23:39:24.421 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['食品饮料', '非银金融', '美容护理']  (得分: ['77', '76', '70'])
+2026-05-11 23:39:24.961 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-05-28 股票池: 过滤后 3784 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:25.339 | DEBUG    | __main__:run_backtest:98 - 2021-06-02 追踪止损 001219: 高点=14.45 现价=12.80 回撤=-11.4%
+2026-05-11 23:39:25.340 | DEBUG    | __main__:run_backtest:98 - 2021-06-02 追踪止损 600095: 高点=14.45 现价=12.80 回撤=-11.4%
+2026-05-11 23:39:25.340 | DEBUG    | __main__:run_backtest:98 - 2021-06-02 追踪止损 688363: 高点=269.10 现价=238.00 回撤=-11.6%
+2026-05-11 23:39:25.341 | DEBUG    | __main__:run_backtest:98 - 2021-06-02 追踪止损 300896: 高点=679.97 现价=620.05 回撤=-8.8%
+2026-05-11 23:39:25.570 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 75.8  MA200=40.0 宽度=13.8 涨跌=21.9
+2026-05-11 23:39:25.570 | DEBUG    | __main__:_select_stocks:151 - 2021-06-04 大势:76 仓位:70%
+2026-05-11 23:39:25.984 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['食品饮料', '非银金融', '美容护理']  (得分: ['77', '74', '72'])
+2026-05-11 23:39:26.473 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-06-04 股票池: 过滤后 3790 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:26.853 | DEBUG    | __main__:run_backtest:98 - 2021-06-08 追踪止损 600199: 高点=20.68 现价=18.61 回撤=-10.0%
+2026-05-11 23:39:26.859 | DEBUG    | __main__:run_backtest:98 - 2021-06-10 追踪止损 000995: 高点=37.26 现价=33.53 回撤=-10.0%
+2026-05-11 23:39:26.860 | DEBUG    | __main__:run_backtest:98 - 2021-06-10 追踪止损 002511: 高点=34.03 现价=30.52 回撤=-10.3%
+2026-05-11 23:39:26.863 | DEBUG    | __main__:run_backtest:98 - 2021-06-11 追踪止损 603630: 高点=27.01 现价=24.59 回撤=-9.0%
+2026-05-11 23:39:27.088 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 70.1  MA200=40.0 宽度=12.9 涨跌=17.2
+2026-05-11 23:39:27.089 | DEBUG    | __main__:_select_stocks:151 - 2021-06-11 大势:70 仓位:70%
+2026-05-11 23:39:27.516 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['电力设备', '计算机', '通信']  (得分: ['84', '83', '73'])
+2026-05-11 23:39:28.043 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-06-11 股票池: 过滤后 3807 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:28.426 | DEBUG    | __main__:run_backtest:98 - 2021-06-16 追踪止损 000009: 高点=15.14 现价=13.80 回撤=-8.9%
+2026-05-11 23:39:28.658 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 55.5  MA200=34.0 宽度=10.1 涨跌=11.4
+2026-05-11 23:39:28.658 | DEBUG    | __main__:_select_stocks:151 - 2021-06-18 大势:55 仓位:50%
+2026-05-11 23:39:29.083 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['计算机', '通信', '电子']  (得分: ['84', '80', '77'])
+2026-05-11 23:39:29.618 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-06-18 股票池: 过滤后 3807 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:30.001 | DEBUG    | __main__:run_backtest:98 - 2021-06-22 追踪止损 300264: 高点=8.50 现价=7.66 回撤=-9.9%
+2026-05-11 23:39:30.007 | DEBUG    | __main__:run_backtest:98 - 2021-06-24 追踪止损 300663: 高点=49.40 现价=45.00 回撤=-8.9%
+2026-05-11 23:39:30.007 | DEBUG    | __main__:run_backtest:98 - 2021-06-24 追踪止损 300098: 高点=6.62 现价=5.82 回撤=-12.1%
+2026-05-11 23:39:30.236 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 62.8  MA200=40.0 宽度=11.6 涨跌=11.2
+2026-05-11 23:39:30.237 | DEBUG    | __main__:_select_stocks:151 - 2021-06-25 大势:63 仓位:70%
+2026-05-11 23:39:30.665 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['电力设备', '煤炭', '电子']  (得分: ['89', '81', '75'])
+2026-05-11 23:39:31.150 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-06-25 股票池: 过滤后 3816 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:31.587 | DEBUG    | __main__:run_backtest:98 - 2021-07-01 追踪止损 000983: 高点=8.52 现价=7.80 回撤=-8.5%
+2026-05-11 23:39:31.591 | DEBUG    | __main__:run_backtest:98 - 2021-07-02 追踪止损 002475: 高点=47.49 现价=43.60 回撤=-8.2%
+2026-05-11 23:39:31.591 | DEBUG    | __main__:run_backtest:98 - 2021-07-02 追踪止损 002384: 高点=21.68 现价=19.89 回撤=-8.3%
+2026-05-11 23:39:31.820 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 43.7  MA200=27.4 宽度=7.5 涨跌=8.8
+2026-05-11 23:39:31.820 | DEBUG    | __main__:_select_stocks:151 - 2021-07-02 大势:44 仓位:50%
+2026-05-11 23:39:32.255 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['电力设备', '电子', '计算机']  (得分: ['95', '82', '76'])
+2026-05-11 23:39:32.738 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-07-02 股票池: 过滤后 3825 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:33.113 | DEBUG    | __main__:run_backtest:98 - 2021-07-06 追踪止损 300393: 高点=14.22 现价=12.50 回撤=-12.1%
+2026-05-11 23:39:33.119 | DEBUG    | __main__:run_backtest:98 - 2021-07-08 追踪止损 300672: 高点=129.00 现价=118.40 回撤=-8.2%
+2026-05-11 23:39:33.122 | DEBUG    | __main__:run_backtest:98 - 2021-07-09 追踪止损 300671: 高点=162.68 现价=148.42 回撤=-8.8%
+2026-05-11 23:39:33.339 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 48.0  MA200=28.9 宽度=10.7 涨跌=8.5
+2026-05-11 23:39:33.340 | DEBUG    | __main__:_select_stocks:151 - 2021-07-09 大势:48 仓位:50%
+2026-05-11 23:39:33.758 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['电力设备', '有色金属', '电子']  (得分: ['93', '79', '77'])
+2026-05-11 23:39:34.271 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-07-09 股票池: 过滤后 3832 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:34.653 | DEBUG    | __main__:run_backtest:98 - 2021-07-16 追踪止损 000009: 高点=23.73 现价=21.78 回撤=-8.2%
+2026-05-11 23:39:34.879 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 58.7  MA200=34.5 宽度=9.9 涨跌=14.3
+2026-05-11 23:39:34.879 | DEBUG    | __main__:_select_stocks:151 - 2021-07-16 大势:59 仓位:50%
+2026-05-11 23:39:35.305 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['电力设备', '有色金属', '钢铁']  (得分: ['87', '83', '75'])
+2026-05-11 23:39:35.832 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-07-16 股票池: 过滤后 3837 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:36.449 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 54.5  MA200=33.5 宽度=10.7 涨跌=10.3
+2026-05-11 23:39:36.450 | DEBUG    | __main__:_select_stocks:151 - 2021-07-23 大势:54 仓位:50%
+2026-05-11 23:39:36.882 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['有色金属', '电力设备', '钢铁']  (得分: ['89', '84', '69'])
+2026-05-11 23:39:37.354 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-07-23 股票池: 过滤后 3847 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:37.741 | DEBUG    | __main__:run_backtest:98 - 2021-07-27 追踪止损 600338: 高点=28.85 现价=25.45 回撤=-11.8%
+2026-05-11 23:39:37.743 | DEBUG    | __main__:run_backtest:98 - 2021-07-27 追踪止损 300393: 高点=14.60 现价=13.21 回撤=-9.5%
+2026-05-11 23:39:37.746 | DEBUG    | __main__:run_backtest:98 - 2021-07-28 追踪止损 002466: 高点=95.00 现价=86.14 回撤=-9.3%
+2026-05-11 23:39:37.746 | DEBUG    | __main__:run_backtest:98 - 2021-07-28 追踪止损 002176: 高点=17.42 现价=15.11 回撤=-13.3%
+2026-05-11 23:39:37.747 | DEBUG    | __main__:run_backtest:98 - 2021-07-28 追踪止损 600010: 高点=2.69 现价=2.43 回撤=-9.7%
+2026-05-11 23:39:37.978 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 15.2  MA200=0.0 宽度=7.9 涨跌=7.3
+2026-05-11 23:39:37.979 | DEBUG    | __main__:_select_stocks:151 - 2021-07-30 大势:15 仓位:10%
+2026-05-11 23:39:38.207 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 24.5  MA200=4.0 宽度=10.4 涨跌=10.1
+2026-05-11 23:39:38.208 | DEBUG    | __main__:_select_stocks:151 - 2021-08-06 大势:24 仓位:10%
+2026-05-11 23:39:38.434 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 37.3  MA200=11.4 宽度=15.6 涨跌=10.3
+2026-05-11 23:39:38.435 | DEBUG    | __main__:_select_stocks:151 - 2021-08-13 大势:37 仓位:30%
+2026-05-11 23:39:38.867 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['电力设备', '有色金属', '国防军工']  (得分: ['82', '77', '76'])
+2026-05-11 23:39:39.389 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-08-13 股票池: 过滤后 3884 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:39.786 | DEBUG    | __main__:run_backtest:98 - 2021-08-17 追踪止损 300376: 高点=14.19 现价=12.64 回撤=-10.9%
+2026-05-11 23:39:39.794 | DEBUG    | __main__:run_backtest:98 - 2021-08-20 追踪止损 000933: 高点=13.70 现价=12.51 回撤=-8.7%
+2026-05-11 23:39:40.026 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 17.0  MA200=0.0 宽度=11.3 涨跌=5.8
+2026-05-11 23:39:40.026 | DEBUG    | __main__:_select_stocks:151 - 2021-08-20 大势:17 仓位:10%
+2026-05-11 23:39:40.258 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 29.7  MA200=0.0 宽度=13.6 涨跌=16.1
+2026-05-11 23:39:40.259 | DEBUG    | __main__:_select_stocks:151 - 2021-08-27 大势:30 仓位:30%
+2026-05-11 23:39:40.695 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['煤炭', '有色金属', '基础化工']  (得分: ['83', '73', '68'])
+2026-05-11 23:39:41.231 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-08-27 股票池: 过滤后 3909 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:41.637 | DEBUG    | __main__:run_backtest:98 - 2021-09-01 追踪止损 600348: 高点=14.78 现价=13.30 回撤=-10.0%
+2026-05-11 23:39:41.637 | DEBUG    | __main__:run_backtest:98 - 2021-09-01 追踪止损 600596: 高点=44.37 现价=39.93 回撤=-10.0%
+2026-05-11 23:39:41.643 | DEBUG    | __main__:run_backtest:98 - 2021-09-03 追踪止损 603993: 高点=7.82 现价=7.11 回撤=-9.1%
+2026-05-11 23:39:41.876 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 26.8  MA200=0.0 宽度=14.0 涨跌=12.8
+2026-05-11 23:39:41.877 | DEBUG    | __main__:_select_stocks:151 - 2021-09-03 大势:27 仓位:30%
+2026-05-11 23:39:42.318 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['煤炭', '钢铁', '综合']  (得分: ['87', '76', '69'])
+2026-05-11 23:39:42.812 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-09-03 股票池: 过滤后 3915 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:43.454 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 69.5  MA200=35.2 宽度=16.2 涨跌=18.2
+2026-05-11 23:39:43.455 | DEBUG    | __main__:_select_stocks:151 - 2021-09-10 大势:70 仓位:70%
+2026-05-11 23:39:43.895 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['煤炭', '钢铁', '综合']  (得分: ['90', '75', '69'])
+2026-05-11 23:39:44.420 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-09-10 股票池: 过滤后 3927 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:44.827 | DEBUG    | __main__:run_backtest:98 - 2021-09-13 追踪止损 000833: 高点=10.23 现价=9.35 回撤=-8.6%
+2026-05-11 23:39:44.835 | DEBUG    | __main__:run_backtest:98 - 2021-09-16 追踪止损 600740: 高点=11.50 现价=10.16 回撤=-11.7%
+2026-05-11 23:39:44.836 | DEBUG    | __main__:run_backtest:98 - 2021-09-16 追踪止损 600546: 高点=15.14 现价=13.82 回撤=-8.7%
+2026-05-11 23:39:44.836 | DEBUG    | __main__:run_backtest:98 - 2021-09-16 追踪止损 600673: 高点=10.77 现价=9.69 回撤=-10.0%
+2026-05-11 23:39:44.839 | DEBUG    | __main__:run_backtest:98 - 2021-09-17 追踪止损 000932: 高点=8.89 现价=7.79 回撤=-12.4%
+2026-05-11 23:39:45.071 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 32.9  MA200=3.5 宽度=10.7 涨跌=18.7
+2026-05-11 23:39:45.072 | DEBUG    | __main__:_select_stocks:151 - 2021-09-17 大势:33 仓位:30%
+2026-05-11 23:39:45.510 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['煤炭', '石油石化', '公用事业']  (得分: ['91', '82', '75'])
+2026-05-11 23:39:46.051 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-09-17 股票池: 过滤后 3933 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:46.467 | DEBUG    | __main__:run_backtest:98 - 2021-09-23 追踪止损 000937: 高点=10.13 现价=9.12 回撤=-10.0%
+2026-05-11 23:39:46.470 | DEBUG    | __main__:run_backtest:98 - 2021-09-24 追踪止损 601011: 高点=6.32 现价=5.41 回撤=-14.4%
+2026-05-11 23:39:46.471 | DEBUG    | __main__:run_backtest:98 - 2021-09-24 追踪止损 001896: 高点=10.42 现价=8.80 回撤=-15.5%
+2026-05-11 23:39:46.706 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 24.2  MA200=1.8 宽度=9.5 涨跌=12.9
+2026-05-11 23:39:46.706 | DEBUG    | __main__:_select_stocks:151 - 2021-09-24 大势:24 仓位:10%
+2026-05-11 23:39:46.945 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 19.1  MA200=0.0 宽度=5.4 涨跌=13.7
+2026-05-11 23:39:46.946 | DEBUG    | __main__:_select_stocks:151 - 2021-09-30 大势:19 仓位:10%
+2026-05-11 23:39:47.183 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 25.9  MA200=4.4 宽度=7.5 涨跌=14.0
+2026-05-11 23:39:47.183 | DEBUG    | __main__:_select_stocks:151 - 2021-10-08 大势:26 仓位:30%
+2026-05-11 23:39:47.629 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['公用事业', '石油石化', '农林牧渔']  (得分: ['94', '81', '69'])
+2026-05-11 23:39:48.184 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-10-08 股票池: 过滤后 3968 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:48.604 | DEBUG    | __main__:run_backtest:98 - 2021-10-13 追踪止损 601016: 高点=7.22 现价=6.50 回撤=-10.0%
+2026-05-11 23:39:48.605 | DEBUG    | __main__:run_backtest:98 - 2021-10-13 追踪止损 000993: 高点=18.37 现价=16.53 回撤=-10.0%
+2026-05-11 23:39:48.605 | DEBUG    | __main__:run_backtest:98 - 2021-10-13 追踪止损 600256: 高点=7.62 现价=6.66 回撤=-12.6%
+2026-05-11 23:39:48.606 | DEBUG    | __main__:run_backtest:98 - 2021-10-13 追踪止损 300191: 高点=30.62 现价=27.23 回撤=-11.1%
+2026-05-11 23:39:48.611 | DEBUG    | __main__:run_backtest:98 - 2021-10-15 追踪止损 000998: 高点=24.63 现价=20.97 回撤=-14.9%
+2026-05-11 23:39:48.848 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 17.2  MA200=1.9 宽度=6.2 涨跌=9.1
+2026-05-11 23:39:48.849 | DEBUG    | __main__:_select_stocks:151 - 2021-10-15 大势:17 仓位:10%
+2026-05-11 23:39:49.088 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 25.1  MA200=5.8 宽度=7.2 涨跌=12.1
+2026-05-11 23:39:49.089 | DEBUG    | __main__:_select_stocks:151 - 2021-10-22 大势:25 仓位:30%
+2026-05-11 23:39:49.540 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['银行', '食品饮料', '农林牧渔']  (得分: ['74', '73', '72'])
+2026-05-11 23:39:50.035 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-10-22 股票池: 过滤后 3990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:50.466 | DEBUG    | __main__:run_backtest:98 - 2021-10-28 追踪止损 000930: 高点=10.94 现价=9.67 回撤=-11.6%
+2026-05-11 23:39:50.706 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 19.4  MA200=0.0 宽度=6.9 涨跌=12.4
+2026-05-11 23:39:50.707 | DEBUG    | __main__:_select_stocks:151 - 2021-10-29 大势:19 仓位:10%
+2026-05-11 23:39:50.945 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 20.8  MA200=0.0 宽度=10.5 涨跌=10.3
+2026-05-11 23:39:50.946 | DEBUG    | __main__:_select_stocks:151 - 2021-11-05 大势:21 仓位:10%
+2026-05-11 23:39:51.184 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 31.9  MA200=2.2 宽度=17.2 涨跌=12.6
+2026-05-11 23:39:51.185 | DEBUG    | __main__:_select_stocks:151 - 2021-11-12 大势:32 仓位:30%
+2026-05-11 23:39:51.637 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['电力设备', '传媒', '汽车']  (得分: ['77', '72', '70'])
+2026-05-11 23:39:52.196 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-11-12 股票池: 过滤后 4027 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:52.648 | DEBUG    | __main__:run_backtest:98 - 2021-11-18 追踪止损 300052: 高点=37.68 现价=34.48 回撤=-8.5%
+2026-05-11 23:39:52.649 | DEBUG    | __main__:run_backtest:98 - 2021-11-18 追踪止损 300364: 高点=10.35 现价=9.16 回撤=-11.5%
+2026-05-11 23:39:52.902 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 36.2  MA200=4.6 宽度=19.7 涨跌=11.9
+2026-05-11 23:39:52.903 | DEBUG    | __main__:_select_stocks:151 - 2021-11-19 大势:36 仓位:30%
+2026-05-11 23:39:53.371 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['电力设备', '传媒', '汽车']  (得分: ['75', '74', '74'])
+2026-05-11 23:39:53.950 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-11-19 股票池: 过滤后 4037 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:54.406 | DEBUG    | __main__:run_backtest:98 - 2021-11-25 追踪止损 600556: 高点=14.62 现价=13.14 回撤=-10.1%
+2026-05-11 23:39:54.659 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 34.9  MA200=3.6 宽度=18.4 涨跌=12.8
+2026-05-11 23:39:54.660 | DEBUG    | __main__:_select_stocks:151 - 2021-11-26 大势:35 仓位:30%
+2026-05-11 23:39:55.131 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['汽车', '通信', '电子']  (得分: ['76', '66', '66'])
+2026-05-11 23:39:55.663 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-11-26 股票池: 过滤后 4050 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:56.170 | DEBUG    | __main__:run_backtest:98 - 2021-12-03 追踪止损 000589: 高点=12.27 现价=11.21 回撤=-8.6%
+2026-05-11 23:39:56.171 | DEBUG    | __main__:run_backtest:98 - 2021-12-03 追踪止损 300134: 高点=13.64 现价=12.53 回撤=-8.1%
+2026-05-11 23:39:56.422 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 47.9  MA200=14.0 宽度=17.1 涨跌=16.7
+2026-05-11 23:39:56.423 | DEBUG    | __main__:_select_stocks:151 - 2021-12-03 大势:48 仓位:50%
+2026-05-11 23:39:56.900 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['汽车', '有色金属', '环保']  (得分: ['77', '72', '64'])
+2026-05-11 23:39:57.443 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-12-03 股票池: 过滤后 4062 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:58.145 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 72.1  MA200=39.3 宽度=13.9 涨跌=18.9
+2026-05-11 23:39:58.147 | DEBUG    | __main__:_select_stocks:151 - 2021-12-10 大势:72 仓位:70%
+2026-05-11 23:39:58.606 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['有色金属', '食品饮料', '汽车']  (得分: ['71', '70', '68'])
+2026-05-11 23:39:59.170 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-12-10 股票池: 过滤后 4071 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:39:59.614 | DEBUG    | __main__:run_backtest:98 - 2021-12-13 追踪止损 600335: 高点=10.77 现价=9.74 回撤=-9.6%
+2026-05-11 23:39:59.617 | DEBUG    | __main__:run_backtest:98 - 2021-12-14 追踪止损 600418: 高点=20.38 现价=17.90 回撤=-12.2%
+2026-05-11 23:39:59.872 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 55.6  MA200=25.8 宽度=14.0 涨跌=15.8
+2026-05-11 23:39:59.873 | DEBUG    | __main__:_select_stocks:151 - 2021-12-17 大势:56 仓位:50%
+2026-05-11 23:40:00.340 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '公用事业', '煤炭']  (得分: ['92', '74', '64'])
+2026-05-11 23:40:00.913 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-12-17 股票池: 过滤后 4086 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:01.368 | DEBUG    | __main__:run_backtest:98 - 2021-12-22 追踪止损 300061: 高点=13.08 现价=11.62 回撤=-11.2%
+2026-05-11 23:40:01.632 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 46.7  MA200=20.6 宽度=11.1 涨跌=15.0
+2026-05-11 23:40:01.633 | DEBUG    | __main__:_select_stocks:151 - 2021-12-24 大势:47 仓位:50%
+2026-05-11 23:40:02.113 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '公用事业', '食品饮料']  (得分: ['86', '69', '65'])
+2026-05-11 23:40:02.652 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-12-24 股票池: 过滤后 4094 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:03.123 | DEBUG    | __main__:run_backtest:98 - 2021-12-28 追踪止损 000665: 高点=6.95 现价=6.26 回撤=-9.9%
+2026-05-11 23:40:03.126 | DEBUG    | __main__:run_backtest:98 - 2021-12-29 追踪止损 600021: 高点=15.60 现价=13.39 回撤=-14.2%
+2026-05-11 23:40:03.387 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 55.7  MA200=26.1 宽度=15.3 涨跌=14.4
+2026-05-11 23:40:03.389 | DEBUG    | __main__:_select_stocks:151 - 2021-12-31 大势:56 仓位:50%
+2026-05-11 23:40:03.871 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '医药生物', '石油石化']  (得分: ['91', '66', '63'])
+2026-05-11 23:40:04.460 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2021-12-31 股票池: 过滤后 4100 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:04.935 | DEBUG    | __main__:run_backtest:98 - 2022-01-05 追踪止损 002432: 高点=51.85 现价=46.67 回撤=-10.0%
+2026-05-11 23:40:04.941 | DEBUG    | __main__:run_backtest:98 - 2022-01-07 追踪止损 300058: 高点=12.51 现价=11.39 回撤=-9.0%
+2026-05-11 23:40:04.941 | DEBUG    | __main__:run_backtest:98 - 2022-01-07 追踪止损 300459: 高点=5.87 现价=5.34 回撤=-9.0%
+2026-05-11 23:40:04.942 | DEBUG    | __main__:run_backtest:98 - 2022-01-07 追踪止损 300026: 高点=9.30 现价=8.03 回撤=-13.7%
+2026-05-11 23:40:04.942 | DEBUG    | __main__:run_backtest:98 - 2022-01-07 追踪止损 000819: 高点=22.30 现价=18.80 回撤=-15.7%
+2026-05-11 23:40:05.188 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 21.3  MA200=1.8 宽度=13.0 涨跌=6.5
+2026-05-11 23:40:05.189 | DEBUG    | __main__:_select_stocks:151 - 2022-01-07 大势:21 仓位:10%
+2026-05-11 23:40:05.436 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 16.1  MA200=0.0 宽度=11.1 涨跌=5.1
+2026-05-11 23:40:05.437 | DEBUG    | __main__:_select_stocks:151 - 2022-01-14 大势:16 仓位:10%
+2026-05-11 23:40:05.687 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 13.2  MA200=0.0 宽度=6.1 涨跌=7.1
+2026-05-11 23:40:05.688 | DEBUG    | __main__:_select_stocks:151 - 2022-01-21 大势:13 仓位:10%
+2026-05-11 23:40:05.941 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 5.2  MA200=0.0 宽度=1.8 涨跌=3.4
+2026-05-11 23:40:05.942 | DEBUG    | __main__:_select_stocks:151 - 2022-01-28 大势:5 仓位:10%
+2026-05-11 23:40:06.195 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 12.2  MA200=0.0 宽度=6.4 涨跌=5.8
+2026-05-11 23:40:06.196 | DEBUG    | __main__:_select_stocks:151 - 2022-02-11 大势:12 仓位:10%
+2026-05-11 23:40:06.450 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 20.9  MA200=0.0 宽度=11.3 涨跌=9.6
+2026-05-11 23:40:06.451 | DEBUG    | __main__:_select_stocks:151 - 2022-02-18 大势:21 仓位:10%
+2026-05-11 23:40:06.709 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 21.4  MA200=0.0 宽度=14.3 涨跌=7.1
+2026-05-11 23:40:06.710 | DEBUG    | __main__:_select_stocks:151 - 2022-02-25 大势:21 仓位:10%
+2026-05-11 23:40:06.965 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 24.8  MA200=0.0 宽度=12.3 涨跌=12.5
+2026-05-11 23:40:06.966 | DEBUG    | __main__:_select_stocks:151 - 2022-03-04 大势:25 仓位:10%
+2026-05-11 23:40:07.223 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 11.1  MA200=0.0 宽度=6.2 涨跌=4.9
+2026-05-11 23:40:07.224 | DEBUG    | __main__:_select_stocks:151 - 2022-03-11 大势:11 仓位:10%
+2026-05-11 23:40:07.482 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 9.1  MA200=0.0 宽度=5.9 涨跌=3.3
+2026-05-11 23:40:07.483 | DEBUG    | __main__:_select_stocks:151 - 2022-03-18 大势:9 仓位:10%
+2026-05-11 23:40:07.745 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 10.2  MA200=0.0 宽度=7.3 涨跌=2.9
+2026-05-11 23:40:07.745 | DEBUG    | __main__:_select_stocks:151 - 2022-03-25 大势:10 仓位:10%
+2026-05-11 23:40:08.010 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 16.3  MA200=0.0 宽度=10.7 涨跌=5.6
+2026-05-11 23:40:08.011 | DEBUG    | __main__:_select_stocks:151 - 2022-04-01 大势:16 仓位:10%
+2026-05-11 23:40:08.273 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 21.6  MA200=0.0 宽度=8.8 涨跌=12.7
+2026-05-11 23:40:08.274 | DEBUG    | __main__:_select_stocks:151 - 2022-04-08 大势:22 仓位:10%
+2026-05-11 23:40:08.536 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 19.7  MA200=0.0 宽度=6.0 涨跌=13.7
+2026-05-11 23:40:08.538 | DEBUG    | __main__:_select_stocks:151 - 2022-04-15 大势:20 仓位:10%
+2026-05-11 23:40:08.800 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 7.4  MA200=0.0 宽度=3.5 涨跌=3.9
+2026-05-11 23:40:08.801 | DEBUG    | __main__:_select_stocks:151 - 2022-04-22 大势:7 仓位:10%
+2026-05-11 23:40:09.065 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 7.1  MA200=0.0 宽度=3.1 涨跌=4.0
+2026-05-11 23:40:09.065 | DEBUG    | __main__:_select_stocks:151 - 2022-04-29 大势:7 仓位:10%
+2026-05-11 23:40:09.330 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 6.9  MA200=0.0 宽度=4.5 涨跌=2.4
+2026-05-11 23:40:09.331 | DEBUG    | __main__:_select_stocks:151 - 2022-05-06 大势:7 仓位:10%
+2026-05-11 23:40:09.596 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 19.3  MA200=0.0 宽度=13.2 涨跌=6.2
+2026-05-11 23:40:09.597 | DEBUG    | __main__:_select_stocks:151 - 2022-05-13 大势:19 仓位:10%
+2026-05-11 23:40:09.866 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 32.2  MA200=0.0 宽度=21.7 涨跌=10.5
+2026-05-11 23:40:09.867 | DEBUG    | __main__:_select_stocks:151 - 2022-05-20 大势:32 仓位:30%
+2026-05-11 23:40:10.411 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['综合', '建筑装饰', '电力设备']  (得分: ['83', '81', '69'])
+2026-05-11 23:40:10.959 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-05-20 股票池: 过滤后 4277 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:11.473 | DEBUG    | __main__:run_backtest:98 - 2022-05-24 追踪止损 600770: 高点=9.82 现价=8.84 回撤=-10.0%
+2026-05-11 23:40:11.473 | DEBUG    | __main__:run_backtest:98 - 2022-05-24 追踪止损 000779: 高点=14.96 现价=13.46 回撤=-10.0%
+2026-05-11 23:40:11.476 | DEBUG    | __main__:run_backtest:98 - 2022-05-25 追踪止损 000753: 高点=4.91 现价=4.33 回撤=-11.8%
+2026-05-11 23:40:11.747 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 43.5  MA200=0.0 宽度=19.0 涨跌=24.5
+2026-05-11 23:40:11.748 | DEBUG    | __main__:_select_stocks:151 - 2022-05-27 大势:43 仓位:50%
+2026-05-11 23:40:12.250 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['汽车', '煤炭', '建筑装饰']  (得分: ['71', '70', '69'])
+2026-05-11 23:40:12.850 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-05-27 股票池: 过滤后 4285 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:13.372 | DEBUG    | __main__:run_backtest:98 - 2022-05-31 追踪止损 600686: 高点=7.30 现价=6.57 回撤=-10.0%
+2026-05-11 23:40:13.373 | DEBUG    | __main__:run_backtest:98 - 2022-05-31 追踪止损 002761: 高点=41.14 现价=37.03 回撤=-10.0%
+2026-05-11 23:40:13.378 | DEBUG    | __main__:run_backtest:98 - 2022-06-02 追踪止损 600546: 高点=19.50 现价=16.27 回撤=-16.6%
+2026-05-11 23:40:13.645 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 39.6  MA200=0.0 宽度=20.5 涨跌=19.2
+2026-05-11 23:40:13.646 | DEBUG    | __main__:_select_stocks:151 - 2022-06-02 大势:40 仓位:30%
+2026-05-11 23:40:14.159 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['汽车', '综合', '电力设备']  (得分: ['80', '75', '70'])
+2026-05-11 23:40:14.779 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-06-02 股票池: 过滤后 4288 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:15.307 | DEBUG    | __main__:run_backtest:98 - 2022-06-09 追踪止损 000025: 高点=25.98 现价=23.38 回撤=-10.0%
+2026-05-11 23:40:15.580 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 42.8  MA200=0.0 宽度=18.2 涨跌=24.6
+2026-05-11 23:40:15.581 | DEBUG    | __main__:_select_stocks:151 - 2022-06-10 大势:43 仓位:50%
+2026-05-11 23:40:16.084 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['煤炭', '汽车', '综合']  (得分: ['85', '69', '68'])
+2026-05-11 23:40:16.690 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-06-10 股票池: 过滤后 4291 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:17.212 | DEBUG    | __main__:run_backtest:98 - 2022-06-15 追踪止损 600335: 高点=10.69 现价=9.62 回撤=-10.0%
+2026-05-11 23:40:17.213 | DEBUG    | __main__:run_backtest:98 - 2022-06-15 追踪止损 000833: 高点=11.93 现价=10.37 回撤=-13.1%
+2026-05-11 23:40:17.216 | DEBUG    | __main__:run_backtest:98 - 2022-06-16 追踪止损 600508: 高点=22.37 现价=19.86 回撤=-11.2%
+2026-05-11 23:40:17.219 | DEBUG    | __main__:run_backtest:98 - 2022-06-17 追踪止损 600546: 高点=20.88 现价=18.56 回撤=-11.1%
+2026-05-11 23:40:17.489 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 42.0  MA200=0.0 宽度=17.1 涨跌=25.0
+2026-05-11 23:40:17.489 | DEBUG    | __main__:_select_stocks:151 - 2022-06-17 大势:42 仓位:50%
+2026-05-11 23:40:17.999 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['汽车', '有色金属', '煤炭']  (得分: ['71', '70', '70'])
+2026-05-11 23:40:18.544 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-06-17 股票池: 过滤后 4295 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:19.068 | DEBUG    | __main__:run_backtest:98 - 2022-06-21 追踪止损 002160: 高点=6.18 现价=5.62 回撤=-9.1%
+2026-05-11 23:40:19.347 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 43.9  MA200=0.0 宽度=17.9 涨跌=26.0
+2026-05-11 23:40:19.348 | DEBUG    | __main__:_select_stocks:151 - 2022-06-24 大势:44 仓位:50%
+2026-05-11 23:40:19.858 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['汽车', '电力设备', '非银金融']  (得分: ['84', '82', '63'])
+2026-05-11 23:40:20.448 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-06-24 股票池: 过滤后 4302 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:20.979 | DEBUG    | __main__:run_backtest:98 - 2022-06-29 追踪止损 600335: 高点=11.84 现价=10.66 回撤=-10.0%
+2026-05-11 23:40:20.980 | DEBUG    | __main__:run_backtest:98 - 2022-06-29 追踪止损 002487: 高点=43.71 现价=39.96 回撤=-8.6%
+2026-05-11 23:40:21.257 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 41.9  MA200=0.0 宽度=16.5 涨跌=25.4
+2026-05-11 23:40:21.257 | DEBUG    | __main__:_select_stocks:151 - 2022-07-01 大势:42 仓位:50%
+2026-05-11 23:40:21.767 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['电力设备', '食品饮料', '有色金属']  (得分: ['76', '69', '68'])
+2026-05-11 23:40:22.374 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-07-01 股票池: 过滤后 4304 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:23.187 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 33.8  MA200=0.0 宽度=13.2 涨跌=20.6
+2026-05-11 23:40:23.188 | DEBUG    | __main__:_select_stocks:151 - 2022-07-08 大势:34 仓位:30%
+2026-05-11 23:40:23.698 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['电力设备', '汽车', '综合']  (得分: ['79', '66', '65'])
+2026-05-11 23:40:24.309 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-07-08 股票池: 过滤后 4310 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:24.843 | DEBUG    | __main__:run_backtest:98 - 2022-07-12 追踪止损 688063: 高点=419.00 现价=377.00 回撤=-10.0%
+2026-05-11 23:40:24.850 | DEBUG    | __main__:run_backtest:98 - 2022-07-15 追踪止损 000868: 高点=6.71 现价=6.08 回撤=-9.4%
+2026-05-11 23:40:24.851 | DEBUG    | __main__:run_backtest:98 - 2022-07-15 追踪止损 000025: 高点=26.10 现价=23.67 回撤=-9.3%
+2026-05-11 23:40:25.125 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 18.1  MA200=0.0 宽度=7.4 涨跌=10.7
+2026-05-11 23:40:25.126 | DEBUG    | __main__:_select_stocks:151 - 2022-07-15 大势:18 仓位:10%
+2026-05-11 23:40:25.401 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 22.3  MA200=0.0 宽度=13.9 涨跌=8.4
+2026-05-11 23:40:25.402 | DEBUG    | __main__:_select_stocks:151 - 2022-07-22 大势:22 仓位:10%
+2026-05-11 23:40:25.679 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 21.0  MA200=0.0 宽度=15.8 涨跌=5.2
+2026-05-11 23:40:25.680 | DEBUG    | __main__:_select_stocks:151 - 2022-07-29 大势:21 仓位:10%
+2026-05-11 23:40:25.958 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 17.8  MA200=0.0 宽度=12.1 涨跌=5.7
+2026-05-11 23:40:25.959 | DEBUG    | __main__:_select_stocks:151 - 2022-08-05 大势:18 仓位:10%
+2026-05-11 23:40:26.237 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 30.4  MA200=0.0 宽度=17.4 涨跌=13.0
+2026-05-11 23:40:26.238 | DEBUG    | __main__:_select_stocks:151 - 2022-08-12 大势:30 仓位:30%
+2026-05-11 23:40:26.762 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['电子', '通信', '计算机']  (得分: ['82', '71', '69'])
+2026-05-11 23:40:27.328 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-08-12 股票池: 过滤后 4351 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:27.885 | DEBUG    | __main__:run_backtest:98 - 2022-08-18 追踪止损 603990: 高点=32.22 现价=29.16 回撤=-9.5%
+2026-05-11 23:40:27.889 | DEBUG    | __main__:run_backtest:98 - 2022-08-19 追踪止损 002077: 高点=21.53 现价=19.38 回撤=-10.0%
+2026-05-11 23:40:27.889 | DEBUG    | __main__:run_backtest:98 - 2022-08-19 追踪止损 002156: 高点=22.56 现价=20.18 回撤=-10.5%
+2026-05-11 23:40:27.890 | DEBUG    | __main__:run_backtest:98 - 2022-08-19 追踪止损 002897: 高点=85.33 现价=76.99 回撤=-9.8%
+2026-05-11 23:40:28.210 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 26.3  MA200=0.0 宽度=15.1 涨跌=11.3
+2026-05-11 23:40:28.211 | DEBUG    | __main__:_select_stocks:151 - 2022-08-19 大势:26 仓位:30%
+2026-05-11 23:40:28.735 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['电子', '电力设备', '煤炭']  (得分: ['85', '77', '67'])
+2026-05-11 23:40:29.304 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-08-19 股票池: 过滤后 4364 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:29.862 | DEBUG    | __main__:run_backtest:98 - 2022-08-24 追踪止损 002045: 高点=18.66 现价=16.79 回撤=-10.0%
+2026-05-11 23:40:29.869 | DEBUG    | __main__:run_backtest:98 - 2022-08-26 追踪止损 002384: 高点=30.20 现价=27.33 回撤=-9.5%
+2026-05-11 23:40:30.149 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 20.7  MA200=0.0 宽度=9.3 涨跌=11.3
+2026-05-11 23:40:30.149 | DEBUG    | __main__:_select_stocks:151 - 2022-08-26 大势:21 仓位:10%
+2026-05-11 23:40:30.429 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 16.3  MA200=0.0 宽度=7.7 涨跌=8.6
+2026-05-11 23:40:30.430 | DEBUG    | __main__:_select_stocks:151 - 2022-09-02 大势:16 仓位:10%
+2026-05-11 23:40:30.711 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 19.0  MA200=0.0 宽度=9.4 涨跌=9.6
+2026-05-11 23:40:30.712 | DEBUG    | __main__:_select_stocks:151 - 2022-09-09 大势:19 仓位:10%
+2026-05-11 23:40:30.994 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 4.5  MA200=0.0 宽度=0.0 涨跌=4.5
+2026-05-11 23:40:30.995 | DEBUG    | __main__:_select_stocks:151 - 2022-09-16 大势:4 仓位:10%
+2026-05-11 23:40:31.278 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 4.5  MA200=0.0 宽度=0.0 涨跌=4.5
+2026-05-11 23:40:31.279 | DEBUG    | __main__:_select_stocks:151 - 2022-09-23 大势:4 仓位:10%
+2026-05-11 23:40:31.563 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 4.8  MA200=0.0 宽度=0.0 涨跌=4.8
+2026-05-11 23:40:31.564 | DEBUG    | __main__:_select_stocks:151 - 2022-09-30 大势:5 仓位:10%
+2026-05-11 23:40:31.852 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 6.1  MA200=0.0 宽度=0.0 涨跌=6.1
+2026-05-11 23:40:31.852 | DEBUG    | __main__:_select_stocks:151 - 2022-10-14 大势:6 仓位:10%
+2026-05-11 23:40:32.139 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 7.6  MA200=0.0 宽度=0.0 涨跌=7.6
+2026-05-11 23:40:32.139 | DEBUG    | __main__:_select_stocks:151 - 2022-10-21 大势:8 仓位:10%
+2026-05-11 23:40:32.426 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 4.4  MA200=0.0 宽度=0.0 涨跌=4.4
+2026-05-11 23:40:32.427 | DEBUG    | __main__:_select_stocks:151 - 2022-10-28 大势:4 仓位:10%
+2026-05-11 23:40:32.717 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 37.5  MA200=0.0 宽度=22.1 涨跌=15.4
+2026-05-11 23:40:32.718 | DEBUG    | __main__:_select_stocks:151 - 2022-11-04 大势:38 仓位:30%
+2026-05-11 23:40:33.261 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['其他', '家用电器', '机械设备']  (得分: ['57', '54', '49'])
+2026-05-11 23:40:33.878 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-11-04 股票池: 过滤后 4433 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:34.470 | DEBUG    | __main__:run_backtest:98 - 2022-11-11 追踪止损 002943: 高点=70.90 现价=64.63 回撤=-8.8%
+2026-05-11 23:40:34.470 | DEBUG    | __main__:run_backtest:98 - 2022-11-11 追踪止损 002248: 高点=11.91 现价=10.87 回撤=-8.7%
+2026-05-11 23:40:34.760 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 34.0  MA200=0.0 宽度=21.2 涨跌=12.8
+2026-05-11 23:40:34.761 | DEBUG    | __main__:_select_stocks:151 - 2022-11-11 大势:34 仓位:30%
+2026-05-11 23:40:35.304 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['社会服务', '医药生物', '机械设备']  (得分: ['89', '68', '67'])
+2026-05-11 23:40:35.939 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-11-11 股票池: 过滤后 4440 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:36.528 | DEBUG    | __main__:run_backtest:98 - 2022-11-15 追踪止损 000721: 高点=10.78 现价=9.70 回撤=-10.0%
+2026-05-11 23:40:36.531 | DEBUG    | __main__:run_backtest:98 - 2022-11-16 追踪止损 002317: 高点=37.98 现价=34.38 回撤=-9.5%
+2026-05-11 23:40:36.535 | DEBUG    | __main__:run_backtest:98 - 2022-11-17 追踪止损 600520: 高点=16.72 现价=15.35 回撤=-8.2%
+2026-05-11 23:40:36.829 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 38.1  MA200=0.0 宽度=20.6 涨跌=17.5
+2026-05-11 23:40:36.829 | DEBUG    | __main__:_select_stocks:151 - 2022-11-18 大势:38 仓位:30%
+2026-05-11 23:40:37.371 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '社会服务', '医药生物']  (得分: ['79', '79', '76'])
+2026-05-11 23:40:38.010 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-11-18 股票池: 过滤后 4443 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:38.602 | DEBUG    | __main__:run_backtest:98 - 2022-11-22 追踪止损 000721: 高点=10.36 现价=9.32 回撤=-10.0%
+2026-05-11 23:40:38.606 | DEBUG    | __main__:run_backtest:98 - 2022-11-23 追踪止损 000681: 高点=14.11 现价=12.21 回撤=-13.5%
+2026-05-11 23:40:38.606 | DEBUG    | __main__:run_backtest:98 - 2022-11-23 追踪止损 002858: 高点=15.53 现价=13.41 回撤=-13.7%
+2026-05-11 23:40:38.607 | DEBUG    | __main__:run_backtest:98 - 2022-11-23 追踪止损 002603: 高点=46.00 现价=39.99 回撤=-13.1%
+2026-05-11 23:40:38.607 | DEBUG    | __main__:run_backtest:98 - 2022-11-23 追踪止损 002317: 高点=39.57 现价=35.90 回撤=-9.3%
+2026-05-11 23:40:38.904 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 35.6  MA200=0.0 宽度=12.0 涨跌=23.6
+2026-05-11 23:40:38.905 | DEBUG    | __main__:_select_stocks:151 - 2022-11-25 大势:36 仓位:30%
+2026-05-11 23:40:39.450 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['房地产', '传媒', '建筑材料']  (得分: ['86', '68', '66'])
+2026-05-11 23:40:40.086 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-11-25 股票池: 过滤后 4452 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:40.686 | DEBUG    | __main__:run_backtest:98 - 2022-12-01 追踪止损 300374: 高点=17.07 现价=15.60 回撤=-8.6%
+2026-05-11 23:40:40.691 | DEBUG    | __main__:run_backtest:98 - 2022-12-02 追踪止损 000965: 高点=5.81 现价=5.25 回撤=-9.6%
+2026-05-11 23:40:40.691 | DEBUG    | __main__:run_backtest:98 - 2022-12-02 追踪止损 000620: 高点=3.48 现价=3.12 回撤=-10.3%
+2026-05-11 23:40:40.983 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 34.1  MA200=0.0 宽度=16.7 涨跌=17.4
+2026-05-11 23:40:40.983 | DEBUG    | __main__:_select_stocks:151 - 2022-12-02 大势:34 仓位:30%
+2026-05-11 23:40:41.529 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['房地产', '传媒', '银行']  (得分: ['92', '67', '64'])
+2026-05-11 23:40:42.107 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-12-02 股票池: 过滤后 4459 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:42.699 | DEBUG    | __main__:run_backtest:98 - 2022-12-06 追踪止损 000006: 高点=6.17 现价=5.56 回撤=-9.9%
+2026-05-11 23:40:42.702 | DEBUG    | __main__:run_backtest:98 - 2022-12-07 追踪止损 600633: 高点=9.91 现价=9.05 回撤=-8.7%
+2026-05-11 23:40:43.003 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 39.6  MA200=4.4 宽度=14.0 涨跌=21.2
+2026-05-11 23:40:43.003 | DEBUG    | __main__:_select_stocks:151 - 2022-12-09 大势:40 仓位:30%
+2026-05-11 23:40:43.553 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['房地产', '食品饮料', '银行']  (得分: ['83', '79', '71'])
+2026-05-11 23:40:44.172 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-12-09 股票池: 过滤后 4473 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:44.780 | DEBUG    | __main__:run_backtest:98 - 2022-12-15 追踪止损 000011: 高点=12.38 现价=11.26 回撤=-9.0%
+2026-05-11 23:40:45.074 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 27.3  MA200=0.0 宽度=9.5 涨跌=17.9
+2026-05-11 23:40:45.075 | DEBUG    | __main__:_select_stocks:151 - 2022-12-16 大势:27 仓位:30%
+2026-05-11 23:40:45.625 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['食品饮料', '房地产', '纺织服饰']  (得分: ['81', '77', '70'])
+2026-05-11 23:40:46.257 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2022-12-16 股票池: 过滤后 4485 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:46.861 | DEBUG    | __main__:run_backtest:98 - 2022-12-20 追踪止损 000716: 高点=7.37 现价=6.63 回撤=-10.0%
+2026-05-11 23:40:46.862 | DEBUG    | __main__:run_backtest:98 - 2022-12-20 追踪止损 000006: 高点=6.10 现价=5.48 回撤=-10.2%
+2026-05-11 23:40:46.862 | DEBUG    | __main__:run_backtest:98 - 2022-12-20 追踪止损 000797: 高点=4.25 现价=3.83 回撤=-9.9%
+2026-05-11 23:40:46.870 | DEBUG    | __main__:run_backtest:98 - 2022-12-23 追踪止损 002875: 高点=27.92 现价=25.13 回撤=-10.0%
+2026-05-11 23:40:47.165 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 15.6  MA200=0.0 宽度=3.0 涨跌=12.7
+2026-05-11 23:40:47.166 | DEBUG    | __main__:_select_stocks:151 - 2022-12-23 大势:16 仓位:10%
+2026-05-11 23:40:47.462 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 16.9  MA200=0.0 宽度=5.7 涨跌=11.1
+2026-05-11 23:40:47.462 | DEBUG    | __main__:_select_stocks:151 - 2022-12-30 大势:17 仓位:10%
+2026-05-11 23:40:47.763 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 33.7  MA200=6.1 宽度=14.7 涨跌=12.8
+2026-05-11 23:40:47.764 | DEBUG    | __main__:_select_stocks:151 - 2023-01-06 大势:34 仓位:30%
+2026-05-11 23:40:48.317 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['美容护理', '传媒', '食品饮料']  (得分: ['77', '75', '75'])
+2026-05-11 23:40:48.960 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-01-06 股票池: 过滤后 4512 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:49.585 | DEBUG    | __main__:run_backtest:98 - 2023-01-13 追踪止损 000716: 高点=10.73 现价=9.66 回撤=-10.0%
+2026-05-11 23:40:49.885 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 60.3  MA200=26.5 宽度=16.4 涨跌=17.3
+2026-05-11 23:40:49.886 | DEBUG    | __main__:_select_stocks:151 - 2023-01-13 大势:60 仓位:70%
+2026-05-11 23:40:50.442 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '银行', '非银金融']  (得分: ['80', '75', '71'])
+2026-05-11 23:40:51.087 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-01-13 股票池: 过滤后 4521 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:51.708 | DEBUG    | __main__:run_backtest:98 - 2023-01-18 追踪止损 002238: 高点=9.61 现价=8.65 回撤=-10.0%
+2026-05-11 23:40:52.020 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 89.4  MA200=40.0 宽度=23.6 涨跌=25.8
+2026-05-11 23:40:52.021 | DEBUG    | __main__:_select_stocks:151 - 2023-01-20 大势:89 仓位:90%
+2026-05-11 23:40:52.586 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['非银金融', '计算机', '有色金属']  (得分: ['72', '70', '65'])
+2026-05-11 23:40:53.178 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-01-20 股票池: 过滤后 4530 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:54.174 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 64.8  MA200=40.0 宽度=0.0 涨跌=24.8
+2026-05-11 23:40:54.175 | DEBUG    | __main__:_select_stocks:151 - 2023-02-03 大势:65 仓位:70%
+2026-05-11 23:40:54.745 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['计算机', '有色金属', '非银金融']  (得分: ['75', '70', '66'])
+2026-05-11 23:40:55.345 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-02-03 股票池: 过滤后 4549 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:55.987 | DEBUG    | __main__:run_backtest:98 - 2023-02-08 追踪止损 300339: 高点=27.28 现价=24.38 回撤=-10.6%
+2026-05-11 23:40:56.301 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 60.3  MA200=40.0 宽度=0.0 涨跌=20.3
+2026-05-11 23:40:56.301 | DEBUG    | __main__:_select_stocks:151 - 2023-02-10 大势:60 仓位:70%
+2026-05-11 23:40:56.877 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['计算机', '通信', '电子']  (得分: ['83', '79', '65'])
+2026-05-11 23:40:57.527 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-02-10 股票池: 过滤后 4558 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:40:58.179 | DEBUG    | __main__:run_backtest:98 - 2023-02-16 追踪止损 300520: 高点=27.55 现价=25.25 回撤=-8.3%
+2026-05-11 23:40:58.180 | DEBUG    | __main__:run_backtest:98 - 2023-02-16 追踪止损 688256: 高点=89.10 现价=80.50 回撤=-9.7%
+2026-05-11 23:40:58.183 | DEBUG    | __main__:run_backtest:98 - 2023-02-17 追踪止损 300394: 高点=41.96 现价=37.94 回撤=-9.6%
+2026-05-11 23:40:58.492 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 40.4  MA200=27.1 宽度=0.0 涨跌=13.3
+2026-05-11 23:40:58.493 | DEBUG    | __main__:_select_stocks:151 - 2023-02-17 大势:40 仓位:50%
+2026-05-11 23:40:59.065 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['通信', '传媒', '计算机']  (得分: ['75', '74', '69'])
+2026-05-11 23:40:59.718 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-02-17 股票池: 过滤后 4565 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:00.355 | DEBUG    | __main__:run_backtest:98 - 2023-02-20 追踪止损 688787: 高点=244.80 现价=218.90 回撤=-10.6%
+2026-05-11 23:41:00.363 | DEBUG    | __main__:run_backtest:98 - 2023-02-23 追踪止损 601728: 高点=6.15 现价=5.45 回撤=-11.4%
+2026-05-11 23:41:00.364 | DEBUG    | __main__:run_backtest:98 - 2023-02-23 追踪止损 300624: 高点=55.50 现价=48.00 回撤=-13.5%
+2026-05-11 23:41:00.673 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 58.8  MA200=34.3 宽度=14.2 涨跌=10.2
+2026-05-11 23:41:00.674 | DEBUG    | __main__:_select_stocks:151 - 2023-02-24 大势:59 仓位:50%
+2026-05-11 23:41:01.251 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['机械设备', '家用电器', '其他']  (得分: ['61', '49', '42'])
+2026-05-11 23:41:01.917 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-02-24 股票池: 过滤后 4573 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:02.875 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 67.7  MA200=40.0 宽度=14.4 涨跌=13.3
+2026-05-11 23:41:02.876 | DEBUG    | __main__:_select_stocks:151 - 2023-03-03 大势:68 仓位:70%
+2026-05-11 23:41:03.453 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['通信', '钢铁', '传媒']  (得分: ['92', '72', '71'])
+2026-05-11 23:41:04.121 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-03-03 股票池: 过滤后 4580 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:05.087 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 25.0  MA200=9.1 宽度=7.6 涨跌=8.3
+2026-05-11 23:41:05.087 | DEBUG    | __main__:_select_stocks:151 - 2023-03-10 大势:25 仓位:30%
+2026-05-11 23:41:05.661 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['通信', '传媒', '建筑装饰']  (得分: ['88', '76', '70'])
+2026-05-11 23:41:06.266 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-03-10 股票池: 过滤后 4587 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:07.244 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 24.8  MA200=6.5 宽度=7.7 涨跌=10.6
+2026-05-11 23:41:07.245 | DEBUG    | __main__:_select_stocks:151 - 2023-03-17 大势:25 仓位:10%
+2026-05-11 23:41:07.558 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 48.2  MA200=24.1 宽度=12.1 涨跌=12.0
+2026-05-11 23:41:07.559 | DEBUG    | __main__:_select_stocks:151 - 2023-03-24 大势:48 仓位:50%
+2026-05-11 23:41:08.137 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '通信', '计算机']  (得分: ['95', '90', '78'])
+2026-05-11 23:41:08.787 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-03-24 股票池: 过滤后 4603 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:09.445 | DEBUG    | __main__:run_backtest:98 - 2023-03-28 追踪止损 300418: 高点=42.45 现价=38.25 回撤=-9.9%
+2026-05-11 23:41:09.766 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 52.3  MA200=30.2 宽度=11.5 涨跌=10.6
+2026-05-11 23:41:09.766 | DEBUG    | __main__:_select_stocks:151 - 2023-03-31 大势:52 仓位:50%
+2026-05-11 23:41:10.345 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '通信', '计算机']  (得分: ['97', '84', '77'])
+2026-05-11 23:41:11.000 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-03-31 股票池: 过滤后 4611 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:11.665 | DEBUG    | __main__:run_backtest:98 - 2023-04-06 追踪止损 300364: 高点=23.70 现价=19.99 回撤=-15.7%
+2026-05-11 23:41:11.666 | DEBUG    | __main__:run_backtest:98 - 2023-04-06 追踪止损 300229: 高点=33.80 现价=30.16 回撤=-10.8%
+2026-05-11 23:41:11.668 | DEBUG    | __main__:run_backtest:98 - 2023-04-07 追踪止损 688111: 高点=511.92 现价=470.34 回撤=-8.1%
+2026-05-11 23:41:11.985 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 58.3  MA200=40.0 宽度=0.0 涨跌=18.3
+2026-05-11 23:41:11.985 | DEBUG    | __main__:_select_stocks:151 - 2023-04-07 大势:58 仓位:50%
+2026-05-11 23:41:12.565 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '通信', '电子']  (得分: ['91', '83', '77'])
+2026-05-11 23:41:13.233 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-04-07 股票池: 过滤后 4620 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:13.902 | DEBUG    | __main__:run_backtest:98 - 2023-04-11 追踪止损 002222: 高点=30.32 现价=27.89 回撤=-8.0%
+2026-05-11 23:41:13.910 | DEBUG    | __main__:run_backtest:98 - 2023-04-14 追踪止损 603083: 高点=48.60 现价=43.00 回撤=-11.5%
+2026-05-11 23:41:14.228 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 61.0  MA200=40.0 宽度=0.0 涨跌=21.0
+2026-05-11 23:41:14.229 | DEBUG    | __main__:_select_stocks:151 - 2023-04-14 大势:61 仓位:70%
+2026-05-11 23:41:14.817 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '通信', '电子']  (得分: ['92', '78', '73'])
+2026-05-11 23:41:15.523 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-04-14 股票池: 过滤后 4633 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:16.229 | DEBUG    | __main__:run_backtest:98 - 2023-04-21 追踪止损 300364: 高点=25.80 现价=22.93 回撤=-11.1%
+2026-05-11 23:41:16.229 | DEBUG    | __main__:run_backtest:98 - 2023-04-21 追踪止损 688072: 高点=455.11 现价=409.00 回撤=-10.1%
+2026-05-11 23:41:16.558 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 38.1  MA200=25.4 宽度=0.0 涨跌=12.7
+2026-05-11 23:41:16.559 | DEBUG    | __main__:_select_stocks:151 - 2023-04-21 大势:38 仓位:30%
+2026-05-11 23:41:17.167 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '通信', '石油石化']  (得分: ['92', '79', '62'])
+2026-05-11 23:41:17.874 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-04-21 股票池: 过滤后 4645 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:18.578 | DEBUG    | __main__:run_backtest:98 - 2023-04-27 追踪止损 300002: 高点=14.68 现价=12.35 回撤=-15.9%
+2026-05-11 23:41:18.579 | DEBUG    | __main__:run_backtest:98 - 2023-04-27 追踪止损 603083: 高点=64.41 现价=57.97 回撤=-10.0%
+2026-05-11 23:41:18.579 | DEBUG    | __main__:run_backtest:98 - 2023-04-27 追踪止损 300308: 高点=85.41 现价=78.49 回撤=-8.1%
+2026-05-11 23:41:18.913 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 39.6  MA200=26.9 宽度=0.0 涨跌=12.7
+2026-05-11 23:41:18.913 | DEBUG    | __main__:_select_stocks:151 - 2023-04-28 大势:40 仓位:30%
+2026-05-11 23:41:19.513 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '银行', '建筑装饰']  (得分: ['92', '64', '63'])
+2026-05-11 23:41:20.172 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-04-28 股票池: 过滤后 4660 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:21.195 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 33.2  MA200=23.8 宽度=0.0 涨跌=9.4
+2026-05-11 23:41:21.196 | DEBUG    | __main__:_select_stocks:151 - 2023-05-05 大势:33 仓位:30%
+2026-05-11 23:41:21.812 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '银行', '建筑装饰']  (得分: ['92', '68', '65'])
+2026-05-11 23:41:22.521 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-05-05 股票池: 过滤后 4666 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:23.215 | DEBUG    | __main__:run_backtest:98 - 2023-05-09 追踪止损 300058: 高点=14.10 现价=12.68 回撤=-10.1%
+2026-05-11 23:41:23.221 | DEBUG    | __main__:run_backtest:98 - 2023-05-11 追踪止损 601988: 高点=4.56 现价=4.16 回撤=-8.8%
+2026-05-11 23:41:23.225 | DEBUG    | __main__:run_backtest:98 - 2023-05-12 追踪止损 601186: 高点=12.53 现价=10.99 回撤=-12.3%
+2026-05-11 23:41:23.556 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 13.0  MA200=6.3 宽度=0.0 涨跌=6.7
+2026-05-11 23:41:23.556 | DEBUG    | __main__:_select_stocks:151 - 2023-05-12 大势:13 仓位:10%
+2026-05-11 23:41:23.881 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 15.8  MA200=10.2 宽度=0.0 涨跌=5.6
+2026-05-11 23:41:23.882 | DEBUG    | __main__:_select_stocks:151 - 2023-05-19 大势:16 仓位:10%
+2026-05-11 23:41:24.202 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 9.1  MA200=0.0 宽度=0.0 涨跌=9.1
+2026-05-11 23:41:24.202 | DEBUG    | __main__:_select_stocks:151 - 2023-05-26 大势:9 仓位:10%
+2026-05-11 23:41:24.538 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 22.7  MA200=0.0 宽度=14.7 涨跌=8.0
+2026-05-11 23:41:24.539 | DEBUG    | __main__:_select_stocks:151 - 2023-06-02 大势:23 仓位:10%
+2026-05-11 23:41:24.865 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 19.4  MA200=0.0 宽度=9.9 涨跌=9.5
+2026-05-11 23:41:24.866 | DEBUG    | __main__:_select_stocks:151 - 2023-06-09 大势:19 仓位:10%
+2026-05-11 23:41:25.191 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 51.7  MA200=22.1 宽度=15.2 涨跌=14.4
+2026-05-11 23:41:25.192 | DEBUG    | __main__:_select_stocks:151 - 2023-06-16 大势:52 仓位:50%
+2026-05-11 23:41:25.809 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['通信', '传媒', '计算机']  (得分: ['87', '86', '82'])
+2026-05-11 23:41:26.518 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-06-16 股票池: 过滤后 4688 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:27.243 | DEBUG    | __main__:run_backtest:98 - 2023-06-21 追踪止损 002995: 高点=43.90 现价=37.29 回撤=-15.1%
+2026-05-11 23:41:27.243 | DEBUG    | __main__:run_backtest:98 - 2023-06-21 追踪止损 603019: 高点=61.12 现价=54.66 回撤=-10.6%
+2026-05-11 23:41:27.582 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 22.9  MA200=0.0 宽度=9.3 涨跌=13.5
+2026-05-11 23:41:27.583 | DEBUG    | __main__:_select_stocks:151 - 2023-06-21 大势:23 仓位:10%
+2026-05-11 23:41:27.926 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 14.7  MA200=0.0 宽度=0.0 涨跌=14.7
+2026-05-11 23:41:27.927 | DEBUG    | __main__:_select_stocks:151 - 2023-06-30 大势:15 仓位:10%
+2026-05-11 23:41:28.269 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 14.7  MA200=0.0 宽度=0.0 涨跌=14.7
+2026-05-11 23:41:28.271 | DEBUG    | __main__:_select_stocks:151 - 2023-07-07 大势:15 仓位:10%
+2026-05-11 23:41:28.617 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 24.6  MA200=9.9 宽度=0.0 涨跌=14.7
+2026-05-11 23:41:28.617 | DEBUG    | __main__:_select_stocks:151 - 2023-07-14 大势:25 仓位:10%
+2026-05-11 23:41:28.964 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 23.5  MA200=0.0 宽度=12.0 涨跌=11.5
+2026-05-11 23:41:28.965 | DEBUG    | __main__:_select_stocks:151 - 2023-07-21 大势:24 仓位:10%
+2026-05-11 23:41:29.308 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 61.5  MA200=28.1 宽度=14.0 涨跌=19.3
+2026-05-11 23:41:29.309 | DEBUG    | __main__:_select_stocks:151 - 2023-07-28 大势:61 仓位:70%
+2026-05-11 23:41:29.921 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['房地产', '非银金融', '建筑装饰']  (得分: ['77', '72', '67'])
+2026-05-11 23:41:30.607 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-07-28 股票池: 过滤后 4730 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:31.352 | DEBUG    | __main__:run_backtest:98 - 2023-08-01 追踪止损 300844: 高点=57.13 现价=50.83 回撤=-11.0%
+2026-05-11 23:41:31.690 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 71.3  MA200=35.5 宽度=14.1 涨跌=21.7
+2026-05-11 23:41:31.690 | DEBUG    | __main__:_select_stocks:151 - 2023-08-04 大势:71 仓位:70%
+2026-05-11 23:41:32.302 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['非银金融', '房地产', '建筑装饰']  (得分: ['86', '84', '69'])
+2026-05-11 23:41:32.994 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-08-04 股票池: 过滤后 4738 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:33.736 | DEBUG    | __main__:run_backtest:98 - 2023-08-08 追踪止损 601099: 高点=4.86 现价=4.46 回撤=-8.2%
+2026-05-11 23:41:33.745 | DEBUG    | __main__:run_backtest:98 - 2023-08-11 追踪止损 600906: 高点=9.79 现价=8.86 回撤=-9.5%
+2026-05-11 23:41:34.079 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 18.0  MA200=0.0 宽度=6.0 涨跌=11.9
+2026-05-11 23:41:34.080 | DEBUG    | __main__:_select_stocks:151 - 2023-08-11 大势:18 仓位:10%
+2026-05-11 23:41:34.423 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 15.9  MA200=0.0 宽度=4.9 涨跌=11.0
+2026-05-11 23:41:34.423 | DEBUG    | __main__:_select_stocks:151 - 2023-08-18 大势:16 仓位:10%
+2026-05-11 23:41:34.759 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 6.4  MA200=0.0 宽度=2.7 涨跌=3.7
+2026-05-11 23:41:34.760 | DEBUG    | __main__:_select_stocks:151 - 2023-08-25 大势:6 仓位:10%
+2026-05-11 23:41:35.098 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 18.4  MA200=0.0 宽度=13.5 涨跌=4.9
+2026-05-11 23:41:35.099 | DEBUG    | __main__:_select_stocks:151 - 2023-09-01 大势:18 仓位:10%
+2026-05-11 23:41:35.438 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 21.5  MA200=0.0 宽度=14.1 涨跌=7.4
+2026-05-11 23:41:35.439 | DEBUG    | __main__:_select_stocks:151 - 2023-09-08 大势:22 仓位:10%
+2026-05-11 23:41:35.777 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 22.4  MA200=0.0 宽度=12.1 涨跌=10.3
+2026-05-11 23:41:35.778 | DEBUG    | __main__:_select_stocks:151 - 2023-09-15 大势:22 仓位:10%
+2026-05-11 23:41:36.119 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 26.4  MA200=0.0 宽度=10.7 涨跌=15.7
+2026-05-11 23:41:36.119 | DEBUG    | __main__:_select_stocks:151 - 2023-09-22 大势:26 仓位:30%
+2026-05-11 23:41:36.742 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['煤炭', '通信', '电子']  (得分: ['85', '70', '68'])
+2026-05-11 23:41:37.446 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-09-22 股票池: 过滤后 4791 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:38.221 | DEBUG    | __main__:run_backtest:98 - 2023-09-28 追踪止损 002654: 高点=12.83 现价=11.42 回撤=-11.0%
+2026-05-11 23:41:38.561 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 23.3  MA200=0.0 宽度=12.8 涨跌=10.5
+2026-05-11 23:41:38.562 | DEBUG    | __main__:_select_stocks:151 - 2023-09-28 大势:23 仓位:10%
+2026-05-11 23:41:38.904 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 9.6  MA200=0.0 宽度=0.0 涨跌=9.6
+2026-05-11 23:41:38.905 | DEBUG    | __main__:_select_stocks:151 - 2023-10-13 大势:10 仓位:10%
+2026-05-11 23:41:39.248 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 5.0  MA200=0.0 宽度=0.0 涨跌=5.0
+2026-05-11 23:41:39.249 | DEBUG    | __main__:_select_stocks:151 - 2023-10-20 大势:5 仓位:10%
+2026-05-11 23:41:39.592 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 8.8  MA200=0.0 宽度=0.0 涨跌=8.8
+2026-05-11 23:41:39.592 | DEBUG    | __main__:_select_stocks:151 - 2023-10-27 大势:9 仓位:10%
+2026-05-11 23:41:39.936 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 27.4  MA200=0.0 宽度=18.9 涨跌=8.5
+2026-05-11 23:41:39.937 | DEBUG    | __main__:_select_stocks:151 - 2023-11-03 大势:27 仓位:30%
+2026-05-11 23:41:40.566 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['其他', '机械设备', '家用电器']  (得分: ['58', '46', '44'])
+2026-05-11 23:41:41.272 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-11-03 股票池: 过滤后 4838 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:42.062 | DEBUG    | __main__:run_backtest:98 - 2023-11-08 追踪止损 001306: 高点=7.70 现价=7.03 回撤=-8.7%
+2026-05-11 23:41:42.067 | DEBUG    | __main__:run_backtest:98 - 2023-11-10 追踪止损 600619: 高点=8.76 现价=8.01 回撤=-8.6%
+2026-05-11 23:41:42.068 | DEBUG    | __main__:run_backtest:98 - 2023-11-10 追踪止损 300279: 高点=7.25 现价=6.62 回撤=-8.7%
+2026-05-11 23:41:42.413 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 33.8  MA200=0.0 宽度=23.4 涨跌=10.3
+2026-05-11 23:41:42.414 | DEBUG    | __main__:_select_stocks:151 - 2023-11-10 大势:34 仓位:30%
+2026-05-11 23:41:43.045 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '电子', '建筑装饰']  (得分: ['83', '67', '62'])
+2026-05-11 23:41:43.756 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-11-10 股票池: 过滤后 4849 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:44.547 | DEBUG    | __main__:run_backtest:98 - 2023-11-15 追踪止损 300364: 高点=30.30 现价=27.20 回撤=-10.2%
+2026-05-11 23:41:44.548 | DEBUG    | __main__:run_backtest:98 - 2023-11-15 追踪止损 603929: 高点=28.75 现价=26.21 回撤=-8.8%
+2026-05-11 23:41:44.551 | DEBUG    | __main__:run_backtest:98 - 2023-11-16 追踪止损 000628: 高点=62.50 现价=56.60 回撤=-9.4%
+2026-05-11 23:41:44.554 | DEBUG    | __main__:run_backtest:98 - 2023-11-17 追踪止损 002222: 高点=35.33 现价=32.13 回撤=-9.1%
+2026-05-11 23:41:44.899 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 43.1  MA200=0.0 宽度=25.3 涨跌=17.8
+2026-05-11 23:41:44.900 | DEBUG    | __main__:_select_stocks:151 - 2023-11-17 大势:43 仓位:50%
+2026-05-11 23:41:45.530 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '电子', '汽车']  (得分: ['85', '74', '73'])
+2026-05-11 23:41:46.251 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-11-17 股票池: 过滤后 4861 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:47.047 | DEBUG    | __main__:run_backtest:98 - 2023-11-22 追踪止损 300475: 高点=38.69 现价=35.11 回撤=-9.3%
+2026-05-11 23:41:47.048 | DEBUG    | __main__:run_backtest:98 - 2023-11-22 追踪止损 300375: 高点=6.68 现价=6.01 回撤=-10.0%
+2026-05-11 23:41:47.051 | DEBUG    | __main__:run_backtest:98 - 2023-11-23 追踪止损 300063: 高点=8.48 现价=7.59 回撤=-10.5%
+2026-05-11 23:41:47.052 | DEBUG    | __main__:run_backtest:98 - 2023-11-23 追踪止损 002400: 高点=7.38 现价=6.50 回撤=-11.9%
+2026-05-11 23:41:47.055 | DEBUG    | __main__:run_backtest:98 - 2023-11-24 追踪止损 002654: 高点=15.59 现价=13.99 回撤=-10.3%
+2026-05-11 23:41:47.055 | DEBUG    | __main__:run_backtest:98 - 2023-11-24 追踪止损 603178: 高点=50.45 现价=42.84 回撤=-15.1%
+2026-05-11 23:41:47.403 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 30.3  MA200=0.0 宽度=16.9 涨跌=13.4
+2026-05-11 23:41:47.404 | DEBUG    | __main__:_select_stocks:151 - 2023-11-24 大势:30 仓位:30%
+2026-05-11 23:41:48.038 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '其他', '医药生物']  (得分: ['86', '84', '62'])
+2026-05-11 23:41:48.693 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-11-24 股票池: 过滤后 4870 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:49.497 | DEBUG    | __main__:run_backtest:98 - 2023-11-30 追踪止损 002559: 高点=14.53 现价=13.09 回撤=-9.9%
+2026-05-11 23:41:49.848 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 24.4  MA200=0.0 宽度=14.1 涨跌=10.3
+2026-05-11 23:41:49.848 | DEBUG    | __main__:_select_stocks:151 - 2023-12-01 大势:24 仓位:10%
+2026-05-11 23:41:50.196 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 13.6  MA200=0.0 宽度=6.9 涨跌=6.7
+2026-05-11 23:41:50.197 | DEBUG    | __main__:_select_stocks:151 - 2023-12-08 大势:14 仓位:10%
+2026-05-11 23:41:50.546 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 13.7  MA200=0.0 宽度=8.6 涨跌=5.1
+2026-05-11 23:41:50.547 | DEBUG    | __main__:_select_stocks:151 - 2023-12-15 大势:14 仓位:10%
+2026-05-11 23:41:50.900 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 10.0  MA200=0.0 宽度=4.7 涨跌=5.3
+2026-05-11 23:41:50.901 | DEBUG    | __main__:_select_stocks:151 - 2023-12-22 大势:10 仓位:10%
+2026-05-11 23:41:51.303 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 25.6  MA200=0.0 宽度=15.0 涨跌=10.6
+2026-05-11 23:41:51.304 | DEBUG    | __main__:_select_stocks:151 - 2023-12-29 大势:26 仓位:30%
+2026-05-11 23:41:51.957 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['其他', '电力设备', '综合']  (得分: ['86', '66', '64'])
+2026-05-11 23:41:52.625 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2023-12-29 股票池: 过滤后 4903 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:53.471 | DEBUG    | __main__:run_backtest:98 - 2024-01-03 追踪止损 003021: 高点=91.62 现价=82.46 回撤=-10.0%
+2026-05-11 23:41:53.474 | DEBUG    | __main__:run_backtest:98 - 2024-01-04 追踪止损 605118: 高点=29.27 现价=26.34 回撤=-10.0%
+2026-05-11 23:41:53.483 | DEBUG    | __main__:run_backtest:98 - 2024-01-09 追踪止损 603628: 高点=25.78 现价=23.20 回撤=-10.0%
+2026-05-11 23:41:53.486 | DEBUG    | __main__:run_backtest:98 - 2024-01-10 追踪止损 000705: 高点=11.16 现价=9.80 回撤=-12.2%
+2026-05-11 23:41:53.846 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 18.1  MA200=0.0 宽度=9.5 涨跌=8.7
+2026-05-11 23:41:53.847 | DEBUG    | __main__:_select_stocks:151 - 2024-01-12 大势:18 仓位:10%
+2026-05-11 23:41:54.204 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 12.0  MA200=0.0 宽度=3.4 涨跌=8.5
+2026-05-11 23:41:54.205 | DEBUG    | __main__:_select_stocks:151 - 2024-01-19 大势:12 仓位:10%
+2026-05-11 23:41:54.562 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 14.0  MA200=0.0 宽度=6.3 涨跌=7.7
+2026-05-11 23:41:54.563 | DEBUG    | __main__:_select_stocks:151 - 2024-01-26 大势:14 仓位:10%
+2026-05-11 23:41:54.919 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 5.2  MA200=0.0 宽度=1.4 涨跌=3.8
+2026-05-11 23:41:54.920 | DEBUG    | __main__:_select_stocks:151 - 2024-02-02 大势:5 仓位:10%
+2026-05-11 23:41:55.292 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 22.5  MA200=0.0 宽度=6.5 涨跌=16.0
+2026-05-11 23:41:55.293 | DEBUG    | __main__:_select_stocks:151 - 2024-02-08 大势:23 仓位:10%
+2026-05-11 23:41:55.670 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 23.1  MA200=0.0 宽度=0.0 涨跌=23.1
+2026-05-11 23:41:55.671 | DEBUG    | __main__:_select_stocks:151 - 2024-02-23 大势:23 仓位:10%
+2026-05-11 23:41:56.047 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 23.5  MA200=0.0 宽度=0.0 涨跌=23.5
+2026-05-11 23:41:56.047 | DEBUG    | __main__:_select_stocks:151 - 2024-03-01 大势:24 仓位:10%
+2026-05-11 23:41:56.456 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 27.2  MA200=0.0 宽度=0.0 涨跌=27.2
+2026-05-11 23:41:56.457 | DEBUG    | __main__:_select_stocks:151 - 2024-03-08 大势:27 仓位:30%
+2026-05-11 23:41:57.137 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['其他', '机械设备', '家用电器']  (得分: ['61', '47', '47'])
+2026-05-11 23:41:57.858 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-03-08 股票池: 过滤后 4940 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:41:58.794 | DEBUG    | __main__:run_backtest:98 - 2024-03-14 追踪止损 002611: 高点=8.37 现价=7.59 回撤=-9.3%
+2026-05-11 23:41:59.176 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 50.7  MA200=0.8 宽度=26.3 涨跌=23.7
+2026-05-11 23:41:59.177 | DEBUG    | __main__:_select_stocks:151 - 2024-03-15 大势:51 仓位:50%
+2026-05-11 23:41:59.856 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['其他', '家用电器', '机械设备']  (得分: ['55', '54', '52'])
+2026-05-11 23:42:00.610 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-03-15 股票池: 过滤后 4944 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:01.526 | DEBUG    | __main__:run_backtest:98 - 2024-03-22 追踪止损 688609: 高点=13.85 现价=12.39 回撤=-10.5%
+2026-05-11 23:42:01.527 | DEBUG    | __main__:run_backtest:98 - 2024-03-22 追踪止损 002009: 高点=17.27 现价=15.35 回撤=-11.1%
+2026-05-11 23:42:01.895 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 38.6  MA200=0.0 宽度=20.9 涨跌=17.7
+2026-05-11 23:42:01.896 | DEBUG    | __main__:_select_stocks:151 - 2024-03-22 大势:39 仓位:30%
+2026-05-11 23:42:02.559 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['传媒', '机械设备', '通信']  (得分: ['76', '74', '73'])
+2026-05-11 23:42:03.284 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-03-22 股票池: 过滤后 4946 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:04.192 | DEBUG    | __main__:run_backtest:98 - 2024-03-26 追踪止损 300411: 高点=13.63 现价=12.42 回撤=-8.9%
+2026-05-11 23:42:04.195 | DEBUG    | __main__:run_backtest:98 - 2024-03-27 追踪止损 300364: 高点=31.70 现价=27.98 回撤=-11.7%
+2026-05-11 23:42:04.196 | DEBUG    | __main__:run_backtest:98 - 2024-03-27 追踪止损 300913: 高点=42.82 现价=37.01 回撤=-13.6%
+2026-05-11 23:42:04.565 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 27.2  MA200=0.0 宽度=14.3 涨跌=12.9
+2026-05-11 23:42:04.566 | DEBUG    | __main__:_select_stocks:151 - 2024-03-29 大势:27 仓位:30%
+2026-05-11 23:42:05.232 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['有色金属', '轻工制造', '机械设备']  (得分: ['74', '65', '64'])
+2026-05-11 23:42:05.954 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-03-29 股票池: 过滤后 4949 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:06.887 | DEBUG    | __main__:run_backtest:98 - 2024-04-02 追踪止损 300757: 高点=155.48 现价=118.85 回撤=-23.6%
+2026-05-11 23:42:06.890 | DEBUG    | __main__:run_backtest:98 - 2024-04-03 追踪止损 002103: 高点=7.25 现价=6.55 回撤=-9.7%
+2026-05-11 23:42:06.891 | DEBUG    | __main__:run_backtest:98 - 2024-04-03 追踪止损 300411: 高点=15.34 现价=13.14 回撤=-14.3%
+2026-05-11 23:42:07.270 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 32.9  MA200=2.4 宽度=15.9 涨跌=14.7
+2026-05-11 23:42:07.271 | DEBUG    | __main__:_select_stocks:151 - 2024-04-03 大势:33 仓位:30%
+2026-05-11 23:42:07.943 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['有色金属', '环保', '轻工制造']  (得分: ['82', '66', '66'])
+2026-05-11 23:42:08.678 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-04-03 股票池: 过滤后 4952 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:09.982 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 9.0  MA200=0.0 宽度=0.0 涨跌=9.0
+2026-05-11 23:42:09.983 | DEBUG    | __main__:_select_stocks:151 - 2024-04-12 大势:9 仓位:10%
+2026-05-11 23:42:10.350 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 10.6  MA200=0.0 宽度=0.0 涨跌=10.6
+2026-05-11 23:42:10.351 | DEBUG    | __main__:_select_stocks:151 - 2024-04-19 大势:11 仓位:10%
+2026-05-11 23:42:10.717 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 32.3  MA200=13.3 宽度=0.0 涨跌=19.1
+2026-05-11 23:42:10.718 | DEBUG    | __main__:_select_stocks:151 - 2024-04-26 大势:32 仓位:30%
+2026-05-11 23:42:11.390 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['有色金属', '钢铁', '银行']  (得分: ['77', '69', '68'])
+2026-05-11 23:42:12.126 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-04-26 股票池: 过滤后 4969 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:13.051 | DEBUG    | __main__:run_backtest:98 - 2024-04-30 追踪止损 000932: 高点=5.76 现价=5.22 回撤=-9.4%
+2026-05-11 23:42:13.422 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 39.4  MA200=21.6 宽度=0.0 涨跌=17.8
+2026-05-11 23:42:13.422 | DEBUG    | __main__:_select_stocks:151 - 2024-04-30 大势:39 仓位:30%
+2026-05-11 23:42:14.092 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['银行', '家用电器', '非银金融']  (得分: ['75', '69', '68'])
+2026-05-11 23:42:14.845 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-04-30 股票池: 过滤后 4970 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:16.149 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 60.8  MA200=40.0 宽度=0.0 涨跌=20.8
+2026-05-11 23:42:16.150 | DEBUG    | __main__:_select_stocks:151 - 2024-05-10 大势:61 仓位:70%
+2026-05-11 23:42:16.826 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['国防军工', '房地产', '非银金融']  (得分: ['76', '73', '67'])
+2026-05-11 23:42:17.581 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-05-10 股票池: 过滤后 4975 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:18.524 | DEBUG    | __main__:run_backtest:98 - 2024-05-16 追踪止损 601901: 高点=9.46 现价=8.63 回撤=-8.8%
+2026-05-11 23:42:18.897 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 62.5  MA200=40.0 宽度=0.0 涨跌=22.5
+2026-05-11 23:42:18.898 | DEBUG    | __main__:_select_stocks:151 - 2024-05-17 大势:63 仓位:70%
+2026-05-11 23:42:19.572 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['房地产', '基础化工', '建筑材料']  (得分: ['92', '63', '62'])
+2026-05-11 23:42:20.253 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-05-17 股票池: 过滤后 4978 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:21.189 | DEBUG    | __main__:run_backtest:98 - 2024-05-21 追踪止损 300243: 高点=15.10 现价=13.50 回撤=-10.6%
+2026-05-11 23:42:21.190 | DEBUG    | __main__:run_backtest:98 - 2024-05-21 追踪止损 002246: 高点=11.18 现价=10.26 回撤=-8.2%
+2026-05-11 23:42:21.198 | DEBUG    | __main__:run_backtest:98 - 2024-05-24 追踪止损 300917: 高点=50.94 现价=45.36 回撤=-11.0%
+2026-05-11 23:42:21.199 | DEBUG    | __main__:run_backtest:98 - 2024-05-24 追踪止损 002244: 高点=10.14 现价=8.97 回撤=-11.5%
+2026-05-11 23:42:21.612 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 38.2  MA200=19.8 宽度=0.0 涨跌=18.4
+2026-05-11 23:42:21.613 | DEBUG    | __main__:_select_stocks:151 - 2024-05-24 大势:38 仓位:30%
+2026-05-11 23:42:22.286 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['房地产', '农林牧渔', '公用事业']  (得分: ['92', '72', '67'])
+2026-05-11 23:42:22.966 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-05-24 股票池: 过滤后 4981 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:23.902 | DEBUG    | __main__:run_backtest:98 - 2024-05-28 追踪止损 300917: 高点=46.77 现价=42.51 回撤=-9.1%
+2026-05-11 23:42:23.905 | DEBUG    | __main__:run_backtest:98 - 2024-05-29 追踪止损 000560: 高点=3.31 现价=3.04 回撤=-8.2%
+2026-05-11 23:42:23.906 | DEBUG    | __main__:run_backtest:98 - 2024-05-29 追踪止损 000702: 高点=7.00 现价=5.81 回撤=-17.0%
+2026-05-11 23:42:23.909 | DEBUG    | __main__:run_backtest:98 - 2024-05-30 追踪止损 600979: 高点=4.44 现价=3.96 回撤=-10.8%
+2026-05-11 23:42:24.284 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 36.0  MA200=17.8 宽度=6.6 涨跌=11.6
+2026-05-11 23:42:24.285 | DEBUG    | __main__:_select_stocks:151 - 2024-05-31 大势:36 仓位:30%
+2026-05-11 23:42:24.964 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['其他', '机械设备', '家用电器']  (得分: ['56', '47', '39'])
+2026-05-11 23:42:25.688 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-05-31 股票池: 过滤后 4983 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:26.637 | DEBUG    | __main__:run_backtest:98 - 2024-06-06 追踪止损 603131: 高点=16.44 现价=14.73 回撤=-10.4%
+2026-05-11 23:42:26.639 | DEBUG    | __main__:run_backtest:98 - 2024-06-06 追踪止损 300342: 高点=17.06 现价=15.04 回撤=-11.8%
+2026-05-11 23:42:26.642 | DEBUG    | __main__:run_backtest:98 - 2024-06-07 追踪止损 920526: 高点=22.61 现价=20.03 回撤=-11.4%
+2026-05-11 23:42:27.017 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 25.5  MA200=14.8 宽度=2.9 涨跌=7.8
+2026-05-11 23:42:27.018 | DEBUG    | __main__:_select_stocks:151 - 2024-06-07 大势:26 仓位:30%
+2026-05-11 23:42:27.701 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['银行', '公用事业', '电子']  (得分: ['84', '81', '76'])
+2026-05-11 23:42:28.439 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-06-07 股票池: 过滤后 4988 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:29.763 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 18.9  MA200=10.6 宽度=0.0 涨跌=8.4
+2026-05-11 23:42:29.764 | DEBUG    | __main__:_select_stocks:151 - 2024-06-14 大势:19 仓位:10%
+2026-05-11 23:42:30.141 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 6.7  MA200=0.0 宽度=0.0 涨跌=6.7
+2026-05-11 23:42:30.141 | DEBUG    | __main__:_select_stocks:151 - 2024-06-21 大势:7 仓位:10%
+2026-05-11 23:42:30.518 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 6.3  MA200=0.0 宽度=0.0 涨跌=6.3
+2026-05-11 23:42:30.519 | DEBUG    | __main__:_select_stocks:151 - 2024-06-28 大势:6 仓位:10%
+2026-05-11 23:42:30.898 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 5.5  MA200=0.0 宽度=0.0 涨跌=5.5
+2026-05-11 23:42:30.899 | DEBUG    | __main__:_select_stocks:151 - 2024-07-05 大势:6 仓位:10%
+2026-05-11 23:42:31.278 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 19.3  MA200=0.0 宽度=10.7 涨跌=8.7
+2026-05-11 23:42:31.279 | DEBUG    | __main__:_select_stocks:151 - 2024-07-12 大势:19 仓位:10%
+2026-05-11 23:42:31.659 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 29.2  MA200=5.6 宽度=10.2 涨跌=13.4
+2026-05-11 23:42:31.661 | DEBUG    | __main__:_select_stocks:151 - 2024-07-19 大势:29 仓位:30%
+2026-05-11 23:42:32.349 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['银行', '商贸零售', '综合']  (得分: ['78', '76', '71'])
+2026-05-11 23:42:33.092 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-07-19 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:34.055 | DEBUG    | __main__:run_backtest:98 - 2024-07-24 追踪止损 000421: 高点=5.29 现价=4.76 回撤=-10.0%
+2026-05-11 23:42:34.058 | DEBUG    | __main__:run_backtest:98 - 2024-07-25 追踪止损 300947: 高点=18.24 现价=16.35 回撤=-10.4%
+2026-05-11 23:42:34.058 | DEBUG    | __main__:run_backtest:98 - 2024-07-25 追踪止损 600250: 高点=8.32 现价=7.65 回撤=-8.1%
+2026-05-11 23:42:34.441 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 19.1  MA200=0.0 宽度=9.3 涨跌=9.8
+2026-05-11 23:42:34.442 | DEBUG    | __main__:_select_stocks:151 - 2024-07-26 大势:19 仓位:10%
+2026-05-11 23:42:34.824 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 30.7  MA200=0.0 宽度=19.4 涨跌=11.3
+2026-05-11 23:42:34.825 | DEBUG    | __main__:_select_stocks:151 - 2024-08-02 大势:31 仓位:30%
+2026-05-11 23:42:35.527 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['国防军工', '非银金融', '综合']  (得分: ['80', '72', '69'])
+2026-05-11 23:42:36.267 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-08-02 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:37.238 | DEBUG    | __main__:run_backtest:98 - 2024-08-06 追踪止损 000712: 高点=12.50 现价=11.25 回撤=-10.0%
+2026-05-11 23:42:37.244 | DEBUG    | __main__:run_backtest:98 - 2024-08-08 追踪止损 300424: 高点=14.96 现价=13.36 回撤=-10.7%
+2026-05-11 23:42:37.247 | DEBUG    | __main__:run_backtest:98 - 2024-08-09 追踪止损 601698: 高点=17.63 现价=16.03 回撤=-9.1%
+2026-05-11 23:42:37.248 | DEBUG    | __main__:run_backtest:98 - 2024-08-09 追踪止损 002670: 高点=10.14 现价=9.29 回撤=-8.4%
+2026-05-11 23:42:37.630 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 21.2  MA200=0.0 宽度=14.3 涨跌=6.9
+2026-05-11 23:42:37.631 | DEBUG    | __main__:_select_stocks:151 - 2024-08-09 大势:21 仓位:10%
+2026-05-11 23:42:38.018 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 17.7  MA200=0.0 宽度=12.2 涨跌=5.5
+2026-05-11 23:42:38.019 | DEBUG    | __main__:_select_stocks:151 - 2024-08-16 大势:18 仓位:10%
+2026-05-11 23:42:38.417 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 13.0  MA200=0.0 宽度=4.2 涨跌=8.8
+2026-05-11 23:42:38.418 | DEBUG    | __main__:_select_stocks:151 - 2024-08-23 大势:13 仓位:10%
+2026-05-11 23:42:38.817 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 23.9  MA200=0.0 宽度=14.0 涨跌=9.9
+2026-05-11 23:42:38.817 | DEBUG    | __main__:_select_stocks:151 - 2024-08-30 大势:24 仓位:10%
+2026-05-11 23:42:39.220 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 17.4  MA200=0.0 宽度=9.2 涨跌=8.2
+2026-05-11 23:42:39.221 | DEBUG    | __main__:_select_stocks:151 - 2024-09-06 大势:17 仓位:10%
+2026-05-11 23:42:39.622 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 12.7  MA200=0.0 宽度=7.6 涨跌=5.2
+2026-05-11 23:42:39.623 | DEBUG    | __main__:_select_stocks:151 - 2024-09-13 大势:13 仓位:10%
+2026-05-11 23:42:40.027 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 8.2  MA200=0.0 宽度=0.0 涨跌=8.2
+2026-05-11 23:42:40.027 | DEBUG    | __main__:_select_stocks:151 - 2024-09-20 大势:8 仓位:10%
+2026-05-11 23:42:40.424 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 68.0  MA200=40.0 宽度=0.0 涨跌=28.0
+2026-05-11 23:42:40.425 | DEBUG    | __main__:_select_stocks:151 - 2024-09-27 大势:68 仓位:70%
+2026-05-11 23:42:41.144 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['非银金融', '房地产', '计算机']  (得分: ['89', '77', '76'])
+2026-05-11 23:42:41.926 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-09-27 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:43.370 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 69.7  MA200=40.0 宽度=0.0 涨跌=29.7
+2026-05-11 23:42:43.370 | DEBUG    | __main__:_select_stocks:151 - 2024-09-30 大势:70 仓位:70%
+2026-05-11 23:42:44.074 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['非银金融', '计算机', '房地产']  (得分: ['86', '84', '69'])
+2026-05-11 23:42:44.829 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-09-30 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:45.862 | DEBUG    | __main__:run_backtest:98 - 2024-10-09 追踪止损 300917: 高点=73.51 现价=58.81 回撤=-20.0%
+2026-05-11 23:42:45.862 | DEBUG    | __main__:run_backtest:98 - 2024-10-09 追踪止损 000560: 高点=3.90 现价=3.51 回撤=-10.0%
+2026-05-11 23:42:45.865 | DEBUG    | __main__:run_backtest:98 - 2024-10-10 追踪止损 300059: 高点=24.90 现价=20.55 回撤=-17.5%
+2026-05-11 23:42:45.866 | DEBUG    | __main__:run_backtest:98 - 2024-10-10 追踪止损 601162: 高点=5.31 现价=4.78 回撤=-10.0%
+2026-05-11 23:42:45.866 | DEBUG    | __main__:run_backtest:98 - 2024-10-10 追踪止损 300085: 高点=47.20 现价=37.76 回撤=-20.0%
+2026-05-11 23:42:45.867 | DEBUG    | __main__:run_backtest:98 - 2024-10-10 追踪止损 300339: 高点=53.81 现价=43.05 回撤=-20.0%
+2026-05-11 23:42:46.265 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 69.3  MA200=40.0 宽度=0.0 涨跌=29.3
+2026-05-11 23:42:46.265 | DEBUG    | __main__:_select_stocks:151 - 2024-10-11 大势:69 仓位:70%
+2026-05-11 23:42:46.989 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['非银金融', '计算机', '其他']  (得分: ['86', '84', '64'])
+2026-05-11 23:42:47.788 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-10-11 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:48.836 | DEBUG    | __main__:run_backtest:98 - 2024-10-15 追踪止损 300047: 高点=17.01 现价=15.19 回撤=-10.7%
+2026-05-11 23:42:48.840 | DEBUG    | __main__:run_backtest:98 - 2024-10-16 追踪止损 002423: 高点=18.22 现价=16.40 回撤=-10.0%
+2026-05-11 23:42:49.237 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 69.7  MA200=40.0 宽度=0.0 涨跌=29.7
+2026-05-11 23:42:49.238 | DEBUG    | __main__:_select_stocks:151 - 2024-10-18 大势:70 仓位:70%
+2026-05-11 23:42:49.944 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['计算机', '其他', '非银金融']  (得分: ['83', '75', '72'])
+2026-05-11 23:42:50.705 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-10-18 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:51.733 | DEBUG    | __main__:run_backtest:98 - 2024-10-22 追踪止损 920799: 高点=97.47 现价=77.29 回撤=-20.7%
+2026-05-11 23:42:51.736 | DEBUG    | __main__:run_backtest:98 - 2024-10-23 追踪止损 000158: 高点=26.36 现价=23.04 回撤=-12.6%
+2026-05-11 23:42:51.736 | DEBUG    | __main__:run_backtest:98 - 2024-10-23 追踪止损 300085: 高点=45.75 现价=40.02 回撤=-12.5%
+2026-05-11 23:42:52.133 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 69.8  MA200=40.0 宽度=0.0 涨跌=29.8
+2026-05-11 23:42:52.134 | DEBUG    | __main__:_select_stocks:151 - 2024-10-25 大势:70 仓位:70%
+2026-05-11 23:42:52.840 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['其他', '国防军工', '计算机']  (得分: ['83', '70', '69'])
+2026-05-11 23:42:53.605 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-10-25 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:54.636 | DEBUG    | __main__:run_backtest:98 - 2024-10-29 追踪止损 603106: 高点=13.11 现价=11.80 回撤=-10.0%
+2026-05-11 23:42:54.640 | DEBUG    | __main__:run_backtest:98 - 2024-10-30 追踪止损 920139: 高点=38.48 现价=35.09 回撤=-8.8%
+2026-05-11 23:42:54.646 | DEBUG    | __main__:run_backtest:98 - 2024-11-01 追踪止损 300424: 高点=22.80 现价=20.73 回撤=-9.1%
+2026-05-11 23:42:54.646 | DEBUG    | __main__:run_backtest:98 - 2024-11-01 追踪止损 688297: 高点=51.47 现价=47.32 回撤=-8.1%
+2026-05-11 23:42:54.647 | DEBUG    | __main__:run_backtest:98 - 2024-11-01 追踪止损 603887: 高点=20.20 现价=18.18 回撤=-10.0%
+2026-05-11 23:42:55.041 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 64.4  MA200=40.0 宽度=0.0 涨跌=24.4
+2026-05-11 23:42:55.042 | DEBUG    | __main__:_select_stocks:151 - 2024-11-01 大势:64 仓位:70%
+2026-05-11 23:42:55.752 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['机械设备', '家用电器', '其他']  (得分: ['55', '53', '51'])
+2026-05-11 23:42:56.442 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-11-01 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:42:57.518 | DEBUG    | __main__:run_backtest:98 - 2024-11-06 追踪止损 600839: 高点=14.99 现价=13.24 回撤=-11.7%
+2026-05-11 23:42:57.519 | DEBUG    | __main__:run_backtest:98 - 2024-11-06 追踪止损 002312: 高点=22.86 现价=20.57 回撤=-10.0%
+2026-05-11 23:42:57.522 | DEBUG    | __main__:run_backtest:98 - 2024-11-07 追踪止损 001696: 高点=28.59 现价=25.74 回撤=-10.0%
+2026-05-11 23:42:57.522 | DEBUG    | __main__:run_backtest:98 - 2024-11-07 追踪止损 600843: 高点=15.19 现价=13.90 回撤=-8.5%
+2026-05-11 23:42:57.921 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 93.0  MA200=40.0 宽度=27.9 涨跌=25.1
+2026-05-11 23:42:57.922 | DEBUG    | __main__:_select_stocks:151 - 2024-11-08 大势:93 仓位:90%
+2026-05-11 23:42:58.630 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['其他', '国防军工', '建筑装饰']  (得分: ['87', '65', '64'])
+2026-05-11 23:42:59.320 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-11-08 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:43:00.360 | DEBUG    | __main__:run_backtest:98 - 2024-11-14 追踪止损 000066: 高点=23.24 现价=19.34 回撤=-16.8%
+2026-05-11 23:43:00.361 | DEBUG    | __main__:run_backtest:98 - 2024-11-14 追踪止损 301091: 高点=61.55 现价=55.21 回撤=-10.3%
+2026-05-11 23:43:00.364 | DEBUG    | __main__:run_backtest:98 - 2024-11-15 追踪止损 300033: 高点=318.78 现价=272.50 回撤=-14.5%
+2026-05-11 23:43:00.365 | DEBUG    | __main__:run_backtest:98 - 2024-11-15 追踪止损 300762: 高点=29.68 现价=26.25 回撤=-11.6%
+2026-05-11 23:43:00.365 | DEBUG    | __main__:run_backtest:98 - 2024-11-15 追踪止损 002625: 高点=49.45 现价=41.63 回撤=-15.8%
+2026-05-11 23:43:00.759 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 71.5  MA200=40.0 宽度=13.7 涨跌=17.8
+2026-05-11 23:43:00.760 | DEBUG    | __main__:_select_stocks:151 - 2024-11-15 大势:71 仓位:70%
+2026-05-11 23:43:01.472 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['其他', '建筑装饰', '传媒']  (得分: ['89', '69', '67'])
+2026-05-11 23:43:02.212 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-11-15 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:43:03.254 | DEBUG    | __main__:run_backtest:98 - 2024-11-18 追踪止损 600629: 高点=10.37 现价=8.62 回撤=-16.9%
+2026-05-11 23:43:03.265 | DEBUG    | __main__:run_backtest:98 - 2024-11-22 追踪止损 300287: 高点=5.29 现价=4.86 回撤=-8.1%
+2026-05-11 23:43:03.678 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 58.5  MA200=40.0 宽度=8.3 涨跌=10.3
+2026-05-11 23:43:03.678 | DEBUG    | __main__:_select_stocks:151 - 2024-11-22 大势:59 仓位:50%
+2026-05-11 23:43:04.426 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['综合', '其他', '商贸零售']  (得分: ['89', '86', '75'])
+2026-05-11 23:43:05.184 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-11-22 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:43:06.234 | DEBUG    | __main__:run_backtest:98 - 2024-11-26 追踪止损 000833: 高点=20.44 现价=18.40 回撤=-10.0%
+2026-05-11 23:43:06.235 | DEBUG    | __main__:run_backtest:98 - 2024-11-26 追踪止损 002344: 高点=5.94 现价=5.35 回撤=-9.9%
+2026-05-11 23:43:06.640 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 70.4  MA200=40.0 宽度=15.3 涨跌=15.1
+2026-05-11 23:43:06.641 | DEBUG    | __main__:_select_stocks:151 - 2024-11-29 大势:70 仓位:70%
+2026-05-11 23:43:07.360 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['综合', '其他', '商贸零售']  (得分: ['84', '76', '75'])
+2026-05-11 23:43:08.115 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-11-29 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:43:09.172 | DEBUG    | __main__:run_backtest:98 - 2024-12-04 追踪止损 002312: 高点=21.08 现价=19.17 回撤=-9.1%
+2026-05-11 23:43:09.175 | DEBUG    | __main__:run_backtest:98 - 2024-12-05 追踪止损 000753: 高点=7.03 现价=6.33 回撤=-10.0%
+2026-05-11 23:43:09.176 | DEBUG    | __main__:run_backtest:98 - 2024-12-05 追踪止损 000421: 高点=8.12 现价=7.47 回撤=-8.0%
+2026-05-11 23:43:09.179 | DEBUG    | __main__:run_backtest:98 - 2024-12-06 追踪止损 601933: 高点=6.52 现价=5.62 回撤=-13.8%
+2026-05-11 23:43:09.579 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 69.6  MA200=40.0 宽度=21.7 涨跌=7.9
+2026-05-11 23:43:09.580 | DEBUG    | __main__:_select_stocks:151 - 2024-12-06 大势:70 仓位:70%
+2026-05-11 23:43:10.299 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['综合', '传媒', '纺织服饰']  (得分: ['95', '82', '71'])
+2026-05-11 23:43:11.067 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-12-06 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:43:12.154 | DEBUG    | __main__:run_backtest:98 - 2024-12-11 追踪止损 301171: 高点=38.50 现价=33.72 回撤=-12.4%
+2026-05-11 23:43:12.573 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 74.1  MA200=40.0 宽度=20.9 涨跌=13.2
+2026-05-11 23:43:12.573 | DEBUG    | __main__:_select_stocks:151 - 2024-12-13 大势:74 仓位:70%
+2026-05-11 23:43:13.300 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['综合', '商贸零售', '传媒']  (得分: ['82', '76', '75'])
+2026-05-11 23:43:14.062 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-12-13 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:43:15.118 | DEBUG    | __main__:run_backtest:98 - 2024-12-17 追踪止损 600881: 高点=2.89 现价=2.60 回撤=-10.0%
+2026-05-11 23:43:15.118 | DEBUG    | __main__:run_backtest:98 - 2024-12-17 追踪止损 000753: 高点=5.38 现价=4.84 回撤=-10.0%
+2026-05-11 23:43:15.119 | DEBUG    | __main__:run_backtest:98 - 2024-12-17 追踪止损 601933: 高点=7.64 现价=6.88 回撤=-9.9%
+2026-05-11 23:43:15.119 | DEBUG    | __main__:run_backtest:98 - 2024-12-17 追踪止损 300622: 高点=50.72 现价=44.99 回撤=-11.3%
+2026-05-11 23:43:15.119 | DEBUG    | __main__:run_backtest:98 - 2024-12-17 追踪止损 300063: 高点=12.91 现价=11.76 回撤=-8.9%
+2026-05-11 23:43:15.122 | DEBUG    | __main__:run_backtest:98 - 2024-12-18 追踪止损 002400: 高点=11.60 现价=10.61 回撤=-8.5%
+2026-05-11 23:43:15.521 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 69.1  MA200=40.0 宽度=11.5 涨跌=17.6
+2026-05-11 23:43:15.522 | DEBUG    | __main__:_select_stocks:151 - 2024-12-20 大势:69 仓位:70%
+2026-05-11 23:43:16.240 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['通信', '传媒', '商贸零售']  (得分: ['74', '74', '71'])
+2026-05-11 23:43:16.995 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-12-20 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:43:18.053 | DEBUG    | __main__:run_backtest:98 - 2024-12-24 追踪止损 000681: 高点=27.89 现价=25.10 回撤=-10.0%
+2026-05-11 23:43:18.057 | DEBUG    | __main__:run_backtest:98 - 2024-12-25 追踪止损 300785: 高点=42.47 现价=38.54 回撤=-9.3%
+2026-05-11 23:43:18.062 | DEBUG    | __main__:run_backtest:98 - 2024-12-27 追踪止损 300442: 高点=59.58 现价=54.50 回撤=-8.5%
+2026-05-11 23:43:18.465 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 63.8  MA200=40.0 宽度=7.1 涨跌=16.7
+2026-05-11 23:43:18.466 | DEBUG    | __main__:_select_stocks:151 - 2024-12-27 大势:64 仓位:70%
+2026-05-11 23:43:19.195 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['通信', '银行', '机械设备']  (得分: ['81', '71', '67'])
+2026-05-11 23:43:19.962 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-12-27 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:43:21.022 | DEBUG    | __main__:run_backtest:98 - 2024-12-30 追踪止损 300913: 高点=71.66 现价=62.41 回撤=-12.9%
+2026-05-11 23:43:21.026 | DEBUG    | __main__:run_backtest:98 - 2024-12-31 追踪止损 300563: 高点=61.28 现价=55.16 回撤=-10.0%
+2026-05-11 23:43:21.397 | DEBUG    | strategies.trinity.market:market_score:69 - 大势得分: 56.0  MA200=40.0 宽度=4.3 涨跌=11.7
+2026-05-11 23:43:21.398 | DEBUG    | __main__:_select_stocks:151 - 2024-12-31 大势:56 仓位:50%
+2026-05-11 23:43:22.097 | INFO     | strategies.trinity.sector:select_sectors:136 - 板块层选出: ['银行', '通信', '商贸零售']  (得分: ['79', '72', '71'])
+2026-05-11 23:43:22.862 | DEBUG    | strategies.trinity.universe:build_universe:59 - 2024-12-31 股票池: 过滤后 4990 只 （ST剔除:8 总原始:5256）
+2026-05-11 23:43:23.851 | INFO     | __main__:main:237 - ── 分年度表现 ──
+2026-05-11 23:43:23.852 | INFO     | __main__:main:244 -   2021  收益:-45.8%  最大回撤:-48.3%
+2026-05-11 23:43:23.853 | INFO     | __main__:main:244 -   2022  收益:-28.8%  最大回撤:-33.4%
+2026-05-11 23:43:23.854 | INFO     | __main__:main:244 -   2023  收益:9.0%  最大回撤:-21.0%
+2026-05-11 23:43:23.855 | INFO     | __main__:main:244 -   2024  收益:-43.9%  最大回撤:-46.7%
+/root/quant/scripts/run_backtest_b.py:189: FutureWarning: The default fill_method='pad' in Series.pct_change is deprecated and will be removed in a future version. Either fill in any non-leading NA values prior to calling pct_change or specify 'fill_method=None' to not fill NA values.
+  wr      = (nav.resample("W").last().pct_change().dropna() > 0).mean()
+2026-05-11 23:43:23.865 | INFO     | __main__:main:247 - ── 总体指标 ──
+2026-05-11 23:43:23.865 | INFO     | __main__:main:249 -   总收益率: -75.1%
+2026-05-11 23:43:23.865 | INFO     | __main__:main:249 -   年化收益率: -29.3%
+2026-05-11 23:43:23.865 | INFO     | __main__:main:249 -   年化波动率: 37.7%
+2026-05-11 23:43:23.866 | INFO     | __main__:main:249 -   夏普比率: -0.78
+2026-05-11 23:43:23.866 | INFO     | __main__:main:249 -   最大回撤: -76.1%
+2026-05-11 23:43:23.866 | INFO     | __main__:main:249 -   周度胜率: 18.8%
+2026-05-11 23:43:23.872 | INFO     | __main__:main:252 - 净值已保存 → logs/backtest_b_nav.csv
+2026-05-11 23:43:23.872 | INFO     | __main__:main:258 - 
+回测结论: ⚠️  未达标  (目标: 年化≥20% 夏普≥0.8 回撤≥-30%)
+2026-05-11 23:43:23.872 | INFO     | __main__:main:260 - ============================================================
