@@ -27,32 +27,39 @@ import pandas as pd
 from loguru import logger
 from data.storage import load_daily, load_meta
 
-FORMULA        = os.getenv("FORMULA", "F")   # F(默认,最优) / A~E 见注释
-BACKTEST_START = "2019-01-01"
-BACKTEST_END   = "2024-12-31"
-N_HOLDINGS     = 30
-COMMISSION     = 0.00125   # 单边 0.125%
-MIN_BARS       = 250       # 所有公式统一用250根K线的预热期
+FORMULA          = os.getenv("FORMULA", "F")      # F(默认,最优) / A~E 见注释
+UNIVERSE         = os.getenv("UNIVERSE", "800")   # "800" / "1800"(800+1000)
+BACKTEST_START   = "2019-01-01"
+BACKTEST_END     = "2024-12-31"
+N_HOLDINGS       = 30
+COMMISSION       = 0.00125   # 单边 0.125%
+MIN_BARS         = 250       # 预热期
+LIQUIDITY_THRESH = 1000      # 流动性门槛：20日均成交额 > 1000万元
 
 logger.add("logs/backtest_a.log", rotation="1 day", retention="30 days")
 
 
-def load_price_panel(codes: list, start: str, end: str) -> pd.DataFrame:
-    """加载多股票收盘价矩阵，index=date，columns=code。"""
-    frames = {}
+def load_panels(codes: list, start: str, end: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    同时加载收盘价矩阵和成交额矩阵（万元）。
+    返回 (price_panel, amount_panel)，index=date，columns=code。
+    """
+    prices, amounts = {}, {}
     for code in codes:
         df = load_daily(code, start, end)
         if df.empty or "close" not in df.columns:
             continue
         df["date"] = pd.to_datetime(df["date"])
-        s = df.set_index("date")["close"]
-        if len(s) > 200:
-            frames[code] = pd.to_numeric(s, errors="coerce")
-    if not frames:
-        return pd.DataFrame()
-    panel = pd.DataFrame(frames).sort_index()
-    logger.info(f"价格矩阵: {panel.shape[0]} 天 × {panel.shape[1]} 只股票")
-    return panel
+        df = df.set_index("date")
+        close  = pd.to_numeric(df["close"],  errors="coerce")
+        amount = pd.to_numeric(df.get("amount", pd.Series(dtype=float)), errors="coerce")
+        if len(close) > 200:
+            prices[code]  = close
+            amounts[code] = amount
+    price_panel  = pd.DataFrame(prices).sort_index()
+    amount_panel = pd.DataFrame(amounts).sort_index()
+    logger.info(f"价格矩阵: {price_panel.shape[0]} 天 × {price_panel.shape[1]} 只股票")
+    return price_panel, amount_panel
 
 
 def _zscore(s: pd.Series) -> pd.Series:
@@ -63,14 +70,28 @@ def _zscore(s: pd.Series) -> pd.Series:
     return ((s - mu) / sigma).clip(-3, 3)
 
 
-def compute_score(panel: pd.DataFrame, date: pd.Timestamp) -> pd.Series:
+def compute_score(
+    panel: pd.DataFrame,
+    date: pd.Timestamp,
+    amount_panel: pd.DataFrame | None = None,
+) -> pd.Series:
     """
     截面动量得分，公式由 FORMULA 常量控制。
+    amount_panel 不为 None 时，先做 20日均额 > LIQUIDITY_THRESH 的流动性过滤。
     返回空 Series 表示数据不足，跳过本期调仓。
     """
     hist = panel[panel.index <= date]
     if len(hist) < MIN_BARS:
         return pd.Series(dtype=float)
+
+    # ── 流动性过滤（调仓日前20日均成交额）──────────
+    if amount_panel is not None:
+        hist_amt   = amount_panel[amount_panel.index <= date]
+        recent_amt = hist_amt.iloc[-20:].mean()
+        liquid     = recent_amt[recent_amt > LIQUIDITY_THRESH].index
+        hist       = hist[hist.columns.intersection(liquid)]
+        if hist.empty:
+            return pd.Series(dtype=float)
 
     p     = hist.iloc[-1]       # 当日价格
     p_21  = hist.iloc[-21]      # 约1个月前
@@ -129,7 +150,11 @@ def get_monthly_rebalance_dates(trade_calendar: list) -> list[str]:
     return monthly_ends
 
 
-def run_backtest(panel: pd.DataFrame, rebalance_dates: list) -> pd.Series:
+def run_backtest(
+    panel: pd.DataFrame,
+    rebalance_dates: list,
+    amount_panel: pd.DataFrame | None = None,
+) -> pd.Series:
     """
     向量化回测主函数。
     返回：每日组合净值序列（初始=1.0）
@@ -143,7 +168,7 @@ def run_backtest(panel: pd.DataFrame, rebalance_dates: list) -> pd.Series:
         date_str = str(date.date())
 
         if date_str in rebalance_set and i >= MIN_BARS:
-            score = compute_score(panel, date)
+            score = compute_score(panel, date, amount_panel)
             if len(score) >= N_HOLDINGS:
                 new_holdings = score.nlargest(N_HOLDINGS).index.tolist()
                 if current_holdings:
@@ -184,7 +209,8 @@ def calc_metrics(nav: pd.Series) -> dict:
 
 def main():
     logger.info("=" * 60)
-    logger.info(f"Track A 回测  公式:{FORMULA}  {BACKTEST_START} → {BACKTEST_END}")
+    logger.info(f"Track A 回测  公式:{FORMULA}  股票池:{UNIVERSE}  {BACKTEST_START}→{BACKTEST_END}")
+    logger.info(f"流动性门槛: {LIQUIDITY_THRESH}万元/日（20日均）")
     logger.info("=" * 60)
 
     cal_df = load_meta("trade_calendar")
@@ -194,15 +220,25 @@ def main():
     trade_calendar = [d for d in cal_df["trade_date"].tolist()
                       if BACKTEST_START <= d <= BACKTEST_END]
 
+    # ── 股票池 ──────────────────────────────────────
     csi800 = load_meta("csi800")
     if csi800.empty:
         logger.error("中证800成分股数据缺失")
         return
-    codes = csi800["code"].tolist()
-    logger.info(f"股票池: 中证800，{len(codes)} 只")
+    codes = set(csi800["code"].tolist())
 
-    logger.info("加载价格矩阵...")
-    panel = load_price_panel(codes, BACKTEST_START, BACKTEST_END)
+    if UNIVERSE == "1800":
+        csi1000 = load_meta("csi1000")
+        if csi1000.empty:
+            logger.warning("中证1000数据缺失，仅用CSI 800")
+        else:
+            codes |= set(csi1000["code"].tolist())
+
+    codes = sorted(codes)
+    logger.info(f"股票池: {len(codes)} 只（{UNIVERSE}）")
+
+    logger.info("加载价格+成交额矩阵...")
+    panel, amount_panel = load_panels(codes, BACKTEST_START, BACKTEST_END)
     if panel.empty:
         logger.error("价格数据加载失败")
         return
@@ -211,7 +247,7 @@ def main():
     logger.info(f"调仓月数: {len(rebalance_dates)}")
 
     logger.info("运行回测...")
-    nav = run_backtest(panel, rebalance_dates)
+    nav = run_backtest(panel, rebalance_dates, amount_panel)
 
     logger.info("── 分年度表现 ──")
     for year in range(2019, 2025):
