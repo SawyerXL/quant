@@ -6,8 +6,9 @@ RiskGateway 单元测试。
   - 单笔金额上限（防错单）
   - 单股持仓上限（Track A 5% / Track B 8%）
   - 现金不足拦截
-  - 卖出方向豁免持仓检查
-  - 已知 stub（涨跌停检查、行业集中度）文档化测试
+  - 卖出方向豁免持仓/行业检查
+  - 行业集中度（Track A ≤30% / Track B ≤50%）
+  - 已知 stub（涨跌停检查）文档化测试
 
 运行：
     cd /root/quant && .venv/bin/python -m pytest tests/test_risk.py -v
@@ -29,6 +30,7 @@ def make_state(
     nav_high: float = 1.0,
     current_nav: float = 1.0,
     strategy_positions: dict = None,
+    industry_map: dict = None,
 ):
     return {
         "total_assets": total_assets,
@@ -37,6 +39,7 @@ def make_state(
         "nav_high": nav_high,
         "current_nav": current_nav,
         "strategy_positions": strategy_positions or {"track_a": {}, "track_b": {}},
+        "industry_map": industry_map or {},
     }
 
 
@@ -251,37 +254,109 @@ class TestCombinedScenarios:
 # 6. 已知 Stub / 待完善功能（文档化测试）
 # ══════════════════════════════════════════════════
 
+# ══════════════════════════════════════════════════
+# 6. 行业集中度（Track A ≤30% / Track B ≤50%）
+# ══════════════════════════════════════════════════
+
+class TestIndustryConcentration:
+
+    # 基础行业映射：电子行业持有 A/B/C，新买 D（同行业）
+    IMAP = {
+        "000001": "电子", "000002": "电子", "000003": "电子",
+        "000004": "电子",   # 拟买入的股
+        "000010": "银行",
+    }
+
+    def _state_with_industry(self, elec_exposure=0, cash=600_000):
+        strat_pos = {}
+        if elec_exposure > 0:
+            # 将电子行业持仓分配给 A/B/C
+            per = elec_exposure // 3
+            strat_pos = {"000001": per, "000002": per, "000003": per}
+        return make_state(
+            total_assets=1_000_000,
+            cash=cash,
+            strategy_positions={"track_a": strat_pos, "track_b": {}},
+            industry_map=self.IMAP,
+        )
+
+    def test_within_industry_limit_passes(self):
+        # 已有电子20万，再买4万(4%<单股5%上限) → 合计24万 < 30%
+        gw = RiskGateway(self._state_with_industry(elec_exposure=200_000))
+        ok, msg = gw.check("track_a", "000004", "buy", 100, 400.0)
+        assert ok, msg
+
+    def test_exceeds_industry_limit_blocked(self):
+        # 已有电子27万，再买4万 → 合计31万 > 30%（4%<单股5%，故行业是绑腿因素）
+        gw = RiskGateway(self._state_with_industry(elec_exposure=270_000))
+        ok, msg = gw.check("track_a", "000004", "buy", 100, 400.0)
+        assert not ok
+        assert "行业" in msg and "电子" in msg
+
+    def test_different_industry_not_counted(self):
+        # 买入银行股，电子行业已满载也不影响
+        gw = RiskGateway(self._state_with_industry(elec_exposure=290_000))
+        ok, msg = gw.check("track_a", "000010", "buy", 100, 200.0)
+        assert ok, msg
+
+    def test_no_industry_map_skips_check(self):
+        # 没有行业映射时宽松放行（不阻断业务）
+        state = make_state(industry_map={})
+        gw = RiskGateway(state)
+        ok, msg = gw.check("track_a", "000004", "buy", 100, 200.0)
+        assert ok, msg
+
+    def test_track_b_higher_limit_50pct(self):
+        # Track B 上限50%：已有40万电子，再买7万(7%<单股8%上限) → 47万 < 50%
+        imap = {"000001": "电子", "000002": "电子", "000003": "电子", "000004": "电子"}
+        state = make_state(
+            total_assets=1_000_000,
+            cash=200_000,
+            strategy_positions={
+                "track_a": {},
+                "track_b": {"000001": 200_000, "000002": 200_000},
+            },
+            industry_map=imap,
+        )
+        gw = RiskGateway(state)
+        ok, msg = gw.check("track_b", "000004", "buy", 100, 700.0)
+        assert ok, msg
+
+    def test_track_b_exceeds_50pct_blocked(self):
+        # Track B：已有45万电子，再买6万 → 51万 > 50%
+        imap = {"000001": "电子", "000002": "电子", "000004": "电子"}
+        state = make_state(
+            total_assets=1_000_000,
+            cash=200_000,
+            strategy_positions={
+                "track_a": {},
+                "track_b": {"000001": 250_000, "000002": 200_000},
+            },
+            industry_map=imap,
+        )
+        gw = RiskGateway(state)
+        ok, msg = gw.check("track_b", "000004", "buy", 100, 600.0)
+        assert not ok
+        assert "行业" in msg
+
+    def test_sell_bypasses_industry_check(self):
+        # 卖出不检查行业集中度
+        gw = RiskGateway(self._state_with_industry(elec_exposure=290_000))
+        ok, msg = gw.check("track_a", "000001", "sell", 100, 400.0)
+        assert ok, f"卖出不应被行业检查拦截: {msg}"
+
+
+# ══════════════════════════════════════════════════
+# 7. 已知 Stub 文档化测试
+# ══════════════════════════════════════════════════
+
 class TestKnownStubs:
 
     def test_limit_price_check_is_stub(self):
         """
         [已知] _check_limit_price 是 stub，始终返回 True。
         接入 QMT 实时行情后需实现：涨停不买 / 跌停不卖。
-        此测试确认当前行为，并作为接入后的回归基准。
         """
         gw = RiskGateway(make_state())
-        # 即使模拟涨停价（极高价格），当前实现也会放行
-        ok, _ = gw.check("track_a", "000001", "buy", 100, 999999.0)
-        # 注：此处因金额超限会被 _check_order_amount 拦截，
-        # 单独测 _check_limit_price 需绕过其他检查
         result = gw._check_limit_price("track_a", "000001", "buy", 100, 100.0, 10000, {})
         assert result == (True, ""), "涨跌停检查是 stub，接入 QMT 后需更新此测试"
-
-    def test_industry_concentration_not_called(self):
-        """
-        [已知缺陷] _check_industry_concentration 定义了但未加入 checks 列表。
-        行业集中度无法被检查。需修复或在此测试通过后删除此 TODO。
-        """
-        state = make_state(
-            total_assets=1_000_000,
-            cash=600_000,
-            strategy_positions={
-                "track_a": {f"00000{i}": 40_000 for i in range(8)},  # 已持有8只同行业股
-                "track_b": {},
-            }
-        )
-        gw = RiskGateway(state)
-        # 当前代码行业集中度未被检查，此买入会被放行（不应该）
-        ok, _ = gw.check("track_a", "999999", "buy", 100, 200.0)
-        # 此 assert 记录当前行为（放行），修复后应改为 assert not ok
-        assert ok, "行业集中度检查未实现 — 已知缺陷，后续需修复"

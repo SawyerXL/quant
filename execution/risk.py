@@ -21,13 +21,15 @@ class RiskGateway:
         account_state: {
             'total_assets': float,           # 账户总资产
             'cash': float,                   # 可用现金
-            'positions': {code: value},      # 当前持仓（市值）
+            'positions': {code: value},      # 当前持仓（市值，全策略合计）
             'nav_high': float,               # 历史最高净值
             'current_nav': float,            # 当前净值
             'strategy_positions': {          # 各策略持仓市值
                 'track_a': {code: value},
                 'track_b': {code: value},
-            }
+            },
+            'industry_map': {code: str},     # 股票→申万一级行业，用于集中度检查
+                                             # 缺省时跳过行业检查
         }
         """
         self.state = account_state
@@ -54,7 +56,10 @@ class RiskGateway:
             self._check_single_position,
         ]
         if direction == "buy":
-            checks += [self._check_cash_available]
+            checks += [
+                self._check_cash_available,
+                self._check_industry_concentration,
+            ]
 
         for check_fn in checks:
             ok, reason = check_fn(
@@ -104,9 +109,31 @@ class RiskGateway:
             return False, f"可用现金 {self.state['cash']:,.0f} 不足 {order_value:,.0f}"
         return True, ""
 
-    def _check_industry_concentration(self, strategy_id, code, direction, shares, price, order_value, risk, industry):
-        max_pct = risk.get("max_industry_position", 0.50)
+    def _check_industry_concentration(self, strategy_id, code, direction, shares, price, order_value, risk):
+        if direction != "buy":
+            return True, ""
+
+        industry_map = self.state.get("industry_map", {})
+        target = industry_map.get(code)
+        if not target or target == "其他":
+            # 无行业信息或北交所等无法归类股票，宽松放行
+            return True, ""
+
+        # Track A 用 max_industry_position(30%)，Track B 用 max_sector_position(50%)
+        max_pct = risk.get("max_industry_position") or risk.get("max_sector_position", 0.50)
         total   = self.state["total_assets"]
+
+        # 当前策略同行业持仓市值汇总
         strat_pos = self.state["strategy_positions"].get(strategy_id, {})
-        # 同行业/板块持仓汇总（此处简化，实际需传入 industry_map）
+        industry_exposure = sum(
+            v for c, v in strat_pos.items()
+            if industry_map.get(c) == target
+        )
+
+        after = industry_exposure + order_value
+        if after / total > max_pct:
+            return False, (
+                f"行业集中度 [{target}] {after/total:.1%} 超过上限 {max_pct:.1%} "
+                f"(当前={industry_exposure:,.0f}, 拟买={order_value:,.0f})"
+            )
         return True, ""
