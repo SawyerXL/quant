@@ -6,8 +6,8 @@ Track A 每日信号生成脚本。
     14:25 生成信号 → 人工确认 → 14:57 前提交竞价收盘委托
 
 逻辑：
-    1. 非交易日 / 非月末调仓日 → 仅打日志，退出
-    2. 月末调仓日：
+    1. 非交易日 / 非调仓日（月中+月末）→ 仅打日志，退出
+    2. 两周调仓日（月中/月末）：
        a. 大势过滤（CSI 800 MA200 ±2%）→ 熊市则清仓
        b. 牛市：运行公式H计算截面得分，取前30只
        c. 与上期持仓对比，输出买入/卖出清单
@@ -57,11 +57,26 @@ def is_trade_day(today: str, calendar: list[str]) -> bool:
 
 
 def is_rebalance_day(today: str, calendar: list[str]) -> bool:
-    """月末最后一个交易日（下一个交易日属于下个月）。"""
-    future = [d for d in calendar if d > today]
-    if not future:
-        return True   # 日历最后一天也视为调仓日
-    return today[:7] != future[0][:7]
+    """
+    两周调仓日判断（与 run_backtest_a.py 的 REBAL_FREQ=biweekly 一致）：
+    - 月末最后一个交易日
+    - 月中（当月第 floor(N/2)-1 个交易日，约第10-12个）
+    """
+    import pandas as pd
+    year_month = today[:7]
+    month_dates = sorted([d for d in calendar if d.startswith(year_month)])
+    if not month_dates:
+        return False
+
+    # 月末
+    is_month_end = (today == month_dates[-1])
+
+    # 月中：第 floor(N/2)-1 个交易日（与回测完全一致）
+    n = len(month_dates)
+    mid_idx = max(0, n // 2 - 1)
+    is_month_mid = (n >= 2 and today == month_dates[mid_idx])
+
+    return is_month_end or is_month_mid
 
 
 def _is_bull_market(today: str) -> bool:
@@ -137,11 +152,11 @@ def run():
 
     # ② 非调仓日
     if not is_rebalance_day(today, calendar):
-        logger.info(f"{today} 非月末调仓日，无需生成信号")
+        logger.info(f"{today} 非调仓日（非月中/月末），跳过")
         return
 
     logger.info(f"{'='*55}")
-    logger.info(f"[Track A] 月末调仓日: {today}")
+    logger.info(f"[Track A] 两周调仓日: {today}")
     logger.info(f"{'='*55}")
 
     # ③ 大势过滤
