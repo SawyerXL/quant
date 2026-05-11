@@ -68,7 +68,19 @@ def run_backtest(
     for i, date in enumerate(all_dates):
         date_str = str(date.date())
 
-        # ── 每日止损检查（追踪止损：从持仓以来最高价回撤-8%）──
+        # ═══ 关键执行顺序：先算当日收益（昨日持仓），再止损，再调仓 ═══
+        # 错误顺序（原bug）：先调仓选出今日强势股 → 再算今日收益 = 先知交易
+        # 正确顺序：昨日持仓 → 算今日收益 → 今日收盘止损 → 今日收盘调仓（明日生效）
+
+        # ── Step 1：当日收益（必须用昨日持仓，不受今日调仓影响）──
+        if current_holdings and i > 0:
+            prev = panel.iloc[i - 1][current_holdings].dropna()
+            curr = panel.iloc[i][current_holdings].dropna()
+            common = prev.index.intersection(curr.index)
+            if len(common) > 0:
+                portfolio_returns.iloc[i] += (curr[common] / prev[common] - 1).mean()
+
+        # ── Step 2：当日收盘止损（使用今日收盘价，明日不再持有）──
         if current_holdings and i > 0:
             to_stop = []
             for code in current_holdings:
@@ -76,35 +88,30 @@ def run_backtest(
                 if entry and entry > 0:
                     cur_price = panel.iloc[i].get(code)
                     if pd.notna(cur_price):
-                        # 更新该股持仓期间最高价
                         peak_key = f"peak_{code}"
                         peak = entry_prices.get(peak_key, entry)
                         if cur_price > peak:
                             entry_prices[peak_key] = cur_price
                             peak = cur_price
-                        # 从最高价回撤超过止损线
                         if (cur_price / peak - 1) <= STOP_LOSS:
                             to_stop.append(code)
                             logger.debug(f"{date_str} 追踪止损 {code}: "
                                          f"高点={peak:.2f} 现价={cur_price:.2f} "
                                          f"回撤={cur_price/peak-1:.1%}")
             if to_stop:
-                # 止损手续费（只算卖出）
                 portfolio_returns.iloc[i] -= len(to_stop) / max(len(current_holdings), 1) * COMMISSION
                 for code in to_stop:
                     current_holdings.remove(code)
                     entry_prices.pop(code, None)
                     entry_prices.pop(f"peak_{code}", None)
 
-        # ── 每周五收盘生成信号，下周一（次交易日）开盘执行（T+1）──
-        # 修复：原代码用当日收盘价生成信号并当日执行，存在前视偏差
-        # 现在：周五收盘生成信号，周一开盘执行（用 panel.iloc[i+1] 作为入场价）
+        # ── Step 3：周五调仓（今日收盘生成信号，明日开盘执行，T+1）──
         if date_str in rebalance_set and i >= MIN_BARS_WEEK:
             new_holdings = _select_stocks(
                 panel, amount_panel, stock_info, index_close, date
             )
 
-            if new_holdings is not None:   # None 表示熊市，维持原仓
+            if new_holdings is not None:
                 old_set = set(current_holdings)
                 new_set = set(new_holdings)
                 sell_n  = len(old_set - new_set)
@@ -113,26 +120,17 @@ def run_backtest(
                     turnover = (sell_n + buy_n) / max(2 * max(len(old_set), len(new_set), 1), 1)
                     portfolio_returns.iloc[i] -= turnover * COMMISSION * 2
 
-                # 入场价用次交易日（i+1）的开盘价代理（无开盘价则用收盘价）
+                # 入场价用次交易日价格（T+1执行）
                 exec_row = i + 1 if i + 1 < len(panel) else i
                 for code in new_set - old_set:
-                    price = panel.iloc[exec_row].get(code)   # T+1执行
+                    price = panel.iloc[exec_row].get(code)
                     if pd.notna(price):
                         entry_prices[code] = float(price)
-                # 清除已卖出的入场价和峰值记录
                 for code in old_set - new_set:
                     entry_prices.pop(code, None)
                     entry_prices.pop(f"peak_{code}", None)
 
                 current_holdings = new_holdings
-
-        # ── 每日收益 ────────────────────────────────
-        if current_holdings and i > 0:
-            prev = panel.iloc[i - 1][current_holdings].dropna()
-            curr = panel.iloc[i][current_holdings].dropna()
-            common = prev.index.intersection(curr.index)
-            if len(common) > 0:
-                portfolio_returns.iloc[i] += (curr[common] / prev[common] - 1).mean()
 
     return (1 + portfolio_returns).cumprod()
 
