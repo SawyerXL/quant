@@ -27,19 +27,23 @@ import pandas as pd
 from loguru import logger
 from data.storage import load_daily, load_meta
 
-FORMULA          = os.getenv("FORMULA", "I")      # I(默认,最优) / H/F/A~E 见注释
-MONTHLY_STOP     = float(os.getenv("MONTHLY_STOP", "-0.15"))  # 月内净值止损，默认-15%
+FORMULA          = os.getenv("FORMULA", "I")      # I(默认) / H/F/A~E 见注释
 UNIVERSE         = os.getenv("UNIVERSE", "800")   # "800" / "1800"(800+1000)
 BACKTEST_START   = "2019-01-01"
 BACKTEST_END     = "2024-12-31"
 N_HOLDINGS       = 30
-COMMISSION       = 0.00125   # 单边 0.125%
-MIN_BARS         = 250       # 预热期
-LIQUIDITY_THRESH = 1000      # 流动性门槛：20日均成交额 > 1000万元
-MA_PERIOD        = 200       # 大势过滤：CSI 800 指数均线周期
-REGIME_BEAR_THR  = 0.98      # 跌破 MA × 0.98 → 进入空仓
-REGIME_BULL_THR  = 1.02      # 收复 MA × 1.02 → 恢复建仓（防止频繁进出）
-USE_REGIME       = os.getenv("USE_REGIME", "1") == "1"  # 默认开启
+COMMISSION       = 0.00125     # 单边 0.125%
+MIN_BARS         = 250         # 预热期
+LIQUIDITY_THRESH = 1000        # 流动性门槛：20日均成交额 > 1000万元
+MA_PERIOD        = 200         # 大势过滤：CSI 800 指数均线周期
+REGIME_BEAR_THR  = 0.98        # 跌破 MA × 0.98 → 进入空仓
+REGIME_BULL_THR  = 1.02        # 收复 MA × 1.02 → 恢复建仓
+USE_REGIME       = os.getenv("USE_REGIME", "1") == "1"
+
+# 止损参数（公式I）
+PERIOD_STOP      = -0.15       # 每期（两周）内最大亏损
+TRAILING_STOP    = -0.18       # 从本期入场最高点追踪止损（防止渐进式崩盘）
+REBAL_FREQ       = os.getenv("REBAL_FREQ", "biweekly")  # "monthly" / "biweekly"
 
 logger.add("logs/backtest_a.log", rotation="1 day", retention="30 days")
 
@@ -225,21 +229,24 @@ def compute_score(
 
 def get_monthly_rebalance_dates(trade_calendar: list) -> list[str]:
     """
-    返回每月最后一个交易日列表（信号日 = 执行日）。
+    返回调仓日期列表（信号日 = 执行日）。
+    REBAL_FREQ="monthly"  → 每月最后交易日
+    REBAL_FREQ="biweekly" → 月中+月末，每月两次（默认，对应最优公式I）
 
-    实盘要求：当天 14:30 前完成信号计算并提交委托，
-    14:57-15:00 竞价收盘成交，与回测使用同一收盘价基准。
-    月末效应（均 +0.39%/月）在此框架下可合法捕获。
+    实盘：当天 14:30 前完成信号计算，14:57 前竞价收盘委托。
     """
     dates = pd.DatetimeIndex(sorted(trade_calendar))
     dates = dates[(dates >= BACKTEST_START) & (dates <= BACKTEST_END)]
-    monthly_ends = []
+    result = []
     for year in range(dates[0].year, dates[-1].year + 1):
         for month in range(1, 13):
-            month_dates = dates[(dates.year == year) & (dates.month == month)]
-            if len(month_dates) > 0:
-                monthly_ends.append(str(month_dates[-1].date()))
-    return monthly_ends
+            md = dates[(dates.year == year) & (dates.month == month)]
+            if len(md) == 0:
+                continue
+            result.append(str(md[-1].date()))          # 月末（必选）
+            if REBAL_FREQ == "biweekly" and len(md) >= 2:
+                result.append(str(md[len(md) // 2 - 1].date()))  # 月中
+    return sorted(set(result))
 
 
 def run_backtest(
@@ -257,7 +264,9 @@ def run_backtest(
     portfolio_returns = pd.Series(0.0, index=all_dates)
     current_holdings = []
     rebalance_set = set(rebalance_dates)
-    nav_since_rebal = 1.0   # 月内净值追踪（用于止损）
+    nav_since_rebal = 1.0   # 每期净值追踪（期内止损用）
+    entry_hwm       = 1.0   # 本次入场以来最高点（追踪止损用）
+    cumul_nav       = 1.0   # 全程累计净值
 
     for i, date in enumerate(all_dates):
         date_str = str(date.date())
@@ -280,8 +289,10 @@ def run_backtest(
                         buy_set  = set(new_holdings) - set(current_holdings)
                         turnover = (len(sell_set) + len(buy_set)) / (2 * N_HOLDINGS)
                         portfolio_returns.iloc[i] -= turnover * COMMISSION * 2
+                    if not current_holdings:
+                        entry_hwm = cumul_nav   # 从空仓重新入场：重置追踪基准
                     current_holdings = new_holdings
-            nav_since_rebal = 1.0   # 重置月内追踪
+            nav_since_rebal = 1.0   # 每期重置
 
         if current_holdings and i > 0:
             prev = panel.iloc[i - 1][current_holdings].dropna()
@@ -290,13 +301,20 @@ def run_backtest(
             if len(common) > 0:
                 dr = (curr[common] / prev[common] - 1).mean()
                 nav_since_rebal *= (1 + dr)
-                # 月内止损：公式I启用，从调仓日起累计亏损超 MONTHLY_STOP 则清仓
-                if FORMULA == "I" and nav_since_rebal <= (1 + MONTHLY_STOP):
-                    portfolio_returns.iloc[i] += dr
-                    current_holdings = []
-                    nav_since_rebal = 1.0
-                else:
-                    portfolio_returns.iloc[i] += dr
+                cumul_nav       *= (1 + dr)
+                entry_hwm        = max(entry_hwm, cumul_nav)  # 更新本期入场最高点
+
+                if FORMULA == "I":
+                    # 公式I：期内止损 OR 追踪止损（二者任一触发则清仓）
+                    period_stop   = nav_since_rebal <= (1 + PERIOD_STOP)
+                    trailing_stop = (cumul_nav / entry_hwm - 1) <= TRAILING_STOP
+                    if period_stop or trailing_stop:
+                        portfolio_returns.iloc[i] += dr
+                        current_holdings  = []
+                        nav_since_rebal   = 1.0
+                        continue
+
+                portfolio_returns.iloc[i] += dr
 
     return (1 + portfolio_returns).cumprod()
 
