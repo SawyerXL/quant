@@ -149,7 +149,7 @@ def main():
 
         for code in sell_list:
             p = price_map.get(code, 0)
-            if p <= 0:
+            if not p or pd.isna(p) or p <= 0:
                 continue
             shares = int(target_val / p / 100) * 100
             amount = round(shares * p, 2)
@@ -169,7 +169,7 @@ def main():
 
         for code in buy_list:
             p = price_map.get(code, 0)
-            if p <= 0:
+            if not p or pd.isna(p) or p <= 0:
                 continue
             shares = int(target_val / p / 100) * 100
             amount = round(shares * p, 2)
