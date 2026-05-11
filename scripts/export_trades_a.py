@@ -111,7 +111,7 @@ def main():
     calendar = [d for d in cal_df["trade_date"].tolist()
                 if BACKTEST_START <= d]
 
-    stock_info = load_meta("stock_info")
+    stock_info = load_meta("stock_info_full")
     codes = stock_info["code"].tolist() if not stock_info.empty else []
     logger.info(f"股票池 {len(codes)} 只，加载价格矩阵中...")
 
