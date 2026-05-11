@@ -202,7 +202,13 @@ def compute_score(
 
 
 def get_monthly_rebalance_dates(trade_calendar: list) -> list[str]:
-    """返回每月最后一个交易日列表（调仓信号日）。"""
+    """
+    返回每月最后一个交易日列表（信号日 = 执行日）。
+
+    实盘要求：当天 14:30 前完成信号计算并提交委托，
+    14:57-15:00 竞价收盘成交，与回测使用同一收盘价基准。
+    月末效应（均 +0.39%/月）在此框架下可合法捕获。
+    """
     dates = pd.DatetimeIndex(sorted(trade_calendar))
     dates = dates[(dates >= BACKTEST_START) & (dates <= BACKTEST_END)]
     monthly_ends = []
@@ -221,20 +227,19 @@ def run_backtest(
     regime: pd.Series | None = None,
 ) -> pd.Series:
     """
-    向量化回测主函数。
-    regime: 每日布尔 Series，True=牛市，False=熊市空仓。
+    向量化回测主函数（T+0：信号日=执行日=月末收盘）。
+    实盘对应：14:30 前完成选股 → 竞价收盘委托成交。
     返回：每日组合净值序列（初始=1.0）
     """
     all_dates = panel.index
     portfolio_returns = pd.Series(0.0, index=all_dates)
     current_holdings = []
-    rebalance_set = set(str(d.date()) for d in pd.DatetimeIndex(rebalance_dates))
+    rebalance_set = set(rebalance_dates)
 
     for i, date in enumerate(all_dates):
         date_str = str(date.date())
 
         if date_str in rebalance_set and i >= MIN_BARS:
-            # 大势过滤：熊市状态则清仓，不再选股
             in_bull = True
             if regime is not None and date in regime.index:
                 in_bull = bool(regime.loc[date])
@@ -255,12 +260,11 @@ def run_backtest(
                     current_holdings = new_holdings
 
         if current_holdings and i > 0:
-            prev_prices = panel.iloc[i - 1][current_holdings].dropna()
-            curr_prices = panel.iloc[i][current_holdings].dropna()
-            common = prev_prices.index.intersection(curr_prices.index)
+            prev = panel.iloc[i - 1][current_holdings].dropna()
+            curr = panel.iloc[i][current_holdings].dropna()
+            common = prev.index.intersection(curr.index)
             if len(common) > 0:
-                daily_rets = curr_prices[common] / prev_prices[common] - 1
-                portfolio_returns.iloc[i] += daily_rets.mean()
+                portfolio_returns.iloc[i] += (curr[common] / prev[common] - 1).mean()
 
     return (1 + portfolio_returns).cumprod()
 
@@ -320,7 +324,8 @@ def main():
         return
 
     rebalance_dates = get_monthly_rebalance_dates(trade_calendar)
-    logger.info(f"调仓月数: {len(rebalance_dates)}")
+    logger.info(f"调仓月数: {len(rebalance_dates)}  "
+                f"（T+0：月末收盘执行，实盘需 14:30 前生成信号）")
 
     # ── 大势过滤 ────────────────────────────────────
     regime = None
