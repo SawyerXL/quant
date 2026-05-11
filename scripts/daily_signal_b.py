@@ -145,16 +145,17 @@ def run():
         logger.warning("大势极弱，本期全空仓")
         prev = _load_prev_holdings()
         _save_and_alert({
-            "signal_date": today,
-            "regime": "bear",
-            "market_score": round(m_score, 1),
+            "signal_date":    today,
+            "regime":         "bear",
+            "cash_action":    "money_market",  # 30万转入货币基金
+            "market_score":   round(m_score, 1),
             "position_ratio": pos_ratio,
-            "sectors": [],
+            "sectors":  [],
             "holdings": [],
-            "buy": [],
-            "sell": prev,
-            "weights": {},
-            "shares": {},
+            "buy":      [],
+            "sell":     prev,
+            "weights":  {},
+            "shares":   {},
         })
         return
 
@@ -197,15 +198,16 @@ def run():
     shares = _calc_shares(new_holdings, latest_prices, len(new_holdings))
 
     signal = {
-        "signal_date":   today,
-        "regime":        "bull",
-        "market_score":  round(m_score, 1),
+        "signal_date":    today,
+        "regime":         "bull",
+        "cash_action":    "equity",       # 资金用于股票持仓
+        "market_score":   round(m_score, 1),
         "position_ratio": pos_ratio,
-        "sectors":       selected_sectors,
-        "sector_picks":  sector_picks,
-        "holdings":      new_holdings,
-        "buy":           buy_list,
-        "sell":          sell_list,
+        "sectors":        selected_sectors,
+        "sector_picks":   sector_picks,
+        "holdings":       new_holdings,
+        "buy":            buy_list,
+        "sell":           sell_list,
         "weights":       {c: round(1 / len(new_holdings), 6) for c in new_holdings},
         "shares":        shares,
         "prices":        {c: round(float(latest_prices.get(c, 0)), 2) for c in new_holdings},
@@ -235,7 +237,8 @@ def _save_and_alert(signal: dict):
         msg = (
             f"【Track B 信号】{today}\n"
             f"⚠️ 大势过弱（{m_score:.0f}分），全部清仓\n"
-            f"卖出: {len(sell)} 只"
+            f"卖出: {len(sell)} 只\n"
+            f"💰 空仓期操作：30万转入货币基金"
         )
     else:
         sector_str = " / ".join(sectors)

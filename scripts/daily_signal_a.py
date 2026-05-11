@@ -152,6 +152,7 @@ def run():
         signal = {
             "signal_date": today,
             "regime":      "bear",
+            "cash_action": "money_market",  # 空仓：资金转入货币基金
             "holdings":    [],
             "buy":         [],
             "sell":        prev,
@@ -200,6 +201,7 @@ def run():
     signal = {
         "signal_date": today,
         "regime":      "bull",
+        "cash_action": "equity",          # 资金用于股票持仓
         "holdings":    new_holdings,
         "buy":         buy_list,
         "sell":        sell_list,
@@ -230,16 +232,22 @@ def _save_and_alert(signal: dict):
         msg = (
             f"【Track A 信号】{today}\n"
             f"⚠️ 大势过滤：熊市，全部清仓\n"
-            f"卖出: {len(sell)} 只"
+            f"卖出: {len(sell)} 只\n"
+            f"💰 空仓期操作：60万转入货币基金（天弘余额宝等），约年化2%"
         )
     else:
+        cash_note = ""
+        if signal.get("cash_action") == "equity":
+            prev_was_cash = len(signal.get("sell", [])) == 0 and len(signal.get("buy", [])) == len(holdings)
+            if prev_was_cash:
+                cash_note = "\n💰 从货币基金赎回资金，准备建仓"
         msg = (
             f"【Track A 信号】{today}\n"
             f"✅ 牛市 | 持仓 {len(holdings)} 只\n"
             f"买入({len(buy)}): {', '.join(buy[:5])}{'...' if len(buy)>5 else ''}\n"
             f"卖出({len(sell)}): {', '.join(sell[:5])}{'...' if len(sell)>5 else ''}\n"
             f"每股仓位: {signal.get('capital_per_stock',0):,} 元\n"
-            f"⏰ 请于 14:57 前提交竞价委托"
+            f"⏰ 请于 14:57 前提交竞价收盘委托{cash_note}"
         )
 
     logger.info(msg)

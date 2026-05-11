@@ -45,6 +45,10 @@ PERIOD_STOP      = -0.15       # 每期（两周）内最大亏损
 TRAILING_STOP    = -0.18       # 从本期入场最高点追踪止损（防止渐进式崩盘）
 REBAL_FREQ       = os.getenv("REBAL_FREQ", "biweekly")  # "monthly" / "biweekly"
 
+# 空仓期资金管理（实盘：存货币基金/短期国债）
+# 回测用 2%/年 保守估算；实盘视具体产品收益率调整
+CASH_YIELD       = float(os.getenv("CASH_YIELD", "0.02"))  # 年化，0=不计息
+
 logger.add("logs/backtest_a.log", rotation="1 day", retention="30 days")
 
 
@@ -315,6 +319,9 @@ def run_backtest(
                         continue
 
                 portfolio_returns.iloc[i] += dr
+        elif CASH_YIELD > 0:
+            # 空仓期：按货币基金/短期国债日化收益计息
+            portfolio_returns.iloc[i] += CASH_YIELD / 252
 
     return (1 + portfolio_returns).cumprod()
 
