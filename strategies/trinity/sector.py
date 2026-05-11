@@ -132,8 +132,8 @@ def select_sectors(
         candidates = scores.nlargest(top_n)   # 放宽门槛兜底
 
     selected = candidates.index.tolist()
-    logger.info(f"板块层选出: {selected}  "
-                f"(得分: {[f'{s:.0f}' for s in candidates.values]})")
+    score_strs = [f"{s:.0f}" if pd.notna(s) else "N/A" for s in candidates.values]
+    logger.info(f"板块层选出: {selected}  (得分: {score_strs})")
     return selected
 
 
