@@ -39,6 +39,8 @@ def sector_scores(
         return pd.Series(50.0, index=industries)
 
     ind_map = stock_info.set_index("code")["industry_l1"].dropna()
+
+    ind_map = stock_info.set_index("code")["industry_l1"].dropna()
     industries = ind_map.unique()
 
     results = {}
@@ -59,13 +61,13 @@ def sector_scores(
 
         # 成交额增速（近4周均 / 近20周均）
         if not a_ind.empty and len(a_ind) >= 20:
-            recent4  = a_ind.iloc[-20:].mean().mean()   # 近4周（~20交易日）
-            base20   = a_ind.iloc[-100:].mean().mean()  # 近20周（~100交易日）
+            recent4  = a_ind.iloc[-20:].mean().mean()
+            base20   = a_ind.iloc[-100:].mean().mean()
             amt_ratio = (recent4 / base20 - 1) if base20 > 0 else 0.0
         else:
             amt_ratio = 0.0
 
-        # MA20 强度
+        # MA20 强度（保持不变）
         if len(p_ind) >= 20:
             ma20  = p_ind.rolling(20).mean().iloc[-1]
             last  = p_ind.iloc[-1]
