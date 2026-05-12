@@ -202,7 +202,9 @@ def compute_score(
             ind_map = stock_info.set_index("code")["industry_l1"]
             sector_amt_rank = pd.Series(0.5, index=p.index)
             for ind in ind_map.unique():
-                ind_codes = [c for c in ind_map[ind_map == ind].index if c in vol_recent.index]
+                # 只取同时在 p.index（流动性过滤后）和 vol_recent 中的股票
+                ind_codes = [c for c in ind_map[ind_map == ind].index
+                             if c in p.index and c in vol_recent.index]
                 if len(ind_codes) >= 3:
                     sector_amt_rank[ind_codes] = vol_recent[ind_codes].rank(pct=True)
             combined_rank = 0.70 * cross_amt_rank + 0.30 * sector_amt_rank.reindex(p.index)
