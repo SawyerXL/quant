@@ -139,8 +139,8 @@ def main():
     rebal_dates = get_rebal_dates(calendar)
     logger.info(f"共 {len(rebal_dates)} 个调仓日")
 
-    capital     = 600_000.0
-    nav         = capital
+    CAPITAL_PER = 600_000.0 / N_HOLDINGS   # 固定等权：每只2万，不随净值变动
+    total_realized_pnl = 0.0
     positions   = {}    # {code: {'shares': int, 'cost': float}}  实际持仓
     prev_hold   = []
     rows        = []
@@ -153,7 +153,7 @@ def main():
 
         price_map = panel[panel.index <= rebal_dt].iloc[-1].to_dict()
         date_str  = str(rebal_dt.date())
-        capital_per = nav / N_HOLDINGS
+        capital_per = CAPITAL_PER   # 始终用固定等权金额
 
         sell_list = [c for c in prev_hold if c not in set(new_hold)]
         buy_list  = [c for c in new_hold  if c not in set(prev_hold)]
@@ -190,7 +190,7 @@ def main():
                 "盈亏(%)":     pnl_pct,
                 "备注":        "移出持仓池",
             })
-            nav += pnl  # 更新净值
+            total_realized_pnl += pnl
 
         # ── 买入（计算整手数，记录成本）──────────────────
         for code in buy_list:
@@ -279,7 +279,7 @@ def main():
     logger.info(f"  调仓次数: {df['日期'].nunique()} 次")
     logger.info(f"  买入笔数: {len(df[df['方向']=='买入'])}")
     logger.info(f"  卖出笔数: {len(df[df['方向']=='卖出'])}")
-    logger.info(f"  实现盈亏: {sell_pnl.sum():+,.0f} 元")
+    logger.info(f"  实现盈亏: {total_realized_pnl:+,.0f} 元")
     logger.info(f"  盈利笔数: {(sell_pnl > 0).sum()} / 亏损笔数: {(sell_pnl < 0).sum()}")
     logger.info(f"  结果文件: {out}")
 
