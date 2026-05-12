@@ -1,17 +1,6 @@
 # 项目状态
 
-## 最新更新：2026-05-12（待 5/12 登录云服务器后继续）
-
----
-
-## 5月12日登录后第一件事
-
-```bash
-cd /root/quant && git pull && source .venv/bin/activate
-python scripts/run_backtest_a.py   # 重新跑 Track A 回测（含两个新修复）
-```
-
-**为什么要重跑**：今天做了两个因子改进（见下方已完成），需要验证新回测结果是否达标。
+## 最新更新：2026-05-12
 
 ---
 
@@ -30,10 +19,13 @@ python scripts/run_backtest_a.py   # 重新跑 Track A 回测（含两个新修�
 - [x] **新**：因子优化：截面成交额排名改为 板块内排名30% + 截面70%（修正行业规模偏差）
 - [x] **新**：科创板最小手数修正：688开头→200股，其余→100股（daily_signal_a.py + trader.py）
 
-**Track B 回测**
-- [x] 排查并修复3个前视偏差bug（生存者偏差+执行顺序+T+0问题）
-- [x] 修复后结论：年化-29.3%，策略需重新设计（正常，符合预期）
-- [ ] Track B 策略优化：待后续迭代
+**Track B 方向确定**
+- [x] 修复3个前视偏差bug后量化回测结论：年化-29.3%（符合预期，量化无法单独跑通）
+- [x] **决策（2026-05-12）：选择路线B** — 人机协作模式
+  - 大势层+板块层：金融同学每周人工判断，填入 `manual_scores_b.json`
+  - 个股层：量化强势打分（资金/价格/趋势三维）自动输出
+  - 量化回测不是验证方式，改用纸面交易验证人工判断质量
+- [ ] Track B纸面交易：等Track A上实盘后（约8周后）启动
 
 **纸面交易**
 - [x] 已建仓30只，总金额77万
@@ -45,16 +37,26 @@ python scripts/run_backtest_a.py   # 重新跑 Track A 回测（含两个新修�
 - [x] cron 14:25 生成信号，17:00 更新数据，15:30 纸面交易跟踪
 - [x] 最新信号（5/11）：bull 大势，30只持仓
 
-### 今日（5/12）需要做的
+### 当前待办
 
-**你来做（必须）**：
+**团队来做**：
 1. 联系QMT券商确认账户审批状态
 2. 询问券商是否提供配套Windows VPS
+3. 配置企业微信机器人 webhook（WECHAT_WEBHOOK_URL），接收每日告警
 
-**我来做（5/12登录云服务器后）**：
-1. `python scripts/run_backtest_a.py` 重跑回测（含新因子）
-2. 查看结果是否达标
-3. 如果达标 → 打 v0.2-track-a 版本标签
+**Track B人工操作（每周一早上，金融同学）**：
+填写 `data_store/meta/manual_scores_b.json`：
+```json
+{
+  "week_start": "YYYY-MM-DD",
+  "market_manual_score": 70,
+  "sector_overrides": {
+    "电子": 85,
+    "医药生物": 40
+  },
+  "notes": "本周市场判断说明"
+}
+```
 
 ---
 
@@ -62,10 +64,10 @@ python scripts/run_backtest_a.py   # 重新跑 Track A 回测（含两个新修�
 
 | 周次 | 关键任务 | 依赖 |
 |---|---|---|
-| Week 3（本周）| 重跑Track A回测验证，QMT信息到位，配置Windows服务器 | QMT状态确认 |
+| Week 3（本周）| Track A回测验证✅，QMT信息确认，Track B纸面交易人工输入启动 | QMT状态确认 |
 | Week 4 | QMT安装测试，MockQMTClient模拟交易链路验证 | Windows服务器 |
 | Week 5-6 | QMT模拟盘，信号→下单→对账全流程 | QMT连接 |
-| Week 7-8 | 10万→60万逐步实盘 | 模拟盘通过 |
+| Week 7-8 | 10万→60万逐步实盘；Track B同步纸面交易积累数据 | 模拟盘通过 |
 
 ---
 
