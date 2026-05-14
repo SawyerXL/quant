@@ -211,9 +211,12 @@ def run():
     buy_list  = [c for c in new_holdings if c not in set(prev_holdings)]
     sell_list = [c for c in prev_holdings if c not in set(new_holdings)]
 
-    # ⑦ 计算委托股数（基于今日收盘价）
-    latest_prices = panel.iloc[-1]
+    # ⑦ 计算委托股数（基于最新有效收盘价，ffill 避免当日数据未到时全NaN）
+    latest_prices = panel.ffill().iloc[-1]
     shares = _calc_shares(new_holdings, latest_prices)
+    zero_shares = [c for c, s in shares.items() if s == 0]
+    if zero_shares:
+        logger.warning(f"以下 {len(zero_shares)} 只股价超过2万/手，无法整手买入，需人工处理: {zero_shares}")
 
     signal = {
         "signal_date": today,
