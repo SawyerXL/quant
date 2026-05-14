@@ -34,7 +34,17 @@ def save_daily(code: str, df: pd.DataFrame) -> None:
     """按年分片写入日线数据。"""
     if df.empty:
         return
-    df["date"] = pd.to_datetime(df["date"])
+    # 清洗：'-' / '暂无数据' 等非数值字段转 NaN，无效日期行丢弃
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df = df.dropna(subset=["date"])
+    if df.empty:
+        return
+    # code 列统一为6位零填充字符串
+    if "code" in df.columns:
+        df["code"] = df["code"].astype(str).str.zfill(6)
+    for col in df.select_dtypes(include="object").columns:
+        if col not in ("date", "code"):
+            df[col] = pd.to_numeric(df[col], errors="coerce")
     for year, grp in df.groupby(df["date"].dt.year):
         path = _daily_path(code, year)
         if path.exists():
