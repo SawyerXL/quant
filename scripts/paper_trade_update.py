@@ -28,13 +28,17 @@ START_CSV   = START_CSV_A   # 默认 Track A，兼容旧调用
 
 def fetch_prices(codes: list[str], trade_date: str) -> dict[str, float]:
     """通过 MCP 拉取当日收盘价。"""
+    import math
     src = MCPSource()
     prices = {}
     for code in codes:
         try:
             df = src.get_daily(code, trade_date, trade_date)
             if not df.empty and "close" in df.columns:
-                prices[code] = float(df.iloc[-1]["close"])
+                val = float(df.iloc[-1]["close"])
+                # 过滤 NaN / 0 / 负数，否则 NaN 会导致合计行计算口径不一致
+                if not math.isnan(val) and val > 0:
+                    prices[code] = val
         except Exception as e:
             logger.warning(f"{code} 价格获取失败: {e}")
     logger.info(f"获取到 {len(prices)}/{len(codes)} 只价格")
