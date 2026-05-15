@@ -48,7 +48,7 @@ def market_score(
     hist_panel = price_panel[price_panel.index <= date]
     if len(hist_panel) >= 20:
         ma20_panel = hist_panel.rolling(20).mean().iloc[-1]
-        last_price = hist_panel.iloc[-1]
+        last_price = hist_panel.ffill().iloc[-1]   # ffill：14:25时当日价格尚未出来
         breadth_pct = (last_price > ma20_panel).mean()  # 0–1
     else:
         breadth_pct = 0.5

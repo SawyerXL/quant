@@ -75,11 +75,12 @@ def _load_prev_holdings() -> list[str]:
         return []
 
 
-def _calc_shares(codes: list[str], prices: pd.Series, n_total: int) -> dict[str, int]:
+def _calc_shares(codes: list[str], prices: pd.Series, n_total: int,
+                 pos_ratio: float = 1.0) -> dict[str, int]:
     """等权计算各股计划买入手数（向下取整，至少1手）。"""
     if not codes or n_total == 0:
         return {}
-    capital_per = TRACK_B_CAPITAL / n_total
+    capital_per = TRACK_B_CAPITAL * pos_ratio / n_total   # 乘以仓位系数
     return {
         code: max(1, int(capital_per / prices.get(code, 1) / 100)) * 100
         for code in codes
@@ -195,7 +196,7 @@ def run():
 
     # 计划股数
     latest_prices = panel.iloc[-1]
-    shares = _calc_shares(new_holdings, latest_prices, len(new_holdings))
+    shares = _calc_shares(new_holdings, latest_prices, len(new_holdings), pos_ratio)
 
     signal = {
         "signal_date":    today,
@@ -211,7 +212,7 @@ def run():
         "weights":       {c: round(1 / len(new_holdings), 6) for c in new_holdings},
         "shares":        shares,
         "prices":        {c: round(float(latest_prices.get(c, 0)), 2) for c in new_holdings},
-        "capital_per_stock": round(TRACK_B_CAPITAL / max(len(new_holdings), 1)),
+        "capital_per_stock": round(TRACK_B_CAPITAL * pos_ratio / max(len(new_holdings), 1)),
         "note":          "T+0：本日14:57前提交竞价委托",
     }
     _save_and_alert(signal)

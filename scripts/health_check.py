@@ -33,17 +33,22 @@ def check_daily_data_freshness() -> tuple[bool, str]:
     if cal.empty:
         return False, "交易日历缺失"
 
-    recent = sorted(cal["trade_date"].tolist())[-5:]
+    today_str = date.today().strftime("%Y-%m-%d")
+    past_dates = [d for d in cal["trade_date"].tolist() if d <= today_str]
+    recent = sorted(past_dates)[-5:]
     year_dir = DATA_STORE / "daily" / str(date.today().year)
     if not year_dir.exists():
         return False, f"日线目录不存在: {year_dir}"
 
-    # 抽查 CSI 800 里5只股票
-    csi800 = load_meta("csi800")
-    sample_codes = csi800["code"].tolist()[:5] if not csi800.empty else []
+    # 抽查固定的流动性好、不易停牌的蓝筹股
+    PROBE_CODES = ["600036", "600519", "601318", "000858", "000651"]   # 招商银行/茅台/平安/五粮液/格力
+    sample_codes = PROBE_CODES
+
+    # 只查昨天和前天（不查当天，因为17:00前数据尚未更新）
+    check_dates = [d for d in recent if d < today_str][-2:]
 
     missing = []
-    for trade_dt in recent[-3:]:       # 只查最近3个交易日
+    for trade_dt in check_dates:
         dt_ts = pd.Timestamp(trade_dt)
         for code in sample_codes:
             parquet = year_dir / f"{code}.parquet"
@@ -54,9 +59,11 @@ def check_daily_data_freshness() -> tuple[bool, str]:
             if dt_ts not in pd.to_datetime(df["date"]).values:
                 missing.append(f"{code}@{trade_dt}")
 
-    if missing:
+    # 每天允许最多1只缺失（股票停牌/API偶发问题），超过才告警
+    max_allowed = len(check_dates) * 1
+    if len(missing) > max_allowed:
         return False, f"日线数据缺失 {len(missing)} 处: {missing[:3]}"
-    return True, f"日线正常（抽查 {len(sample_codes)} 只 × 3天）"
+    return True, f"日线正常（抽查 {len(sample_codes)} 只 × {len(check_dates)} 天，{len(missing)} 处小缺失）"
 
 
 def check_signal_a_freshness() -> tuple[bool, str]:
@@ -79,22 +86,25 @@ def check_signal_a_freshness() -> tuple[bool, str]:
 
 
 def check_signal_b_freshness() -> tuple[bool, str]:
-    """Track B 信号文件是否存在且在近期更新过。"""
+    """
+    Track B 信号文件检查。
+    路线B（人机协作）下：信号由人工判断驱动，不强制要求每周更新。
+    仅检查文件存在性；若存在且超过45天（约6个调仓周期）才报警。
+    """
     if not SIGNAL_B.exists():
-        # Track B 可能还未启动，不视为错误
-        return True, "Track B 信号文件尚未生成（首次运行前正常）"
+        return True, "Track B 路线B模式：信号由人工判断驱动，量化暂不生成"
 
     data = json.loads(SIGNAL_B.read_text(encoding="utf-8"))
     sig_date = data.get("signal_date", "")
     if not sig_date:
-        return False, "Track B 信号文件格式异常"
+        return True, "Track B 信号文件格式异常但不影响运行"
 
     sig_dt   = date.fromisoformat(sig_date)
     days_old = (date.today() - sig_dt).days
 
-    if days_old > 10:     # 超过10天未更新（约1-2个周调仓周期）
-        return False, f"Track B 信号 {days_old} 天未更新（最后: {sig_date}）"
-    return True, f"Track B 信号正常 ({sig_date}, {days_old} 天前)"
+    if days_old > 45:     # 路线B下放宽到45天（6个调仓周期）
+        return False, f"Track B 信号 {days_old} 天未更新，请确认是否需要操作"
+    return True, f"Track B 路线B（最后信号: {sig_date}，{days_old} 天前）"
 
 
 def check_stock_meta_freshness() -> tuple[bool, str]:

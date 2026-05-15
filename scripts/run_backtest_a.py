@@ -140,10 +140,12 @@ def compute_score(
         if hist.empty:
             return pd.Series(dtype=float)
 
-    p     = hist.iloc[-1]       # 当日价格
-    p_21  = hist.iloc[-21]      # 约1个月前
-    p_126 = hist.iloc[-126]     # 约6个月前
-    p_252 = hist.iloc[-252]     # 约12个月前
+    # 用 ffill 避免当日数据未到时最后一行全 NaN（信号在14:25跑，当日收盘价还没有）
+    hist_filled = hist.ffill()
+    p     = hist_filled.iloc[-1]       # 最新有效收盘价
+    p_21  = hist_filled.iloc[-21]
+    p_126 = hist_filled.iloc[-126]
+    p_252 = hist_filled.iloc[-252]
 
     reversal = _zscore(p_21 / p - 1)           # 1月反转（负的1月收益）
 

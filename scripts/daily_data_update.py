@@ -118,16 +118,22 @@ def update_today():
     codes = stock_info["code"].tolist()
     failed = []
     for i, code in enumerate(codes):
-        df = src.get_daily(code, today, today)
-        if df.empty:
+        try:
+            df = src.get_daily(code, today, today)
+            if df.empty:
+                failed.append(code)
+            else:
+                save_daily(code, df)
+        except Exception as e:
+            # 单只股票失败（如"暂无数据"解析错误）不影响整体流程
+            logger.debug(f"{code}: 更新失败 — {e}")
             failed.append(code)
-        else:
-            save_daily(code, df)
         if (i + 1) % 500 == 0:
             logger.info(f"进度: {i+1}/{len(codes)}")
 
-    # 4. 更新交易日历
-    cal_df = __import__("pandas").DataFrame({"trade_date": calendar})
+    # 4. 更新交易日历（先于日报，确保日历及时保存）
+    import pandas as pd
+    cal_df = pd.DataFrame({"trade_date": calendar})
     save_meta("trade_calendar", cal_df)
 
     # 5. 推送日报
