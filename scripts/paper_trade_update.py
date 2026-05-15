@@ -21,7 +21,9 @@ from data.source.mcp_source import MCPSource
 
 logger.add("logs/paper_trade_update.log", rotation="1 day", retention="30 days")
 
-START_CSV = Path("logs/paper_trade_a_start.csv")
+START_CSV_A = Path("logs/paper_trade_a_start.csv")
+START_CSV_B = Path("logs/paper_trade_b_start.csv")
+START_CSV   = START_CSV_A   # 默认 Track A，兼容旧调用
 
 
 def fetch_prices(codes: list[str], trade_date: str) -> dict[str, float]:
@@ -98,43 +100,52 @@ def calc_pnl(start: pd.DataFrame, prices: dict, trade_date: str) -> pd.DataFrame
     return df
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--date", default=date.today().strftime("%Y-%m-%d"))
-    args = parser.parse_args()
-    trade_date = args.date
+def _run_track(track: str, trade_date: str):
+    """单个 track 的纸面交易更新逻辑。"""
+    csv = START_CSV_B if track == "b" else START_CSV_A
+    prefix = f"paper_trade_b" if track == "b" else "paper_trade"
 
-    logger.info(f"纸面交易更新: {trade_date}")
+    if not csv.exists():
+        logger.warning(f"Track {track.upper()} 建仓文件不存在: {csv}，跳过")
+        return
 
-    if not START_CSV.exists():
-        logger.error(f"建仓文件不存在: {START_CSV}")
-        sys.exit(1)
-
-    start = pd.read_csv(START_CSV, dtype={"代码": str})
+    start = pd.read_csv(csv, dtype={"代码": str}, encoding="utf-8-sig")
     start["代码"] = start["代码"].astype(str).str.zfill(6)
     codes = start["代码"].tolist()
 
     prices   = fetch_prices(codes, trade_date)
     result   = calc_pnl(start, prices, trade_date)
 
-    out_path = Path(f"logs/paper_trade_{trade_date.replace('-', '')}.csv")
+    out_path = Path(f"logs/{prefix}_{trade_date.replace('-', '')}.csv")
     result.to_csv(out_path, index=False, encoding="utf-8-sig")
 
-    # 控制台摘要
     summary = result[result["代码"] == "合计"].iloc[0]
     pnl     = float(summary["浮动盈亏(元)"])
     pnl_pct = float(summary["涨跌幅(%)"])
     sign    = "+" if pnl >= 0 else ""
+    tag     = f"Track {'B' if track == 'b' else 'A'} 纸面交易日报"
     logger.info(
-        f"【纸面交易日报 {trade_date}】\n"
+        f"【{tag} {trade_date}】\n"
         f"  建仓总额: {summary['建仓金额(元)']:,.0f} 元\n"
         f"  当前市值: {summary['当前市值(元)']:,.0f} 元\n"
         f"  浮动盈亏: {sign}{pnl:,.0f} 元  ({sign}{pnl_pct:.2f}%)\n"
         f"  结果文件: {out_path}"
     )
-    print(result[result["代码"] != "合计"][
-        ["代码", "名称", "涨跌幅(%)", "浮动盈亏(元)"]
-    ].sort_values("涨跌幅(%)", ascending=False).to_string(index=False))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--date",  default=date.today().strftime("%Y-%m-%d"))
+    parser.add_argument("--track", default="both", choices=["a", "b", "both"],
+                        help="a=Track A, b=Track B, both=两个都跑（默认）")
+    args = parser.parse_args()
+    trade_date = args.date
+
+    logger.info(f"纸面交易更新: {trade_date}")
+
+    tracks = ["a", "b"] if args.track == "both" else [args.track]
+    for t in tracks:
+        _run_track(t, trade_date)
 
 
 if __name__ == "__main__":
