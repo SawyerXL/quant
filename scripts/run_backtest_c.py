@@ -26,11 +26,26 @@ from data.storage import load_daily, load_meta, load_financial
 # ── 复用 A 的核心函数 ───────────────────────────────────────────────────────
 from run_backtest_a import (
     load_panels, build_regime_series, _zscore,
-    get_monthly_rebalance_dates, calc_metrics,
+    calc_metrics,
     BACKTEST_START, COMMISSION, MIN_BARS, LIQUIDITY_THRESH,
     MA_PERIOD, REGIME_BEAR_THR, REGIME_BULL_THR,
     PERIOD_STOP, TRAILING_STOP, CASH_YIELD,
 )
+
+
+def _make_rebal_dates(calendar: list[str], freq: str = "biweekly") -> list[str]:
+    """自行计算调仓日期，不依赖 A 的全局变量。"""
+    dates = pd.DatetimeIndex(sorted(calendar))
+    result = []
+    for yr in range(dates[0].year, dates[-1].year + 1):
+        for mo in range(1, 13):
+            md = dates[(dates.year == yr) & (dates.month == mo)]
+            if len(md) == 0:
+                continue
+            if freq == "biweekly" and len(md) >= 2:
+                result.append(str(md[len(md) // 2].date()))
+            result.append(str(md[-1].date()))
+    return sorted(set(result))
 
 logger.add("logs/backtest_c.log", rotation="1 day", retention="30 days")
 
@@ -307,7 +322,8 @@ def main():
         if regime.empty:
             regime = None
 
-    rebal_dates = get_monthly_rebalance_dates(trade_calendar)
+    # 不用 A 的 get_monthly_rebalance_dates（依赖 A 的全局变量会出错），自行计算
+    rebal_dates = _make_rebal_dates(trade_calendar, REBAL_FREQ)
 
     results = {}
 
