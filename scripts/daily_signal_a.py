@@ -9,7 +9,7 @@ Track A 每日信号生成脚本。
     1. 非交易日 / 非调仓日（月中+月末）→ 仅打日志，退出
     2. 两周调仓日（月中/月末）：
        a. 大势过滤（CSI 800 MA200 ±2%）→ 熊市则清仓
-       b. 牛市：运行公式H计算截面得分，取前30只
+       b. 牛市：运行公式I计算截面得分，取前30只
        c. 与上期持仓对比，输出买入/卖出清单
        d. 保存信号 JSON + 发企业微信告警
 """
@@ -193,8 +193,8 @@ def run():
         send_alert("[Track A] 价格数据加载失败，信号中止", level="error")
         return
 
-    # ⑤ 公式H计算得分，取前30
-    logger.info("运行公式H选股...")
+    # ⑤ 公式I计算得分，取前30（6M动量 + 量价突破加成 + 成交额排名权重）
+    logger.info("运行公式I选股（6M动量）...")
     today_ts = pd.Timestamp(today)
     score = compute_score(panel, today_ts, amount_panel)
 
