@@ -1,13 +1,24 @@
 """
-Track A 每日信号生成脚本（策略A-2版）。
+Track A 每日信号生成脚本（策略A-3版）。
 
-策略A-2 改进点（vs 原策略A）：
+策略A-3 在 A-2 基础上新增「新仓保护期」：
+  ⑦ 新仓保护期（GRACE_PERIODS=2, GRACE_THRESHOLD=15%）
+     持仓 < 2个调仓周期（约4周）的股票受保护，
+     替换者需得分高出15%才能换出，防止「旋转门」效应。
+
+  数据支撑（持仓天数分析）：
+    <2周 胜率23%，单笔期望-4.3%（负收益）
+    2-4周 胜率33%，单笔期望-3.2%（负收益）
+    >4周 胜率51%，单笔期望+6.0%（正收益）
+  → 减少早期换仓，让持仓进入正期望区间
+
+继承 A-2 全部改进：
   ① 多周期动量叠加：Z行业(1M)×30% + Z行业(6M)×40% + Z行业(12M)×30%
   ② 波动率调控：高波动股票得分×0.7，低波动×1.3
-  ③ 行业均衡选股：按行业强度比例分配30只名额，单行业上限8只
+  ③ 行业均衡选股：按行业强度分配名额，单行业上限8只
   ④ 得分加权：top股权重约2倍bottom股（线性递减）
   ⑤ 主线板块1.3倍：最强板块额外放大
-  ⑥ 阶梯式仓位（5档）：CSI800/MA200 → 30%~100%，不再二值化
+  ⑥ 阶梯式仓位（5档）：CSI800/MA200 → 30%~100%
 
 运行时机（cron）：
     25 14 * * 1-5  → 每个交易日 14:25 运行
@@ -25,15 +36,18 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
-# 从策略A-2回测脚本复用核心函数
+# 策略A-3：复用 A-2 的打分/权重，替换选股为 A-3 的保护期选股
 from run_backtest_a2 import (
     compute_score_a2,
-    select_industry_balanced,
     compute_weights,
     get_position_ratio,
     MAX_IND_SLOT,
     SECTOR_BOOST,
 )
+from run_backtest_a3 import select_with_grace   # ★ A-3 新仓保护期选股
+
+GRACE_PERIODS   = 2     # 保护期：持仓不足2期的股票受保护
+GRACE_THRESHOLD = 0.15  # 替换门槛：替换者需高出15%得分
 from run_backtest_a import MA_PERIOD, load_panels
 from data.storage import load_meta
 from monitoring.alerts import send_alert
@@ -85,13 +99,19 @@ def _get_position_ratio(today: str) -> float:
 
 
 def _load_prev_signal() -> dict:
-    """读取上期信号文件。"""
+    """读取上期信号文件（含 hold_counts 持仓期数）。"""
     if not SIGNAL_FILE.exists():
         return {}
     try:
         return json.loads(SIGNAL_FILE.read_text(encoding="utf-8"))
     except Exception:
         return {}
+
+
+def _load_hold_counts() -> dict[str, int]:
+    """从上期信号文件读取各股已持仓期数，用于保护期判断。"""
+    prev = _load_prev_signal()
+    return {str(k): int(v) for k, v in prev.get("hold_counts", {}).items()}
 
 
 def _calc_weighted_shares(
@@ -135,10 +155,10 @@ def run():
         return
 
     logger.info("=" * 60)
-    logger.info(f"[Track A-2] 两周调仓日: {today}")
+    logger.info(f"[Track A-3] 两周调仓日: {today}")
     logger.info("=" * 60)
 
-    # ③ 阶梯式仓位（策略A-2：不再二值化，5档30%~100%）
+    # ③ 阶梯式仓位（策略A-3：不再二值化，5档30%~100%）
     pos_ratio = _get_position_ratio(today)
     logger.info(f"[大势研判] CSI800/MA200 → 仓位比例: {pos_ratio:.0%}")
 
@@ -177,8 +197,8 @@ def run():
         return
     logger.info(f"价格矩阵：{panel.shape[0]}天 × {panel.shape[1]}只")
 
-    # ⑤ 策略A-2 选股打分（多周期行业中性 + 波动率调控）
-    logger.info("策略A-2 选股中（多周期行业中性动量）...")
+    # ⑤ 策略A-3 选股打分（多周期行业中性 + 波动率调控）
+    logger.info("策略A-3 选股中（多周期行业中性动量 + 新仓保护期）...")
     today_ts   = pd.Timestamp(today)
     stock_info = load_meta("stock_info_full")
     stock_info = None if stock_info.empty else stock_info
@@ -190,9 +210,14 @@ def run():
         send_alert(msg, level="error")
         return
 
-    # ⑥ 行业均衡选股（主线多名额，弱势少名额）
-    selected = select_industry_balanced(score, stock_info, N_HOLDINGS, MAX_IND_SLOT)
-    logger.info(f"行业均衡选股完成: {len(selected)} 只")
+    # ⑥ A-3 保护期选股（持仓<2期的股票需15%优势才能被替换）
+    hold_counts = _load_hold_counts()
+    selected = select_with_grace(
+        score, prev_holdings, hold_counts,
+        N_HOLDINGS, GRACE_PERIODS, GRACE_THRESHOLD
+    )
+    logger.info(f"A-3 保护期选股完成: {len(selected)} 只 "
+                f"（保护中: {sum(1 for c in selected if hold_counts.get(c,0)<GRACE_PERIODS)}只）")
 
     # ⑦ 得分加权 + 主线板块1.3倍权重
     raw_weights = compute_weights(selected, score, stock_info, SECTOR_BOOST)
@@ -223,9 +248,20 @@ def run():
         f"{c}({raw_weights.get(c,0):.1%})" for c in top5
     ))
 
+    # 更新持仓期数（新入仓从1开始，续仓+1）
+    new_set = set(selected)
+    old_set = set(prev_holdings)
+    new_hold_counts = {
+        c: hold_counts.get(c, 0) + 1 if c in old_set else 1
+        for c in selected
+    }
+    logger.info(f"持仓期数分布: "
+                f"≥2期={sum(1 for v in new_hold_counts.values() if v>=2)}只  "
+                f"1期={sum(1 for v in new_hold_counts.values() if v==1)}只（受保护）")
+
     signal = {
         "signal_date":    today,
-        "strategy":       "A-2",
+        "strategy":       "A-3",
         "regime":         "bull",
         "position_ratio": pos_ratio,
         "cash_ratio":     cash_ratio,
@@ -238,7 +274,8 @@ def run():
         "shares":         shares,
         "prices":         {c: round(float(latest_prices.get(c, 0)), 2) for c in selected},
         "effective_capital": round(effective_cap),
-        "note":           f"T+0：14:57前提交竞价收盘委托 | 仓位{pos_ratio:.0%} | 策略A-2",
+        "hold_counts":    new_hold_counts,          # 持仓期数，下次调仓读取
+        "note":           f"T+0：14:57前提交竞价收盘委托 | 仓位{pos_ratio:.0%} | 策略A-3",
     }
     _save_and_alert(signal, pos_ratio)
 
@@ -260,7 +297,7 @@ def _save_and_alert(signal: dict, pos_ratio: float = 1.0):
 
     if regime == "bear":
         msg = (
-            f"【Track A-2 信号】{today}\n"
+            f"【Track A-3 信号】{today}\n"
             f"⚠️ 极度熊市（CSI800/MA200 < 0.95）\n"
             f"股票仓位：{pos_ratio:.0%} → 清仓转货币基金\n"
             f"卖出: {len(sell)} 只\n"
@@ -282,7 +319,7 @@ def _save_and_alert(signal: dict, pos_ratio: float = 1.0):
 
         top5 = sorted(holdings, key=lambda c: weights.get(c, 0), reverse=True)[:5]
         msg = (
-            f"【Track A-2 信号】{today}\n"
+            f"【Track A-3 信号】{today}\n"
             f"📊 仓位: {pos_ratio:.0%}（股票）+ {1-pos_ratio:.0%}（货基）\n"
             f"📈 持仓: {len(holdings)} 只 | 主要行业: {ind_str}\n"
             f"🔴 卖出({len(sell)}): {', '.join(sell[:4])}{'...' if len(sell)>4 else ''}\n"
