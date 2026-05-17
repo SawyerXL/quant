@@ -161,7 +161,7 @@ def compute_score_a2(
 
     # ③ 波动率调控：20日历史波动率高 → 权重降低
     if len(hist) >= 21:
-        vol_20d   = hist.iloc[-20:].pct_change().std()      # 各股20日波动率
+        vol_20d   = hist.iloc[-20:].pct_change(fill_method=None).std()  # 各股20日波动率
         vol_rank  = vol_20d.rank(pct=True).reindex(p.index).fillna(0.5)
         # 低波动（rank低）→ 1.3，高波动（rank高）→ 0.7
         vol_mult  = 1.3 - 0.6 * vol_rank
