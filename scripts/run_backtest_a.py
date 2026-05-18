@@ -29,7 +29,7 @@ from data.storage import load_daily, load_meta
 
 FORMULA          = os.getenv("FORMULA", "I")      # I(默认) / H/F/A~E 见注释
 UNIVERSE         = os.getenv("UNIVERSE", "800")   # "800" / "1800"(800+1000)
-BACKTEST_START   = "2019-01-01"
+BACKTEST_START   = os.getenv("BACKTEST_START", "2019-01-01")
 BACKTEST_END     = os.getenv("BACKTEST_END", "")   # 空字符串=自动取最新交易日
 N_HOLDINGS       = 30
 COMMISSION       = 0.00175     # 单边 0.175% = 手续费0.125% + 滑点估计0.05%
