@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from loguru import logger
-from data.storage import save_daily, save_meta
+from data.storage import save_daily, save_meta, load_meta
 from monitoring.alerts import send_alert
 
 logger.add(
@@ -150,15 +150,18 @@ def main():
     t0 = time.time()
     src = _make_source()
 
-    # 交易日历（尽量用 Akshare，列表拉取不受 IP 封锁影响）
+    # 交易日历：合并新区间到已有日历，不覆盖（避免截断历史）
     try:
         from data.source.akshare_source import AkshareSource
-        ak = AkshareSource()
+        ak_src = AkshareSource()
         import pandas as pd
-        cal = ak.get_trade_calendar(start=args.start, end=args.end)
-        if cal:
-            save_meta("trade_calendar", pd.DataFrame({"trade_date": cal}))
-            logger.info(f"交易日历：{len(cal)} 个交易日")
+        new_cal = ak_src.get_trade_calendar(start=args.start, end=args.end)
+        if new_cal:
+            existing = load_meta("trade_calendar")
+            existing_set = set(existing["trade_date"].tolist()) if not existing.empty else set()
+            merged = sorted(existing_set | set(new_cal))
+            save_meta("trade_calendar", pd.DataFrame({"trade_date": merged}))
+            logger.info(f"交易日历已合并：共 {len(merged)} 个交易日（新增 {len(set(new_cal)-existing_set)} 天）")
     except Exception as e:
         logger.warning(f"交易日历获取失败：{e}")
 

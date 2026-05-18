@@ -32,7 +32,7 @@ UNIVERSE         = os.getenv("UNIVERSE", "800")   # "800" / "1800"(800+1000)
 BACKTEST_START   = "2019-01-01"
 BACKTEST_END     = os.getenv("BACKTEST_END", "")   # 空字符串=自动取最新交易日
 N_HOLDINGS       = 30
-COMMISSION       = 0.00125     # 单边 0.125%
+COMMISSION       = 0.00175     # 单边 0.175% = 手续费0.125% + 滑点估计0.05%
 MIN_BARS         = 250         # 预热期
 LIQUIDITY_THRESH = 1000        # 流动性门槛：20日均成交额 > 1000万元
 MA_PERIOD        = 200         # 大势过滤：CSI 800 指数均线周期
