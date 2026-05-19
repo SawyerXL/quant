@@ -78,10 +78,14 @@ def check_signal_fresh(signal: dict) -> bool:
     return True
 
 
-def execute(track: str = "a", dry_run: bool = False):
-    """拉取信号并执行调仓。"""
+def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
+    """
+    拉取信号并执行调仓。
+    setup=True：建仓模式，跳过新鲜度检查，买入全部 holdings（适合首次初始化）。
+    """
+    mode = "建仓初始化" if setup else ("DRY-RUN预览" if dry_run else "正式执行")
     logger.info("=" * 60)
-    logger.info(f"Track {track.upper()} 信号执行  dry_run={dry_run}")
+    logger.info(f"Track {track.upper()} 信号执行  模式={mode}")
     logger.info("=" * 60)
 
     # 1. 拉取信号
@@ -90,8 +94,8 @@ def execute(track: str = "a", dry_run: bool = False):
         send_alert(f"[执行失败] Track {track.upper()} 信号拉取失败", level="error")
         return
 
-    # 2. 检查信号新鲜度
-    if not check_signal_fresh(signal):
+    # 2. 检查信号新鲜度（--setup 模式跳过，用于初始建仓）
+    if not setup and not check_signal_fresh(signal):
         return
 
     # 3. 大势过滤检查
@@ -99,12 +103,20 @@ def execute(track: str = "a", dry_run: bool = False):
     if regime == "bear":
         logger.warning("大势过滤：熊市信号，仅执行清仓操作")
 
-    # 4. 打印交易计划
-    holdings = signal.get("holdings", [])
-    buy_list = signal.get("buy",      [])
-    sell_list = signal.get("sell",    [])
+    # 4. 交易计划：setup模式=全量买入holdings，正常模式=买卖差量
+    holdings  = signal.get("holdings", [])
     shares    = signal.get("shares",  {})
     prices    = signal.get("prices",  {})
+
+    if setup:
+        # 建仓模式：买入所有目标持仓（QMT账户从零开始）
+        buy_list  = [c for c in holdings if shares.get(c, 0) > 0]
+        sell_list = []
+        logger.info(f"[建仓模式] 全量买入 {len(buy_list)} 只（跳过新鲜度检查）")
+        logger.info(f"  信号日期: {signal.get('signal_date')}  仓位: {signal.get('position_ratio', 1.0):.0%}")
+    else:
+        buy_list  = signal.get("buy",  [])
+        sell_list = signal.get("sell", [])
 
     logger.info(f"交易计划：买入 {len(buy_list)} 只，卖出 {len(sell_list)} 只")
     if sell_list:
@@ -127,14 +139,22 @@ def execute(track: str = "a", dry_run: bool = False):
         from execution.trader import Trader
         trader = Trader()
 
-        sig_file = ROOT / f"data_store/meta/signal_{track}_latest.json"
-        result   = trader.execute_signal(sig_file, strategy_id=f"track_{track}")
+        if setup:
+            # 建仓模式：直接调用 rebalance 买入全量 holdings
+            cur_prices = {c: float(prices.get(c, 0)) for c in buy_list if prices.get(c, 0) > 0}
+            pos_ratio  = signal.get("position_ratio", 1.0)
+            weights    = signal.get("weights", {c: 1/len(buy_list) for c in buy_list})
+            actual_w   = {c: weights.get(c, 1/len(buy_list)) * pos_ratio for c in buy_list}
+            result = trader.rebalance(f"track_{track}", actual_w, cur_prices)
+        else:
+            sig_file = ROOT / f"data_store/meta/signal_{track}_latest.json"
+            result   = trader.execute_signal(sig_file, strategy_id=f"track_{track}")
 
         logger.info(f"执行完成: {result}")
         send_alert(
-            f"[Track {track.upper()} 执行完成] {date.today()}\n"
+            f"[Track {track.upper()} {'建仓' if setup else '调仓'}完成] {date.today()}\n"
             f"买入: {len(buy_list)} 只  卖出: {len(sell_list)} 只\n"
-            f"详情: {result}"
+            f"信号日期: {signal.get('signal_date')}"
         )
     except Exception as e:
         logger.error(f"执行失败: {e}")
@@ -145,9 +165,11 @@ def main():
     parser = argparse.ArgumentParser(description="从 Linux 拉取信号并通过 QMT 执行")
     parser.add_argument("--track",   default="a", choices=["a", "b"], help="执行哪个策略")
     parser.add_argument("--dry-run", action="store_true", help="仅打印，不真正下单")
+    parser.add_argument("--setup",   action="store_true",
+                        help="建仓初始化：跳过日期检查，全量买入holdings（首次使用）")
     args = parser.parse_args()
 
-    execute(track=args.track, dry_run=args.dry_run)
+    execute(track=args.track, dry_run=args.dry_run, setup=args.setup)
 
 
 if __name__ == "__main__":
