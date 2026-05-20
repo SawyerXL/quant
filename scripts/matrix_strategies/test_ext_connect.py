@@ -1,43 +1,41 @@
-"""
-用系统 Python 从外部连接 Matrix QMT 服务器测试
-在 H:\quant 目录下运行：python scripts\matrix_strategies\test_ext_connect.py
-"""
-import sys
+"""用系统 Python 从外部连接 Matrix QMT 服务器测试"""
+import sys, time
 
-QMT_PATH = (
-    r"H:\BaiduNetdiskDownload\申万宏源极速交易系统UAT环境接入资料"
-    r"\Matrix仿真交易终端\申万宏源QMT仿真环境策略量化交易终端-2.0.13"
-    r"\申万宏源策略量化交易终端-2.0.13版本\userdata_mini"
+BASE = (
+    "H:\\BaiduNetdiskDownload\\申万宏源极速交易系统UAT环境接入资料"
+    "\\Matrix仿真交易终端\\申万宏源QMT仿真环境策略量化交易终端-2.0.13"
+    "\\申万宏源策略量化交易终端-2.0.13版本"
 )
 ACCOUNT_ID = "1633013579"
 
-print("Python:", sys.version[:10])
-print("QMT Path:", QMT_PATH)
+from xtquant.xttrader import XtQuantTrader
+from xtquant.xttype import StockAccount
 
-try:
-    from xtquant.xttrader import XtQuantTrader
-    from xtquant.xttype import StockAccount
-    print("xtquant import OK")
-
-    trader  = XtQuantTrader(QMT_PATH, 123456)
-    account = StockAccount(ACCOUNT_ID)
-
-    print("连接中...")
-    result = trader.connect()
-    print("连接结果:", result)
-
-    if result == 0:
-        print("连接成功！查询账户信息...")
+# 试两个路径
+for sub in ["userdata_mini", "userdata"]:
+    path = BASE + "\\" + sub
+    print(f"\n=== 测试路径: {sub} ===")
+    try:
+        trader = XtQuantTrader(path, 123456)
+        # 先 start，再 connect
         trader.start()
-        asset = trader.query_stock_asset(account)
-        print("账户资产:", asset)
-        positions = trader.query_stock_positions(account)
-        print("持仓:", positions)
-    else:
-        print("连接失败，确认 Matrix 终端是否正在运行且已登录")
+        time.sleep(2)
+        result = trader.connect()
+        print("connect() 返回:", result)
 
-except ImportError as e:
-    print("xtquant 未安装:", e)
-    print("请先运行: pip install xtquant")
-except Exception as e:
-    print("错误:", type(e).__name__, str(e))
+        if result == 0:
+            print("连接成功！")
+            account = StockAccount(ACCOUNT_ID)
+            asset = trader.query_stock_asset(account)
+            print("资产:", asset)
+            break
+        else:
+            print(f"路径 {sub} 连接失败 (result={result})")
+            trader.stop()
+    except Exception as e:
+        print("异常:", type(e).__name__, e)
+
+print("\n如果两个路径都失败：")
+print("1. 确认 Matrix 终端正在运行并已登录账号", ACCOUNT_ID)
+print("2. 确认 Matrix 终端界面没有弹出错误对话框")
+print("3. 查看 Matrix 终端的日志或状态栏")
