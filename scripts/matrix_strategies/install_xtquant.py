@@ -1,32 +1,31 @@
-import sys, os, subprocess
+import sys, os
 
 mpython = sys.path[0]
-log_file = os.path.join(mpython, "pip_log.txt")
-
-print("Python:", sys.executable)
 print("mpython:", mpython)
 
-# 用文件接收输出（pythonw.exe 没有控制台，不能用 PIPE）
-with open(log_file, 'w') as f:
-    proc = subprocess.Popen(
-        [sys.executable, '-m', 'pip', 'install', 'xtquant',
-         '--target', mpython, '--no-warn-script-location'],
-        stdout=f, stderr=f
-    )
-    proc.wait(timeout=120)
-    print("pip returncode:", proc.returncode)
-
-# 打印日志
-with open(log_file, 'r', errors='ignore') as f:
-    content = f.read()
-print("pip output:", content[:800])
+# 直接调用 pip 内部 API，不启动子进程（避免 pythonw.exe 句柄问题）
+try:
+    from pip._internal import main as pip_main
+    ret = pip_main(['install', 'xtquant', '--target', mpython,
+                    '--no-warn-script-location', '-q'])
+    print("pip returned:", ret)
+except ImportError:
+    try:
+        from pip._internal.cli.main import main as pip_main
+        ret = pip_main(['install', 'xtquant', '--target', mpython,
+                        '--no-warn-script-location', '-q'])
+        print("pip (new API) returned:", ret)
+    except Exception as e2:
+        print("pip import failed:", e2)
 
 # 检查结果
 xt_path = os.path.join(mpython, 'xtquant')
 if os.path.exists(xt_path):
-    print("SUCCESS: xtquant installed to", xt_path)
+    print("SUCCESS: xtquant installed!")
+    sys.path.insert(0, mpython)
     import xtquant
-    print("import OK:", dir(xtquant)[:8])
+    print("import OK:", dir(xtquant)[:5])
 else:
-    print("FAILED: xtquant not in mpython")
-    print("mpython contents:", [f for f in os.listdir(mpython) if not f.endswith('.py')][:10])
+    print("FAILED: xtquant not found")
+    print("mpython files:", [f for f in os.listdir(mpython)
+                             if not f.endswith('.py')][:15])
