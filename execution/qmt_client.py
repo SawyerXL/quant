@@ -17,17 +17,33 @@ except ImportError:
     logger.warning("xtquant 未安装（非 Windows/未装 QMT），使用 MockQMTClient")
 
 
+def _to_xt_code(code: str) -> str:
+    """将6位股票代码转为 xtquant 格式（加交易所后缀）。"""
+    code = str(code).zfill(6)
+    if code.startswith(("60", "68", "90")):
+        return code + ".SH"   # 沪市主板/科创板
+    elif code.startswith("92"):
+        return code + ".BJ"   # 北交所
+    else:
+        return code + ".SZ"   # 深市主板/创业板
+
+
 class QMTClient:
     """生产环境 QMT 客户端（仅限 Windows 服务器）。"""
 
     def __init__(self):
         if not QMT_AVAILABLE:
             raise RuntimeError("xtquant 不可用，请在 Windows QMT 环境中运行")
+        import time
         session_id = 123456
         self.trader = XtQuantTrader(QMT_PATH, session_id)
         self.account = StockAccount(QMT_ACCOUNT_ID)
         self.trader.start()
-        self.trader.connect()
+        time.sleep(2)        # 等待服务器就绪
+        result = self.trader.connect()
+        if result != 0:
+            raise RuntimeError(f"QMT 连接失败(result={result})，请确认 Matrix 终端已登录")
+        time.sleep(1)
         logger.info(f"QMT 连接成功: account={QMT_ACCOUNT_ID}")
 
     def get_positions(self) -> dict:
@@ -71,7 +87,7 @@ class QMTClient:
 
         order_id = self.trader.order_stock(
             self.account,
-            code,
+            _to_xt_code(code),
             xt_direction,
             shares,
             xt_price_type,
