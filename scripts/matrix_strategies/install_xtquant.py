@@ -1,23 +1,28 @@
 import sys, os, subprocess
 
-print("Python executable:", sys.executable)
-print("Python version:", sys.version)
+print("Python:", sys.executable)
+print("Version:", sys.version[:10])
 
-# Try pip
-result = subprocess.run(
-    [sys.executable, '-m', 'pip', 'install', 'xtquant', '--target', sys.path[0]],
-    capture_output=True, text=True, timeout=60
-)
-print("pip stdout:", result.stdout[:500])
-print("pip stderr:", result.stderr[:500])
-print("returncode:", result.returncode)
-
-# Check if xtquant now exists in mpython
 mpython = sys.path[0]
+print("Target dir:", mpython)
+
+# Python 3.6 compatible subprocess call (no capture_output)
+proc = subprocess.Popen(
+    [sys.executable, '-m', 'pip', 'install', 'xtquant', '--target', mpython,
+     '--no-warn-script-location'],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE
+)
+out, err = proc.communicate(timeout=120)
+print("stdout:", out.decode('utf-8', errors='ignore')[:500])
+print("stderr:", err.decode('utf-8', errors='ignore')[:300])
+print("returncode:", proc.returncode)
+
+# Check result
 if os.path.exists(os.path.join(mpython, 'xtquant')):
-    print("xtquant installed to mpython!")
+    print("SUCCESS: xtquant installed!")
     import xtquant
-    print("xtquant import OK:", dir(xtquant))
+    print("xtquant OK:", dir(xtquant)[:5])
 else:
-    print("xtquant not in mpython yet")
-    print("Files in mpython:", os.listdir(mpython))
+    print("FAILED: xtquant not found in mpython")
+    print("Contents:", os.listdir(mpython)[:10])
