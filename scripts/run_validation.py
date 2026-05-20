@@ -43,8 +43,12 @@ STRESS_PERIODS = {
 
 # ── 工具函数 ─────────────────────────────────────────────────────────────
 
-def _run_period(panel, amt, idx_close, stock_info, start, end, rebal_freq="biweekly"):
-    """在指定区间运行 A-4 回测，返回 NAV Series。"""
+def _run_period(panel, amt, idx_close, stock_info, start, end,
+                rebal_freq="biweekly", eval_start=None):
+    """
+    在指定区间运行 A-4 回测，返回 NAV Series。
+    eval_start: 只统计该日期之后的 NAV（WFA 用，含 IS 期预热但只评估 OOS）
+    """
     cal = load_meta("trade_calendar")
     calendar = [d for d in sorted(cal["trade_date"].tolist()) if start <= d <= end]
     if len(calendar) < 100:
@@ -53,7 +57,12 @@ def _run_period(panel, amt, idx_close, stock_info, start, end, rebal_freq="biwee
     sub_panel   = panel[start:end]
     sub_amt     = amt[start:end] if amt is not None else None
     sub_idx     = idx_close[start:end] if idx_close is not None else None
-    return run_backtest_a4(sub_panel, rebal_dates, sub_amt, sub_idx, stock_info)
+    nav = run_backtest_a4(sub_panel, rebal_dates, sub_amt, sub_idx, stock_info)
+    if eval_start and not nav.empty:
+        nav = nav[nav.index >= pd.Timestamp(eval_start)]
+        if not nav.empty:
+            nav = nav / nav.iloc[0]   # 重新归一到1.0
+    return nav
 
 
 def _monthly_returns(nav: pd.Series) -> pd.Series:
@@ -91,8 +100,11 @@ def walk_forward(panel, amt, idx_close, stock_info, fast=False):
         if oos_end > "2025-12-31":
             break
 
-        nav_is  = _run_period(panel, amt, idx_close, stock_info, is_start, is_end)
-        nav_oos = _run_period(panel, amt, idx_close, stock_info, is_end, oos_end)
+        # IS：从 is_start 跑到 is_end
+        nav_is = _run_period(panel, amt, idx_close, stock_info, is_start, is_end)
+        # OOS：从 is_start 起加载数据（含 IS 期预热），但只统计 is_end 之后的表现
+        nav_oos = _run_period(panel, amt, idx_close, stock_info,
+                              is_start, oos_end, eval_start=is_end)
 
         if nav_is.empty or nav_oos.empty:
             continue
