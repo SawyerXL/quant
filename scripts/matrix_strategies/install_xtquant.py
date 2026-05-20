@@ -1,28 +1,32 @@
 import sys, os, subprocess
 
-print("Python:", sys.executable)
-print("Version:", sys.version[:10])
-
 mpython = sys.path[0]
-print("Target dir:", mpython)
+log_file = os.path.join(mpython, "pip_log.txt")
 
-# Python 3.6 compatible subprocess call (no capture_output)
-proc = subprocess.Popen(
-    [sys.executable, '-m', 'pip', 'install', 'xtquant', '--target', mpython,
-     '--no-warn-script-location'],
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE
-)
-out, err = proc.communicate(timeout=120)
-print("stdout:", out.decode('utf-8', errors='ignore')[:500])
-print("stderr:", err.decode('utf-8', errors='ignore')[:300])
-print("returncode:", proc.returncode)
+print("Python:", sys.executable)
+print("mpython:", mpython)
 
-# Check result
-if os.path.exists(os.path.join(mpython, 'xtquant')):
-    print("SUCCESS: xtquant installed!")
+# 用文件接收输出（pythonw.exe 没有控制台，不能用 PIPE）
+with open(log_file, 'w') as f:
+    proc = subprocess.Popen(
+        [sys.executable, '-m', 'pip', 'install', 'xtquant',
+         '--target', mpython, '--no-warn-script-location'],
+        stdout=f, stderr=f
+    )
+    proc.wait(timeout=120)
+    print("pip returncode:", proc.returncode)
+
+# 打印日志
+with open(log_file, 'r', errors='ignore') as f:
+    content = f.read()
+print("pip output:", content[:800])
+
+# 检查结果
+xt_path = os.path.join(mpython, 'xtquant')
+if os.path.exists(xt_path):
+    print("SUCCESS: xtquant installed to", xt_path)
     import xtquant
-    print("xtquant OK:", dir(xtquant)[:5])
+    print("import OK:", dir(xtquant)[:8])
 else:
-    print("FAILED: xtquant not found in mpython")
-    print("Contents:", os.listdir(mpython)[:10])
+    print("FAILED: xtquant not in mpython")
+    print("mpython contents:", [f for f in os.listdir(mpython) if not f.endswith('.py')][:10])
