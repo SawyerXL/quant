@@ -40,7 +40,6 @@ schtasks /delete /tn "QuantTrackA_Setup" /f >nul 2>&1
 schtasks /create /tn "QuantTrackA_Setup" ^
   /tr "cmd /c cd /d H:\quant && python scripts\fetch_and_execute.py --track a --setup >> logs\setup_execute.log 2>&1 && python scripts\reconcile.py --track a >> logs\setup_execute.log 2>&1" ^
   /sc ONCE ^
-  /sd %date:~0,10% ^
   /st 14:35 ^
   /ru "%USERNAME%" ^
   /f >nul 2>&1
