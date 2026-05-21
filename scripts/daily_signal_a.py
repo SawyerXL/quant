@@ -22,6 +22,7 @@ Track A 每日信号生成脚本（策略A-4版）。
     14:25 生成信号 → 人工确认 → 14:57 前提交竞价收盘委托
 """
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -206,10 +207,14 @@ def run():
         )
 
     # ── 非调仓日且无出清：记录日志退出 ───────────────────────────
-    if not is_rebalance_day(today, calendar):
+    # FORCE_REBAL=1 可强制在非调仓日生成完整选股信号（用于手动建仓）
+    force = os.getenv("FORCE_REBAL", "0") == "1"
+    if not is_rebalance_day(today, calendar) and not force:
         if not ma10_exits:
             logger.info(f"{today} 非调仓日，MA10正常，持仓 {len(current_holdings)} 只")
         return
+    if force and not is_rebalance_day(today, calendar):
+        logger.info(f"[FORCE_REBAL] 强制在非调仓日生成完整选股信号")
 
     # ── 调仓日：完整 A-4 选股 ─────────────────────────────────────
     logger.info("=" * 60)
