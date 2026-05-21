@@ -140,12 +140,17 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
         trader = Trader()
 
         if setup:
-            # 建仓模式：直接调用 rebalance 买入全量 holdings
-            cur_prices = {c: float(prices.get(c, 0)) for c in buy_list if prices.get(c, 0) > 0}
-            pos_ratio  = signal.get("position_ratio", 1.0)
-            weights    = signal.get("weights", {c: 1/len(buy_list) for c in buy_list})
-            actual_w   = {c: weights.get(c, 1/len(buy_list)) * pos_ratio for c in buy_list}
-            result = trader.rebalance(f"track_{track}", actual_w, cur_prices)
+            # 建仓模式：用信号预计算好的股数下单，不用 rebalance（避免按账户总资产重算）
+            import json as _json
+            setup_sig = dict(signal)
+            setup_sig["buy"]  = [c for c in holdings if shares.get(c, 0) > 0]
+            setup_sig["sell"] = []
+            temp_path = ROOT / f"data_store/meta/signal_{track}_setup_tmp.json"
+            temp_path.write_text(
+                _json.dumps(setup_sig, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            result = trader.execute_signal(temp_path, strategy_id=f"track_{track}")
+            temp_path.unlink(missing_ok=True)
         else:
             sig_file = ROOT / f"data_store/meta/signal_{track}_latest.json"
             result   = trader.execute_signal(sig_file, strategy_id=f"track_{track}")
