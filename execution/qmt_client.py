@@ -7,7 +7,8 @@ from loguru import logger
 from config.settings import QMT_PATH, QMT_ACCOUNT_ID, IS_PROD
 
 try:
-    from xtquant import xtdata
+    # 注意：不导入 xtdata（行情模块，需要QMT行情服务，会导致ImportError）
+    # 只导入交易相关模块
     from xtquant.xttrader import XtQuantTrader
     from xtquant.xttype import StockAccount
     import xtquant.xtconstant as xtc
