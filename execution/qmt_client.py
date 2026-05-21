@@ -171,7 +171,9 @@ class MockQMTClient:
 
 
 def get_client():
-    """工厂函数：生产环境返回真实客户端，否则返回 Mock。"""
-    if IS_PROD and QMT_AVAILABLE:
+    """工厂函数：simulation/production 用真实QMT，development（本地）用 Mock。"""
+    import os as _os
+    _env = _os.getenv("ENV", "development")
+    if QMT_AVAILABLE and _env in ("simulation", "production"):
         return QMTClient()
     return MockQMTClient()
