@@ -64,12 +64,19 @@ def is_trade_day(today: str, calendar: list[str]) -> bool:
 
 
 def is_rebalance_day(today: str, calendar: list[str]) -> bool:
-    """月末最后交易日 + 月中（与回测biweekly一致）。"""
+    """
+    月末倒数第二个交易日 + 月中。
+    月末用倒数第二天（而非最后一天），为调仓执行失败预留1天缓冲。
+    若当月只有1个交易日，则用最后一天兜底。
+    """
     year_month  = today[:7]
     month_dates = sorted([d for d in calendar if d.startswith(year_month)])
     if not month_dates:
         return False
-    is_month_end = (today == month_dates[-1])
+    # 月末：倒数第二个交易日（保留最后一天为缓冲/重试日）
+    end_idx = -2 if len(month_dates) >= 2 else -1
+    is_month_end = (today == month_dates[end_idx])
+    # 月中：约第 floor(N/2)-1 个交易日
     n = len(month_dates)
     mid_idx = max(0, n // 2 - 1)
     is_month_mid = (n >= 2 and today == month_dates[mid_idx])

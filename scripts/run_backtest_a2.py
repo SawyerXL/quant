@@ -46,6 +46,10 @@ REBAL_FREQ    = os.getenv("REBAL_FREQ", "biweekly")
 
 
 def _make_rebal_dates(calendar, freq="biweekly"):
+    """
+    生成调仓日期列表。
+    月末用倒数第二个交易日（为执行失败预留1天缓冲）。
+    """
     dates = pd.DatetimeIndex(sorted(calendar))
     result = []
     for yr in range(dates[0].year, dates[-1].year + 1):
@@ -55,7 +59,9 @@ def _make_rebal_dates(calendar, freq="biweekly"):
                 continue
             if freq == "biweekly" and len(md) >= 2:
                 result.append(str(md[len(md) // 2].date()))
-            result.append(str(md[-1].date()))
+            # 月末：倒数第二个交易日（保留最后一天为缓冲）
+            end_idx = -2 if len(md) >= 2 else -1
+            result.append(str(md[end_idx].date()))
     return sorted(set(result))
 
 
