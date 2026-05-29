@@ -36,7 +36,8 @@ class QMTClient:
         if not QMT_AVAILABLE:
             raise RuntimeError("xtquant 不可用，请在 Windows QMT 环境中运行")
         import time
-        session_id = 123456
+        # 用时间戳作为 session_id，避免复用旧会话导致返回缓存废单
+        session_id = int(time.time()) % 100000
         self.trader = XtQuantTrader(QMT_PATH, session_id)
         self.account = StockAccount(QMT_ACCOUNT_ID)
         self.trader.start()

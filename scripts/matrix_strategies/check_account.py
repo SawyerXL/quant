@@ -12,7 +12,7 @@ ACCOUNT_ID = "1633013579"
 from xtquant.xttrader import XtQuantTrader
 from xtquant.xttype import StockAccount
 
-trader  = XtQuantTrader(QMT_PATH, 123456)
+trader  = XtQuantTrader(QMT_PATH, int(time.time()) % 100000)
 account = StockAccount(ACCOUNT_ID)
 trader.start()
 time.sleep(2)
