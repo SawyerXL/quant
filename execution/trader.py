@@ -162,7 +162,7 @@ class Trader:
             if ok:
                 # 买入用 1.10 倍报价（A股限价单，超过市价时以市价成交）
                 # 避免信号价格过期导致挂单不成交
-                oid = self.client.place_order(code, "buy", shares, price * 1.10)
+                oid = self.client.place_order(code, "buy", shares, price * 1.05)
                 results["buys"].append({"code": code, "shares": shares,
                                         "price": price, "order_id": oid})
                 logger.info(f"买入 {code} {shares}股 @{price:.2f}")
