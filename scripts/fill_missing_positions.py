@@ -11,7 +11,7 @@ from execution.qmt_client import get_client, _to_xt_code
 import xtquant.xtconstant as xtc
 
 # 读取最新信号
-sig = json.loads(Path("data_store/meta/signal_a_latest.json").read_text())
+sig = json.loads(Path("data_store/meta/signal_a_latest.json").read_text(encoding="utf-8"))
 target_holdings = set(sig["holdings"])
 signal_prices   = sig.get("prices", {})
 signal_shares   = sig.get("shares", {})
