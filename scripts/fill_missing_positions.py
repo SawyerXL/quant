@@ -51,13 +51,14 @@ print(f"实际下单: {len(orders)} 只，跳过: {skip_count} 只")
 print()
 
 for code, shares, price in orders:
-    limit_price = round(price * 1.10, 2)
+    # 使用"对手方最优价格"（type=1），以当前卖一价成交，绕过限价废单问题
+    # price参数在市价类型下填0或任意值均可
     oid = c.trader.order_stock(
         c.account, _to_xt_code(code),
-        xtc.STOCK_BUY, shares, xtc.FIX_PRICE, limit_price,
+        xtc.STOCK_BUY, shares, 1, 0,   # type=1: 对手方最优价格
         strategy_name='quant', order_remark='fill_missing'
     )
-    print(f"  买入 {code} {shares}股 @{limit_price} (信号价{price}) → order_id={oid}")
+    print(f"  买入 {code} {shares}股 市价 (参考{price}) → order_id={oid}")
     time.sleep(0.1)
 
 print(f"\n完成！去 Matrix 查看委托（应有 {len(orders)} 笔）")
