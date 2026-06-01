@@ -138,6 +138,70 @@ def check_disk_space() -> tuple[bool, str]:
     return True, f"磁盘正常（剩余 {free_gb:.1f} / {total_gb:.0f} GB，已用 {used_pct:.0f}%）"
 
 
+def check_rolling_beta() -> tuple[bool, str]:
+    """
+    计算策略过去12个月滚动单因子Beta（vs CSI 800）。
+    Beta > 0.8 说明市场暴露偏高，触发预警。
+
+    用历史宇宙净值文件；若不存在则用当前净值文件。
+    Beta 本身用简单OLS，不依赖因子下载。
+    """
+    NAV_PATHS = [
+        Path("logs/backtest_a4_nav_2016.csv"),
+        Path("logs/backtest_a4_nav_hist_universe.csv"),
+        Path("logs/backtest_a4_nav.csv"),
+    ]
+    BETA_WARN = 0.8
+
+    # 找一个可用的净值文件
+    nav_path = next((p for p in NAV_PATHS if p.exists()), None)
+    if nav_path is None:
+        return True, "未找到净值文件，跳过Beta检查"
+
+    try:
+        import statsmodels.api as sm
+
+        nav = pd.read_csv(nav_path, index_col=0, parse_dates=True).squeeze()
+        strat_ret = nav.resample("ME").last().pct_change().dropna()
+
+        idx = load_meta("csi800_index")
+        if idx.empty:
+            return True, "CSI 800 指数数据缺失，跳过"
+        idx["date"] = pd.to_datetime(idx["date"])
+        mkt_ret = idx.set_index("date")["close"].resample("ME").last().pct_change().dropna()
+
+        df = pd.concat([strat_ret, mkt_ret], axis=1).dropna()
+        df.columns = ["strat", "mkt"]
+
+        # 取最近12个月
+        df_12m = df.tail(12)
+        if len(df_12m) < 8:
+            return True, f"近期数据不足（{len(df_12m)}月），跳过"
+
+        X = sm.add_constant(df_12m["mkt"])
+        m = sm.OLS(df_12m["strat"], X).fit()
+        beta = m.params["mkt"]
+        r2   = m.rsquared
+
+        # 全样本滚动Beta分位（用于判断当前水位）
+        roll_betas = []
+        for i in range(12, len(df) + 1):
+            w = df.iloc[i - 12 : i]
+            Xw = sm.add_constant(w["mkt"])
+            roll_betas.append(sm.OLS(w["strat"], Xw).fit().params["mkt"])
+        pct_rank = sum(b < beta for b in roll_betas) / len(roll_betas) * 100
+
+        msg = (f"滚动12月Beta={beta:.3f}（历史{pct_rank:.0f}%分位），"
+               f"R²={r2:.2f}，基于{len(df_12m)}月数据")
+
+        if beta > BETA_WARN:
+            return False, f"⚠️ Beta偏高：{msg}"
+        return True, msg
+
+    except Exception as e:
+        return True, f"Beta检查出错（不影响运行）：{e}"
+
+
 def check_csi_index_freshness() -> tuple[bool, str]:
     """CSI 800 / CSI 1000 成分股是否有效。"""
     csi800  = load_meta("csi800")
@@ -165,6 +229,7 @@ def run():
         ("Track B 信号",    check_signal_b_freshness),
         ("股票元数据",       check_stock_meta_freshness),
         ("CSI 指数成分",    check_csi_index_freshness),
+        ("策略滚动Beta",    check_rolling_beta),
         ("磁盘空间",        check_disk_space),
     ]
 
