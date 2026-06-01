@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent))
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -341,6 +341,7 @@ def run():
 
 
 def _save_and_alert(signal: dict, pos_ratio: float = 1.0):
+    signal["generated_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     SIGNAL_FILE.parent.mkdir(parents=True, exist_ok=True)
     SIGNAL_FILE.write_text(
         json.dumps(signal, ensure_ascii=False, indent=2), encoding="utf-8"

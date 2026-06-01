@@ -15,7 +15,8 @@ import json
 import os
 import subprocess
 import sys
-from datetime import date
+import time
+from datetime import date, datetime
 from pathlib import Path
 
 # 确保项目根目录在 sys.path
@@ -34,6 +35,27 @@ LINUX_SERVER  = os.getenv("LINUX_SERVER", "47.116.166.139")
 LINUX_USER    = os.getenv("LINUX_USER",   "root")
 SSH_KEY       = os.getenv("SSH_KEY", "")
 SIGNAL_DIR    = "data_store/meta"
+EXEC_RESULT_DIR = ROOT / "logs"
+FILL_WAIT_SECS  = 45   # 委托后等待成交确认的秒数
+
+
+def push_result_to_linux(result_file: Path) -> bool:
+    """将执行结果 JSON 推回 Linux，供健康检查使用。"""
+    ssh_opts = ["-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
+    if SSH_KEY:
+        ssh_opts += ["-i", SSH_KEY]
+    remote_path = f"{LINUX_USER}@{LINUX_SERVER}:/root/quant/logs/{result_file.name}"
+    cmd = ["scp"] + ssh_opts + [str(result_file), remote_path]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if r.returncode == 0:
+            logger.info(f"执行结果已推送至 Linux: {result_file.name}")
+            return True
+        logger.warning(f"推送失败（不影响本次执行）: {r.stderr.strip()}")
+        return False
+    except Exception as e:
+        logger.warning(f"推送结果出错（不影响本次执行）: {e}")
+        return False
 
 
 def fetch_signal_from_linux(track: str = "a") -> dict | None:
@@ -135,12 +157,15 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
         return
 
     # 5. 通过 Trader 执行（会走风控检查）
+    exec_started_at = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     try:
         from execution.trader import Trader
+        from execution.qmt_client import get_client
+
         trader = Trader()
+        client = get_client()
 
         if setup:
-            # 建仓模式：用信号预计算好的股数下单，不用 rebalance（避免按账户总资产重算）
             import json as _json
             setup_sig = dict(signal)
             setup_sig["buy"]  = [c for c in holdings if shares.get(c, 0) > 0]
@@ -155,11 +180,81 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
             sig_file = ROOT / f"data_store/meta/signal_{track}_latest.json"
             result   = trader.execute_signal(sig_file, strategy_id=f"track_{track}")
 
-        logger.info(f"执行完成: {result}")
+        logger.info(f"委托提交完成，等待 {FILL_WAIT_SECS}s 后采集成交价...")
+        time.sleep(FILL_WAIT_SECS)
+
+        # ── 采集实际成交数据 ──────────────────────────────────────
+        exec_confirmed_at = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        actual_positions  = {}
+        try:
+            actual_positions = client.get_positions()
+        except Exception as qe:
+            logger.warning(f"获取持仓失败，跳过成交价记录: {qe}")
+
+        assumed_prices = signal.get("prices", {})
+        slippage_data  = []
+        filled_codes   = set(actual_positions.keys())
+        target_buys    = set(buy_list)
+
+        for code in target_buys:
+            assumed = assumed_prices.get(code)
+            actual  = actual_positions.get(code, {}).get("cost_price")
+            if assumed and actual and assumed > 0:
+                slip_pct = (actual - assumed) / assumed * 100
+                slippage_data.append({
+                    "code": code, "assumed": round(assumed, 4),
+                    "actual": round(actual, 4), "slippage_pct": round(slip_pct, 4),
+                })
+
+        fill_count = len(target_buys & filled_codes)
+        fill_rate  = fill_count / len(target_buys) * 100 if target_buys else 100.0
+        avg_slip   = (sum(d["slippage_pct"] for d in slippage_data) / len(slippage_data)
+                      if slippage_data else 0.0)
+        max_slip   = (max(abs(d["slippage_pct"]) for d in slippage_data)
+                      if slippage_data else 0.0)
+
+        # 计算全链路时延（信号生成→成交确认）
+        gen_at = signal.get("generated_at", "")
+        try:
+            gen_dt  = datetime.fromisoformat(gen_at)
+            conf_dt = datetime.fromisoformat(exec_confirmed_at)
+            latency_min = (conf_dt - gen_dt).total_seconds() / 60
+        except Exception:
+            latency_min = None
+
+        exec_record = {
+            "signal_date":        signal.get("signal_date"),
+            "track":              track,
+            "generated_at":       gen_at,
+            "exec_started_at":    exec_started_at,
+            "exec_confirmed_at":  exec_confirmed_at,
+            "latency_min":        round(latency_min, 1) if latency_min is not None else None,
+            "target_buy_count":   len(target_buys),
+            "fill_count":         fill_count,
+            "fill_rate_pct":      round(fill_rate, 1),
+            "avg_slippage_pct":   round(avg_slip, 4),
+            "max_slippage_pct":   round(max_slip, 4),
+            "slippage_detail":    slippage_data,
+            "blocked":            result.get("blocked", []),
+        }
+
+        # 保存到本地并推回 Linux
+        today_str   = date.today().strftime("%Y%m%d")
+        result_file = EXEC_RESULT_DIR / f"execution_result_{today_str}.json"
+        EXEC_RESULT_DIR.mkdir(parents=True, exist_ok=True)
+        result_file.write_text(
+            json.dumps(exec_record, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        logger.info(f"执行结果已保存: {result_file}")
+        logger.info(f"成交率: {fill_rate:.0f}%  平均滑点: {avg_slip:+.3f}%  时延: {latency_min:.1f}min" if latency_min else f"成交率: {fill_rate:.0f}%  平均滑点: {avg_slip:+.3f}%")
+        push_result_to_linux(result_file)
+
         send_alert(
             f"[Track {track.upper()} {'建仓' if setup else '调仓'}完成] {date.today()}\n"
             f"买入: {len(buy_list)} 只  卖出: {len(sell_list)} 只\n"
-            f"信号日期: {signal.get('signal_date')}"
+            f"成交率: {fill_rate:.0f}%  平均滑点: {avg_slip:+.3f}%"
+            + (f"  时延: {latency_min:.1f}min" if latency_min else "")
+            + f"\n信号日期: {signal.get('signal_date')}"
         )
     except Exception as e:
         logger.error(f"执行失败: {e}")

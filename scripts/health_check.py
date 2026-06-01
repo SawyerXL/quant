@@ -138,6 +138,82 @@ def check_disk_space() -> tuple[bool, str]:
     return True, f"磁盘正常（剩余 {free_gb:.1f} / {total_gb:.0f} GB，已用 {used_pct:.0f}%）"
 
 
+def check_execution_quality() -> tuple[bool, str]:
+    """
+    读取 fetch_and_execute.py 推回的 execution_result_{YYYYMMDD}.json，
+    检查三项执行质量指标：
+      1. 实际成交价 vs 信号假设价偏差（阈值：单边 >0.3% 且连续出现）
+      2. 实际成交率（阈值：<90%）
+      3. 全链路时延（阈值：>30min 告警）
+    """
+    SLIP_WARN_PCT  = 0.30   # 单边滑点告警阈值（%）
+    FILL_WARN_PCT  = 90.0   # 成交率告警阈值（%）
+    LATENCY_WARN   = 30.0   # 链路时延告警阈值（分钟）
+    SLIP_CONSEC    = 3      # 连续N次超阈值才升级为告警
+
+    logs_dir = Path("logs")
+    # 找最近30天内的执行结果文件
+    result_files = sorted(logs_dir.glob("execution_result_*.json"), reverse=True)[:10]
+    if not result_files:
+        return True, "暂无执行结果文件（首次调仓后自动生成）"
+
+    latest = json.loads(result_files[0].read_text(encoding="utf-8"))
+    sig_date = latest.get("signal_date", "?")
+
+    issues = []
+    notes  = []
+
+    # ── 指标1：成交率 ─────────────────────────────────────────
+    fill_rate = latest.get("fill_rate_pct", 100.0)
+    if fill_rate < FILL_WARN_PCT:
+        issues.append(f"成交率{fill_rate:.0f}%（应≥{FILL_WARN_PCT:.0f}%，"
+                      f"仅成交{latest.get('fill_count',0)}/{latest.get('target_buy_count',0)}只）")
+    else:
+        notes.append(f"成交率{fill_rate:.0f}%")
+
+    # ── 指标2：滑点（看历史趋势）─────────────────────────────
+    recent_slips = []
+    for rf in result_files[:SLIP_CONSEC]:
+        try:
+            r = json.loads(rf.read_text(encoding="utf-8"))
+            recent_slips.append(abs(r.get("avg_slippage_pct", 0.0)))
+        except Exception:
+            pass
+
+    avg_slip = latest.get("avg_slippage_pct", 0.0)
+    max_slip = latest.get("max_slippage_pct", 0.0)
+    consec_high = sum(1 for s in recent_slips if s > SLIP_WARN_PCT)
+
+    if consec_high >= SLIP_CONSEC:
+        issues.append(
+            f"滑点连续{consec_high}次超{SLIP_WARN_PCT}%（最近均值{sum(recent_slips)/len(recent_slips):.3f}%）"
+        )
+    elif abs(avg_slip) > SLIP_WARN_PCT:
+        notes.append(f"本次平均滑点{avg_slip:+.3f}%（单次，尚未连续）")
+    else:
+        notes.append(f"滑点{avg_slip:+.3f}%（max={max_slip:.3f}%）")
+
+    # ── 指标3：全链路时延 ──────────────────────────────────────
+    latency = latest.get("latency_min")
+    if latency is not None:
+        if latency > LATENCY_WARN:
+            issues.append(f"链路时延{latency:.1f}min（超过{LATENCY_WARN:.0f}min阈值）")
+        else:
+            notes.append(f"链路时延{latency:.1f}min")
+    else:
+        notes.append("时延：本次未记录")
+
+    # ── 风控拦截提示 ───────────────────────────────────────────
+    blocked = latest.get("blocked", [])
+    if blocked:
+        notes.append(f"风控拦截{len(blocked)}笔：{[b.get('code','?') for b in blocked[:3]]}")
+
+    summary = f"[{sig_date}] " + "  ".join(notes)
+    if issues:
+        return False, "执行质量告警：" + "；".join(issues) + "  |  " + summary
+    return True, summary
+
+
 def check_rolling_beta() -> tuple[bool, str]:
     """
     计算策略过去12个月滚动单因子Beta（vs CSI 800）。
@@ -229,6 +305,7 @@ def run():
         ("Track B 信号",    check_signal_b_freshness),
         ("股票元数据",       check_stock_meta_freshness),
         ("CSI 指数成分",    check_csi_index_freshness),
+        ("执行质量监控",    check_execution_quality),
         ("策略滚动Beta",    check_rolling_beta),
         ("磁盘空间",        check_disk_space),
     ]
