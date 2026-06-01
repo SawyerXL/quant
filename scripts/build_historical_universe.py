@@ -129,7 +129,10 @@ def build_universe_history():
             ld = list_dates.get(code)
             if ld:
                 try:
-                    if (date_ts - pd.Timestamp(ld)).days < 252:
+                    days_listed = (date_ts - pd.Timestamp(ld)).days
+                    # 只过滤"快照日之后不足252天上市"的新股；
+                    # days_listed < 0 意味着 list_date 在快照之后（数据是下载日非IPO日），不过滤
+                    if 0 <= days_listed < 252:
                         continue
                 except Exception:
                     pass
