@@ -129,7 +129,11 @@ def run_backtest_a4(
     amount_panel: pd.DataFrame | None,
     index_close: pd.Series | None,
     stock_info: pd.DataFrame | None,
+    universe_map: dict | None = None,   # {date_str: set(codes)}，历史宇宙快照
 ) -> pd.Series:
+    """
+    universe_map: 若传入，每个调仓日动态限制股票池为对应快照（修复幸存者偏差）。
+    """
     all_dates = panel.index
     port_rets = pd.Series(0.0, index=all_dates)
 
@@ -179,6 +183,13 @@ def run_backtest_a4(
 
         # ── Step 2：调仓日选股 ─────────────────────────────────────
         if date_str in rebal_set and i >= MIN_BARS:
+            # 动态宇宙：找最近的历史快照（≤ 当前日期）
+            if universe_map:
+                avail = sorted([d for d in universe_map if d <= date_str], reverse=True)
+                current_universe = universe_map[avail[0]] if avail else None
+            else:
+                current_universe = None
+
             pos_ratio = get_position_ratio(index_close, date) if index_close is not None else 1.0
 
             if pos_ratio <= 0.30:
@@ -188,7 +199,15 @@ def run_backtest_a4(
                 nav_since = 1.0
                 entry_hwm = cumul_nav
             else:
-                score = compute_score_a2(panel, date, amount_panel, stock_info)
+                # 若有历史宇宙，将面板临时限制到当期快照
+                if current_universe:
+                    active_cols = [c for c in panel.columns if c in current_universe]
+                    _panel_u = panel[active_cols]
+                    _amt_u   = amount_panel[active_cols] if amount_panel is not None else None
+                else:
+                    _panel_u, _amt_u = panel, amount_panel
+
+                score = compute_score_a2(_panel_u, date, _amt_u, stock_info)
                 if len(score) >= N_HOLDINGS:
                     old_hold = list(cur_weights.keys())
                     cur_p_series = panel.ffill().iloc[i]   # 当期价格（ffill）
@@ -274,9 +293,34 @@ def main():
     rebal_dates = _make_rebal_dates(calendar, REBAL_FREQ)
     logger.info(f"调仓日期：{len(rebal_dates)} 个")
 
-    csi800    = load_meta("csi800")
-    panel, ap = load_panels(sorted(csi800["code"].tolist()), BACKTEST_START, BACKTEST_END)
+    # 股票池：若有历史宇宙则用全量股票（历史宇宙在回测中动态切换）
+    use_hist_universe = os.getenv("USE_HIST_UNIVERSE", "0") == "1"
+    hist_universe = load_meta("universe_history") if use_hist_universe else pd.DataFrame()
+
+    if use_hist_universe and not hist_universe.empty:
+        # 合并所有历史时点出现过的股票，作为面板加载范围
+        all_hist_codes = set()
+        for _, row in hist_universe.iterrows():
+            if row.get("codes"):
+                all_hist_codes.update(row["codes"].split(","))
+        codes_to_load = sorted(all_hist_codes)
+        logger.info(f"历史宇宙模式：加载 {len(codes_to_load)} 只（含历史退市）")
+    else:
+        csi800 = load_meta("csi800")
+        codes_to_load = sorted(csi800["code"].tolist())
+        if use_hist_universe:
+            logger.warning("未找到 universe_history，回退到当前 CSI 800")
+
+    panel, ap = load_panels(codes_to_load, BACKTEST_START, BACKTEST_END)
     logger.info(f"价格矩阵：{panel.shape[0]}天 × {panel.shape[1]}只")
+
+    # 预建历史宇宙查询表 {日期字符串 -> set(codes)}
+    if use_hist_universe and not hist_universe.empty:
+        hist_universe_map = {}
+        for _, row in hist_universe.iterrows():
+            if row.get("codes"):
+                hist_universe_map[row["date"]] = set(row["codes"].split(","))
+        logger.info(f"历史宇宙快照: {len(hist_universe_map)} 个时点")
 
     stock_info = load_meta("stock_info_full")
     stock_info = None if stock_info.empty else stock_info
@@ -289,7 +333,9 @@ def main():
         index_close = idx_df.set_index("date")["close"].sort_index()
 
     logger.info("运行A-4回测...")
-    nav_a4 = run_backtest_a4(panel, rebal_dates, ap, index_close, stock_info)
+    umap = hist_universe_map if (use_hist_universe and 'hist_universe_map' in dir()) else None
+    nav_a4 = run_backtest_a4(panel, rebal_dates, ap, index_close, stock_info,
+                             universe_map=umap)
 
     logger.info("── A-4 分年度 ──")
     year_end = int(BACKTEST_END[:4])
