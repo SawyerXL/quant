@@ -53,7 +53,10 @@ def load_actual_positions() -> tuple[dict, dict, str]:
         _os.environ.setdefault("ENV", "simulation")
         from execution.qmt_client import get_client
         client = get_client()
-        return (client.get_positions(), client.get_account_info(), "QMT直连")
+        raw_pos = client.get_positions()
+        # QMT返回代码含交易所后缀（如600816.SH），统一去掉
+        clean_pos = {code.split(".")[0]: v for code, v in raw_pos.items()}
+        return (clean_pos, client.get_account_info(), "QMT直连")
 
     # 离线模式：读取 Windows 端推送的持仓快照
     if QMT_POS_FILE.exists():

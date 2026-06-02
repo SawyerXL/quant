@@ -74,9 +74,10 @@ def execute_orders(orders: list, dry_run: bool = True):
     from execution.risk import RiskGateway
     from data.storage import load_meta
 
-    client   = get_client()
-    account  = client.get_account_info()
-    positions = client.get_positions()
+    client    = get_client()
+    account   = client.get_account_info()
+    raw_pos   = client.get_positions()
+    positions = {code.split(".")[0]: v for code, v in raw_pos.items()}
 
     # 风控网关（直接用账户信息构建）
     info = load_meta("stock_info_full")
@@ -158,11 +159,14 @@ def main():
     os.environ.setdefault("ENV", "simulation")
     from execution.qmt_client import get_client
     client    = get_client()
-    positions = client.get_positions()
     account   = client.get_account_info()
+    # QMT返回代码含交易所后缀（600816.SH），统一去掉后缀
+    raw_pos   = client.get_positions()
+    positions = {code.split(".")[0]: v for code, v in raw_pos.items()}
 
     print(f"\nQMT 账户: 总资产 {account['total_assets']:,.0f}  "
           f"现金 {account['cash']:,.0f}  持仓 {account['market_value']:,.0f}")
+    print(f"QMT 持仓 {len(positions)} 只: {sorted(positions.keys())}")
 
     orders = print_plan(positions)
     if not orders:
