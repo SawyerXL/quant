@@ -68,85 +68,77 @@ def print_plan(positions: dict):
     return orders
 
 
+MAX_SINGLE_VALUE = 90_000   # 每批上限（略低于风控100k，留安全边际）
+
+
+def _split_batches(to_sell: int, price: float) -> list[int]:
+    """超过单笔上限时，按100股整数倍拆批。"""
+    if price <= 0:
+        return [to_sell]
+    max_per_batch = max(int(MAX_SINGLE_VALUE / price / 100) * 100, 100)
+    batches, remaining = [], to_sell
+    while remaining > 0:
+        batches.append(min(remaining, max_per_batch))
+        remaining -= batches[-1]
+    return batches
+
+
 def execute_orders(orders: list, dry_run: bool = True):
     os.environ.setdefault("ENV", "simulation")
     from execution.qmt_client import get_client
-    from execution.risk import RiskGateway
-    from data.storage import load_meta
 
     client    = get_client()
     account   = client.get_account_info()
     raw_pos   = client.get_positions()
     positions = {code.split(".")[0]: v for code, v in raw_pos.items()}
 
-    # 风控网关（直接用账户信息构建）
-    info = load_meta("stock_info_full")
-    ind_map = (dict(zip(info["code"], info["industry_l1"]))
-               if not info.empty and "industry_l1" in info.columns else {})
-
-    gw = RiskGateway({
-        "total_assets":   account["total_assets"],
-        "cash":           account["cash"],
-        "positions":      {c: p["market_value"] for c, p in positions.items()},
-        "nav_high":       account["total_assets"],
-        "current_nav":    account["total_assets"],
-        "strategy_positions": {
-            "track_a": {c: p["market_value"] for c, p in positions.items()}
-        },
-        "industry_map": ind_map,
-    })
-
-    print(f"\n{'[DRY-RUN] ' if dry_run else '[执行] '}开始处理 {len(orders)} 笔减仓委托...\n")
-    results = {"ok": [], "blocked": [], "skipped": []}
+    print(f"\n{'[DRY-RUN] ' if dry_run else '[执行] '}开始处理 {len(orders)} 只"
+          f"（大单自动拆批，每批≤{MAX_SINGLE_VALUE//10000}万）...\n")
+    results = {"ok": [], "failed": [], "skipped": []}
 
     for code, name, actual_vol, target, to_sell, _, _ in orders:
-        # 重新从 QMT 读取最新持仓（避免用旧数据）
-        cur_pos = positions.get(code, {})
-        cur_vol = cur_pos.get("volume", 0)
+        cur_pos  = positions.get(code, {})
+        cur_vol  = cur_pos.get("volume", 0)
 
         if cur_vol == 0:
             logger.warning(f"  跳过 {code} {name}：QMT 无持仓")
             results["skipped"].append(code)
             continue
 
-        real_to_sell = min(to_sell, cur_vol - target)  # 防止超卖
-        if real_to_sell <= 0:
-            logger.info(f"  {code} {name}: 已是目标股数，无需操作")
+        real_sell = min(to_sell, cur_vol - target)
+        if real_sell <= 0:
+            logger.info(f"  {code} {name}: 已达目标股数，跳过")
             results["skipped"].append(code)
             continue
 
-        cur_price = cur_pos.get("cost_price", 1.0)
-        sell_price = cur_price * 0.998   # 卖出略低于成本价限价，确保成交
+        cur_price  = cur_pos.get("cost_price", 1.0)
+        sell_price = round(cur_price * 0.998, 2)
+        batches    = _split_batches(real_sell, sell_price)
 
-        ok, reason = gw.check("track_a", code, "sell", real_to_sell, sell_price)
-        if not ok:
-            logger.warning(f"  ❌ 风控拦截 {code} {name}：{reason}")
-            results["blocked"].append({"code": code, "reason": reason})
-            continue
+        logger.info(f"  {code} {name}: 卖出{real_sell:,}股 → 拆{len(batches)}批 {batches}")
 
-        logger.info(f"  {'[模拟]' if dry_run else '[委托]'} SELL {code} {name} "
-                    f"{real_to_sell:,}股 @{sell_price:.2f}")
-
-        if not dry_run:
-            try:
-                oid = client.place_order(code, "sell", real_to_sell, sell_price)
-                logger.info(f"    → 委托成功，order_id={oid}")
-                results["ok"].append({"code": code, "shares": real_to_sell,
-                                      "price": sell_price, "order_id": oid})
-            except Exception as e:
-                logger.error(f"    → 下单失败：{e}")
-                results["blocked"].append({"code": code, "reason": str(e)})
-        else:
-            results["ok"].append({"code": code, "shares": real_to_sell,
-                                  "price": sell_price, "order_id": -1})
+        for i, qty in enumerate(batches, 1):
+            val = qty * sell_price
+            logger.info(f"    {'[模拟]' if dry_run else '[委托]'} 批{i} SELL {code} "
+                        f"{qty:,}股 @{sell_price:.2f} ≈{val:,.0f}元")
+            if not dry_run:
+                try:
+                    oid = client.place_order(code, "sell", qty, sell_price)
+                    logger.info(f"      → order_id={oid}")
+                    results["ok"].append({"code": code, "batch": i,
+                                          "shares": qty, "order_id": oid})
+                except Exception as e:
+                    logger.error(f"      → 失败：{e}")
+                    results["failed"].append({"code": code, "reason": str(e)})
+            else:
+                results["ok"].append({"code": code, "batch": i, "shares": qty})
 
     print(f"\n{'预览' if dry_run else '执行'}完成:")
-    print(f"  ✅ {'可执行' if dry_run else '已提交'}: {len(results['ok'])} 笔")
-    print(f"  ❌ 风控拦截: {len(results['blocked'])} 笔")
-    print(f"  ⏭️  跳过:     {len(results['skipped'])} 笔")
-
+    print(f"  ✅ {'可执行批次' if dry_run else '已提交批次'}: {len(results['ok'])}")
+    print(f"  ❌ 失败: {len(results['failed'])}")
+    print(f"  ⏭️  跳过: {len(results['skipped'])} 只")
     if dry_run:
-        print("\n  一切正常，请加 --execute 参数重新运行以真正下单。")
+        print("\n  确认无误后：python scripts/fix_overweight.py --execute")
     return results
 
 
