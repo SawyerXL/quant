@@ -107,7 +107,55 @@ def get_position_ratio(index_close: pd.Series, date: pd.Timestamp) -> float:
     else:               return 0.30
 
 
-# ── ③ 策略A-2 综合打分 ─────────────────────────────────────────────────────
+# ── ③ EPS因子缓存 ─────────────────────────────────────────────────────────
+_eps_cache: pd.DataFrame | None = None
+
+
+def _load_eps_cache() -> pd.DataFrame:
+    """加载全市场季度EPS数据。"""
+    global _eps_cache
+    if _eps_cache is not None:
+        return _eps_cache
+    fp = Path("data_store/meta/financial_quarterly.parquet")
+    if fp.exists():
+        _eps_cache = pd.read_parquet(fp)
+        _eps_cache["report_date"] = _eps_cache["report_date"].astype(str)
+    else:
+        _eps_cache = pd.DataFrame(columns=["code","report_date","eps"])
+    return _eps_cache
+
+
+def _get_eps_factor(date: pd.Timestamp, ind_map: pd.Series) -> pd.Series:
+    """
+    TTM EPS因子（最近4个季度每股收益之和，行业Z-score归一化）。
+    季报滞后60天，年报滞后120天。无数据的股票得0分（中性）。
+    """
+    cache = _load_eps_cache()
+    if cache.empty:
+        return pd.Series(0.0, index=ind_map.index)
+
+    lag_days = 120 if date.month <= 4 else 60
+    cutoff   = (date - pd.Timedelta(days=lag_days)).strftime("%Y%m%d")
+
+    # 每个code取cutoff之前最近4个季度的eps，求和得TTM
+    available = cache[cache["report_date"] <= cutoff]
+    if available.empty:
+        return pd.Series(0.0, index=ind_map.index)
+
+    # 用字符串比较取最新4个季度，速度快不依赖datetime
+    ttm = available.groupby("code").apply(
+        lambda g: g.sort_values("report_date", ascending=False).head(4)["eps"].sum(),
+        include_groups=False
+    )
+    eps_raw = pd.Series(0.0, index=ind_map.index)
+    for code in ind_map.index:
+        if code in ttm.index:
+            eps_raw[code] = ttm[code]
+
+    return ind_zscore(eps_raw, ind_map)
+
+
+# ── ④ 策略A-2 综合打分 ─────────────────────────────────────────────────────
 def compute_score_a2(
     panel: pd.DataFrame,
     date: pd.Timestamp,
@@ -176,10 +224,14 @@ def compute_score_a2(
     else:
         quality_z = pd.Series(0, index=common)
 
-    # 动量70% + 质量30%：固定比例
+    # ⑥ EPS因子：TTM每股收益（行业Z-score，权重10%）
+    eps_z = _get_eps_factor(date, ind_map)
+
+    # 动量63% + 质量27% + EPS 10%
     quality_safe = quality_z.reindex(p.index).fillna(0)
     mom_safe     = mom_score.reindex(p.index).fillna(0)
-    base_score   = (0.70 * mom_safe + 0.30 * quality_safe).fillna(0)
+    eps_safe     = eps_z.reindex(p.index).fillna(0)
+    base_score   = (0.63 * mom_safe + 0.27 * quality_safe + 0.10 * eps_safe).fillna(0)
 
     # ③ 波动率调控：20日历史波动率高 → 权重降低
     if len(hist) >= 21:
