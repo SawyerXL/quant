@@ -43,13 +43,13 @@ def print_plan(positions: dict):
         cost_price = positions.get(code, {}).get("cost_price", 0)
 
         if actual_vol == 0:
-            print(f"  ⚠️  {code} {name}: QMT 无持仓，跳过")
+            print(f"  [WARN] {code} {name}: QMT 无持仓，跳过")
             continue
 
         if action == "sell_excess":
             to_sell = actual_vol - target
             if to_sell <= 0:
-                print(f"  ✅ {code} {name}: 实际{actual_vol}股 ≤ 目标{target}股，无需操作")
+                print(f"  [OK] {code} {name}: 实际{actual_vol}股 <= 目标{target}股，无需操作")
                 continue
         else:  # clear
             to_sell = actual_vol
@@ -135,9 +135,9 @@ def execute_orders(orders: list, dry_run: bool = True):
                 results["ok"].append({"code": code, "batch": i, "shares": qty})
 
     print(f"\n{'预览' if dry_run else '执行'}完成:")
-    print(f"  ✅ {'可执行批次' if dry_run else '已提交批次'}: {len(results['ok'])}")
-    print(f"  ❌ 失败: {len(results['failed'])}")
-    print(f"  ⏭️  跳过: {len(results['skipped'])} 只")
+    print(f"  [OK] {'可执行批次' if dry_run else '已提交批次'}: {len(results['ok'])}")
+    print(f"  [FAIL] 失败: {len(results['failed'])}")
+    print(f"  [SKIP]  跳过: {len(results['skipped'])} 只")
     if dry_run:
         print("\n  确认无误后：python scripts/fix_overweight.py --execute")
     return results
@@ -167,14 +167,14 @@ def main():
         return
 
     if not args.execute:
-        print("\n⚠️  当前为 dry-run 预览模式，未真正下单。")
+        print("\n[WARN]  当前为 dry-run 预览模式，未真正下单。")
         print("   确认上述计划无误后，运行：")
         print("   python scripts/fix_overweight.py --execute")
         return
 
     # ── 执行前最后确认 ────────────────────────────────────────
     print("\n" + "=" * 60)
-    print("  ⚠️  即将真正提交减仓委托，请最终确认！")
+    print("  [WARN]  即将真正提交减仓委托，请最终确认！")
     print("=" * 60)
     confirm = input("  输入 YES 确认执行，其他任意键取消：").strip()
     if confirm != "YES":
