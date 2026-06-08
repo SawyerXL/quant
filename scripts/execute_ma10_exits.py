@@ -34,7 +34,7 @@ def main():
               f"@{o['ref_price']:.2f}  {o['reason']}")
 
     if not args.execute:
-        print(f"\n  ⚠️  预览模式，未下单。确认后加 --execute 执行。")
+        print(f"\n  [WARN]  预览模式，未下单。确认后加 --execute 执行。")
         return
 
     confirm = input(f"\n  即将提交 {len(orders)} 笔止损卖出，输入 YES 确认：").strip()
