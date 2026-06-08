@@ -41,6 +41,7 @@ BACKTEST_END  = os.getenv("BACKTEST_END", "")
 N_HOLDINGS    = int(os.getenv("N_HOLDINGS", "30"))
 SECTOR_BOOST  = float(os.getenv("SECTOR_BOOST", "1.3"))   # 主线板块加权倍数
 MAX_IND_SLOT  = int(os.getenv("MAX_IND_SLOT", "8"))        # 单行业最多选几只
+MAX_TURNOVER  = int(os.getenv("MAX_TURNOVER", "15"))        # 单次调仓最多换几只（防单次大换血风险）
 USE_REGIME    = os.getenv("USE_REGIME", "1") == "1"
 REBAL_FREQ    = os.getenv("REBAL_FREQ", "biweekly")
 
@@ -112,9 +113,11 @@ def compute_score_a2(
     date: pd.Timestamp,
     amount_panel: pd.DataFrame | None,
     stock_info: pd.DataFrame | None,
+    mom_weight: float = 0.70,  # 动量权重（1-mom_weight=质量权重），默认70%
 ) -> pd.Series:
     """
-    多周期动量（行业内标准化）× 量价加成 × 波动率调控
+    多周期动量（行业内标准化）× 量价加成 × 波动率调控 × 质量因子
+    mom_weight: 市场环境自适应，牛市0.70/过渡0.50/熊市0.30
     """
     hist = panel[panel.index <= date]
     if len(hist) < MIN_BARS:
@@ -176,10 +179,11 @@ def compute_score_a2(
     else:
         quality_z = pd.Series(0, index=common)
 
-    # 动量70% + 质量30%（防御因子），对齐到当前股价索引并fillna防塌缩
+    # 市场环境自适应：牛市动量主导，熊市质量主导
+    q_weight = 1.0 - mom_weight
     quality_safe = quality_z.reindex(p.index).fillna(0)
     mom_safe     = mom_score.reindex(p.index).fillna(0)
-    base_score   = (0.70 * mom_safe + 0.30 * quality_safe).fillna(0)
+    base_score   = (mom_weight * mom_safe + q_weight * quality_safe).fillna(0)
 
     # ③ 波动率调控：20日历史波动率高 → 权重降低
     if len(hist) >= 21:

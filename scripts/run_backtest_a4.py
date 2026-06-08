@@ -36,7 +36,7 @@ from data.storage import load_meta
 from run_backtest_a2 import (
     compute_score_a2, select_industry_balanced, compute_weights,
     get_position_ratio, _make_rebal_dates,
-    MAX_IND_SLOT, SECTOR_BOOST,
+    MAX_IND_SLOT, SECTOR_BOOST, MAX_TURNOVER,
 )
 from run_backtest_a import (
     load_panels, calc_metrics,
@@ -87,11 +87,11 @@ def select_dynamic_grace(
     remove_cands = sorted(
         [c for c in current_holdings if c not in normal_top],
         key=lambda c: score.get(c, -np.inf)
-    )
+    )[:MAX_TURNOVER]   # 单次换手上限：最多换出15只
     add_cands = sorted(
         [c for c in score.nlargest(wider_n).index if c not in cur_set],
         key=lambda c: score.get(c, -np.inf), reverse=True
-    )
+    )[:MAX_TURNOVER]
 
     result = list(cur_set)
 
@@ -224,7 +224,15 @@ def run_backtest_a4(
                 else:
                     _panel_u, _amt_u = panel, amount_panel
 
-                score = compute_score_a2(_panel_u, date, _amt_u, stock_info)
+                # 市场环境自适应打分：牛市动量70%，熊市质量70%
+                if pos_ratio >= 0.85:
+                    mom_w = 0.70
+                elif pos_ratio >= 0.50:
+                    mom_w = 0.50
+                else:
+                    mom_w = 0.30
+
+                score = compute_score_a2(_panel_u, date, _amt_u, stock_info, mom_w)
                 if len(score) >= N_HOLDINGS:
                     old_hold = list(cur_weights.keys())
                     cur_p_series = panel.ffill().iloc[i]   # 当期价格（ffill）
