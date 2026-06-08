@@ -58,12 +58,31 @@ def _download_one(code: str) -> tuple[str, pd.DataFrame | None]:
 
 
 def main():
-    csi800 = load_meta("csi800")
-    if csi800.empty:
-        logger.error("csi800 数据不存在，请先保存中证800成分股")
+    # 优先用历史宇宙（全量覆盖），回退到 CSI800
+    uh = load_meta("universe_history")
+    if not uh.empty:
+        all_codes = set()
+        for _, row in uh.iterrows():
+            if row.get("codes"):
+                all_codes.update(str(c) for c in row["codes"].split(","))
+        codes = sorted(all_codes)
+        logger.info(f"从历史宇宙取 {len(codes)} 只")
+    else:
+        csi800 = load_meta("csi800")
+        if csi800.empty:
+            logger.error("csi800 数据不存在，请先保存中证800成分股")
+            return
+        codes = csi800["code"].tolist()
+
+    # 去重：跳过已有数据的股票（增量模式）
+    import os as _os
+    existing = set(f.stem.zfill(6) for f in Path("data_store/financial").glob("*.parquet"))
+    new_codes = [c for c in codes if c not in existing]
+    logger.info(f"总{len(codes)}只，已有{len(existing)}只，需下载{len(new_codes)}只（3线程）")
+    codes = new_codes
+    if not codes:
+        logger.info("所有股票已有财务数据，无需下载")
         return
-    codes = csi800["code"].tolist()
-    logger.info(f"开始下载 {len(codes)} 只股票季报财务数据（3线程）")
 
     success, failed = 0, []
 
