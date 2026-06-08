@@ -113,11 +113,9 @@ def compute_score_a2(
     date: pd.Timestamp,
     amount_panel: pd.DataFrame | None,
     stock_info: pd.DataFrame | None,
-    mom_weight: float = 0.70,  # 动量权重（1-mom_weight=质量权重），默认70%
 ) -> pd.Series:
     """
     多周期动量（行业内标准化）× 量价加成 × 波动率调控 × 质量因子
-    mom_weight: 市场环境自适应，牛市0.70/过渡0.50/熊市0.30
     """
     hist = panel[panel.index <= date]
     if len(hist) < MIN_BARS:
@@ -179,11 +177,10 @@ def compute_score_a2(
     else:
         quality_z = pd.Series(0, index=common)
 
-    # 市场环境自适应：牛市动量主导，熊市质量主导
-    q_weight = 1.0 - mom_weight
+    # 动量70% + 质量30%：固定比例
     quality_safe = quality_z.reindex(p.index).fillna(0)
     mom_safe     = mom_score.reindex(p.index).fillna(0)
-    base_score   = (mom_weight * mom_safe + q_weight * quality_safe).fillna(0)
+    base_score   = (0.70 * mom_safe + 0.30 * quality_safe).fillna(0)
 
     # ③ 波动率调控：20日历史波动率高 → 权重降低
     if len(hist) >= 21:

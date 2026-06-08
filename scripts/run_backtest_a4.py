@@ -224,15 +224,7 @@ def run_backtest_a4(
                 else:
                     _panel_u, _amt_u = panel, amount_panel
 
-                # 市场环境自适应打分：牛市动量70%，熊市质量70%
-                if pos_ratio >= 0.85:
-                    mom_w = 0.70
-                elif pos_ratio >= 0.50:
-                    mom_w = 0.50
-                else:
-                    mom_w = 0.30
-
-                score = compute_score_a2(_panel_u, date, _amt_u, stock_info, mom_w)
+                score = compute_score_a2(_panel_u, date, _amt_u, stock_info)
                 if len(score) >= N_HOLDINGS:
                     old_hold = list(cur_weights.keys())
                     cur_p_series = panel.ffill().iloc[i]   # 当期价格（ffill）
