@@ -58,17 +58,23 @@ REBAL_FREQ       = os.getenv("REBAL_FREQ", "biweekly")
 MA10_EXIT_DAYS   = int(os.getenv("MA10_EXIT_DAYS", "3"))   # 连续跌破10日线几天出清
 
 
+NEW_STOCK_PROTECT = int(os.getenv("NEW_STOCK_PROTECT", "2"))  # 新股保护周期数
+
+
 def select_dynamic_grace(
     score: pd.Series,
     current_holdings: list[str],
     n: int,
     entry_prices: dict[str, float],
     current_prices: pd.Series,
+    tenure: dict[str, int] | None = None,
 ) -> list[str]:
     """
-    动态保护期选股：
-    - 浮盈股（当前价 >= 入场价）→ 无门槛，随时可换
-    - 浮亏股（当前价 < 入场价）→ 替换方需得分高出 15% 才能换出
+    动态保护期选股（含新股保护）：
+    - 新股（持有 < NEW_STOCK_PROTECT 个周期）：统一15%门槛，不管浮盈浮亏
+      → 防止追高买入后马上被换掉（5/28新买21只81%亏的根因修复）
+    - 老股浮盈 → 无门槛，随时可换
+    - 老股浮亏 → 替换方需得分高出 15% 才能换出
     """
     if not current_holdings:
         return select_industry_balanced(score, None, n, MAX_IND_SLOT)
@@ -76,6 +82,7 @@ def select_dynamic_grace(
     wider_n    = min(int(n * 1.5), len(score))
     normal_top = set(score.nlargest(n).index.tolist())
     cur_set    = set(current_holdings)
+    tenure     = tenure or {}
 
     remove_cands = sorted(
         [c for c in current_holdings if c not in normal_top],
@@ -94,14 +101,21 @@ def select_dynamic_grace(
         rm_score  = score.get(rm,  -np.inf)
         add_score = score.get(add, -np.inf)
 
-        # ── 动态门槛：浮盈=自由换，浮亏=15%门槛 ──
+        # ── 动态门槛 ──
         entry = entry_prices.get(rm)
         cur_p = current_prices.get(rm) if hasattr(current_prices, 'get') else None
         if cur_p is None:
             cur_p = current_prices.iloc[-1].get(rm) if hasattr(current_prices, 'iloc') else None
 
-        is_profit  = (entry is not None and cur_p is not None and float(cur_p) >= float(entry))
-        threshold  = 0.0 if is_profit else GRACE_THRESHOLD
+        is_new   = tenure.get(rm, 999) < NEW_STOCK_PROTECT
+        is_profit = (entry is not None and cur_p is not None and float(cur_p) >= float(entry))
+
+        if is_new:
+            threshold = GRACE_THRESHOLD          # 新股强制保护
+        elif is_profit:
+            threshold = 0.0                       # 老股浮盈，自由换
+        else:
+            threshold = GRACE_THRESHOLD           # 老股浮亏
 
         if threshold == 0.0:
             can_replace = (add_score > rm_score) and (add not in result)
@@ -139,6 +153,7 @@ def run_backtest_a4(
 
     cur_weights:    dict[str, float] = {}
     entry_prices:   dict[str, float] = {}   # code → 入场收盘价
+    tenure:         dict[str, int]   = {}   # code → 已持有个周期数（用于新股保护）
     days_below_ma10: dict[str, int]  = {}   # code → 连续跌破MA10天数
     cumul_nav = 1.0
     entry_hwm = 1.0
@@ -178,6 +193,7 @@ def run_backtest_a4(
                     w = cur_weights.pop(code, 0)
                     port_rets.iloc[i] -= w * COMMISSION   # 单边卖出手续费
                     entry_prices.pop(code, None)
+                    tenure.pop(code, None)
                     days_below_ma10.pop(code, None)
                 logger.debug(f"{date_str} MA10出清({MA10_EXIT_DAYS}天): {ma10_exits}")
 
@@ -195,6 +211,7 @@ def run_backtest_a4(
             if pos_ratio <= 0.30:
                 cur_weights  = {}
                 entry_prices = {}
+                tenure       = {}
                 days_below_ma10 = {}
                 nav_since = 1.0
                 entry_hwm = cumul_nav
@@ -215,13 +232,16 @@ def run_backtest_a4(
                     # ★ 动态保护期选股
                     new_hold = select_dynamic_grace(
                         score, old_hold, N_HOLDINGS,
-                        entry_prices, cur_p_series
+                        entry_prices, cur_p_series, tenure
                     )
 
-                    # 记录新增持仓的入场价
+                    # 更新tenure：老股+1，新股=0
                     new_set = set(new_hold)
                     old_set = set(old_hold)
+                    for c in old_set & new_set:
+                        tenure[c] = tenure.get(c, 0) + 1
                     for c in new_set - old_set:
+                        tenure[c] = 0
                         ep = cur_p_series.get(c)
                         if ep and not pd.isna(ep):
                             entry_prices[c] = float(ep)
@@ -229,6 +249,7 @@ def run_backtest_a4(
                     for c in old_set - new_set:
                         entry_prices.pop(c, None)
                         days_below_ma10.pop(c, None)
+                        tenure.pop(c, None)
 
                     # 权重
                     raw_w = compute_weights(new_hold, score, stock_info, SECTOR_BOOST)
@@ -249,6 +270,7 @@ def run_backtest_a4(
             if nav_since <= (1 + PERIOD_STOP) or (cumul_nav / entry_hwm - 1) <= TRAILING_STOP:
                 cur_weights  = {}
                 entry_prices = {}
+                tenure       = {}
                 days_below_ma10 = {}
                 nav_since = 1.0
                 entry_hwm = cumul_nav

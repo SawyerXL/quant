@@ -163,7 +163,23 @@ def compute_score_a2(
         vol_ratio  = pd.Series(1.0, index=p.index)
 
     boost      = ((price_nh - 0.9) * 2).clip(0, 1) * ((vol_ratio - 1) * 0.5).clip(0, 0.5)
-    base_score = mom_composite.reindex(p.index).fillna(0) * (1 + boost)
+    mom_score  = mom_composite.reindex(p.index).fillna(0) * (1 + boost)
+
+    # ⑤ 质量因子：6M收益/波动率（风险调整回报，行业Z-score归一化）
+    # 目的：在横盘/下跌市里选出"涨得稳"而非"涨得多"的股票，堵住纯动量追高漏洞
+    if len(hist) >= 127:
+        ret_6m_raw  = ret_6m.reindex(common).fillna(0)
+        vol_6m_raw  = hist.iloc[-126:].pct_change(fill_method=None).std() * np.sqrt(252)
+        sharpe_like = (ret_6m_raw / vol_6m_raw.replace(0, 0.01).clip(lower=0.01)
+                       ).fillna(0).clip(-5, 5).reindex(common)
+        quality_z   = ind_zscore(sharpe_like, ind_map) if not sharpe_like.empty else pd.Series(0, index=common)
+    else:
+        quality_z = pd.Series(0, index=common)
+
+    # 动量70% + 质量30%（防御因子），对齐到当前股价索引并fillna防塌缩
+    quality_safe = quality_z.reindex(p.index).fillna(0)
+    mom_safe     = mom_score.reindex(p.index).fillna(0)
+    base_score   = (0.70 * mom_safe + 0.30 * quality_safe).fillna(0)
 
     # ③ 波动率调控：20日历史波动率高 → 权重降低
     if len(hist) >= 21:
