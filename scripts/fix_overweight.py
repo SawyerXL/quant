@@ -59,7 +59,8 @@ def print_plan(positions: dict):
         est_value = to_sell * est_price
         total_sell_value += est_value
         orders.append((code, name, actual_vol, target, to_sell, est_price, est_value))
-        print(f"  {'🔴' if to_sell > 1000 else '🟡'} {code} {name}:")
+        flag = "[!!]" if to_sell > 1000 else "[!]"
+        print(f"  {flag} {code} {name}:")
         print(f"      当前 {actual_vol:,}股 → 目标 {target:,}股  卖出 {to_sell:,}股")
         print(f"      参考价 {est_price:.2f}  预计回收 ≈ {est_value:,.0f} 元")
 
