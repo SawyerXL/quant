@@ -55,7 +55,8 @@ N_HOLDINGS       = int(os.getenv("N_HOLDINGS", "30"))
 USE_REGIME       = os.getenv("USE_REGIME", "1") == "1"
 REBAL_FREQ       = os.getenv("REBAL_FREQ", "biweekly")
 
-MA10_EXIT_DAYS   = int(os.getenv("MA10_EXIT_DAYS", "3"))   # 连续跌破10日线几天出清
+MA10_EXIT_DAYS   = int(os.getenv("MA10_EXIT_DAYS", "3"))    # 连续跌破MA几天出清
+MA_EXIT_WINDOW    = int(os.getenv("MA_EXIT_WINDOW", "10"))   # MA窗口（天）
 
 
 NEW_STOCK_PROTECT = int(os.getenv("NEW_STOCK_PROTECT", "2"))  # 新股保护周期数
@@ -172,15 +173,16 @@ def run_backtest_a4(
                 col = panel[code] if code in panel.columns else None
                 if col is None:
                     continue
-                hist10 = col.iloc[max(0, i - 9): i + 1].dropna()
-                if len(hist10) < 5:
+                w = MA_EXIT_WINDOW
+                hist_ma = col.iloc[max(0, i - w + 1): i + 1].dropna()
+                if len(hist_ma) < max(5, w // 2):
                     continue
-                ma10_val = hist10.mean()
+                ma_val = hist_ma.mean()
                 cur_p    = panel.iloc[i].get(code)
                 if pd.isna(cur_p) or cur_p is None or cur_p <= 0:
                     continue
 
-                if cur_p < ma10_val:
+                if cur_p < ma_val:
                     days_below_ma10[code] = days_below_ma10.get(code, 0) + 1
                 else:
                     days_below_ma10[code] = 0   # 价格回到10日线上方，重置计数器

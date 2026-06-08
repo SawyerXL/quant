@@ -167,7 +167,6 @@ def compute_score_a2(
     mom_score  = mom_composite.reindex(p.index).fillna(0) * (1 + boost)
 
     # ⑤ 质量因子：6M收益/波动率（风险调整回报，行业Z-score归一化）
-    # 目的：在横盘/下跌市里选出"涨得稳"而非"涨得多"的股票，堵住纯动量追高漏洞
     if len(hist) >= 127:
         ret_6m_raw  = ret_6m.reindex(common).fillna(0)
         vol_6m_raw  = hist.iloc[-126:].pct_change(fill_method=None).std() * np.sqrt(252)
