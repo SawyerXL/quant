@@ -134,7 +134,7 @@ BASKET_FILE   = Path("logs/top3_basket.json")
 def _load_basket() -> dict:
     if BASKET_FILE.exists():
         return json.loads(BASKET_FILE.read_text())
-    return {"holdings": [], "cost_prices": {}, "shares": {}, "capital": CAPITAL}
+    return {"holdings": [], "cost_prices": {}, "shares": {}, "bought_dates": {}, "capital": CAPITAL}
 
 def _save_basket(data: dict):
     BASKET_FILE.parent.mkdir(exist_ok=True)
@@ -180,11 +180,13 @@ def main():
             qty = max(int(per_stock / cur / lot) * lot, lot)
             cost_p[code] = cur
             shares[code] = qty
-        data = {"holdings": basket, "cost_prices": cost_p, "shares": shares, "capital": CAPITAL}
+        data = {"holdings": basket, "cost_prices": cost_p, "shares": shares,
+                "bought_dates": {c: today for c in basket}, "capital": CAPITAL}
         _save_basket(data)
 
     # ── 3. 检查是否需要换仓 ──────────────────────────
     to_remove = []
+    bought_dates = data.get("bought_dates", {})
     for code in basket:
         if code in ma10_exits:
             to_remove.append((code, "策略MA10止损"))
@@ -192,6 +194,8 @@ def main():
             to_remove.append((code, "策略调仓卖出"))
         elif code not in strategy_holdings:
             to_remove.append((code, "已不在策略持仓"))
+        elif bought_dates.get(code) == today:
+            print(f"\n  ⏳ {code} {nmap.get(code,'?')} 今日买入，T+1暂不可换，明天执行")
 
     # ── 4. 选替补 ────────────────────────────────────
     candidates = score.nlargest(30).index.tolist()
@@ -209,6 +213,8 @@ def main():
                 basket.append(c)
                 cost_p.pop(old_code, None)
                 shares.pop(old_code, None)
+                bought_dates.pop(old_code, None)
+                bought_dates[c] = today
                 print(f"\n  ⚠️  替换: 卖出 {old_code} {nmap.get(old_code,'?')}（{reason}）"
                       f" → 买入 {c} {nmap.get(c,'?')} {qty}股 @{cur:.2f}")
                 try:
@@ -221,7 +227,8 @@ def main():
                     )
                 except Exception: pass
                 break
-    data = {"holdings": basket, "cost_prices": cost_p, "shares": shares, "capital": CAPITAL}
+    data = {"holdings": basket, "cost_prices": cost_p, "shares": shares,
+            "capital": CAPITAL, "bought_dates": bought_dates}
     _save_basket(data)
 
     # ── 5. 输出 ──────────────────────────────────────
