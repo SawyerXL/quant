@@ -1,42 +1,70 @@
 """
-企业微信机器人告警。
-所有告警统一从这里发出，便于后续扩展其他渠道（短信/电话）。
+多通道告警：邮件 + 企业微信（可选）。
 """
+import os
+import smtplib
 import httpx
+from email.mime.text import MIMEText
+from email.header import Header
+from datetime import datetime
 from loguru import logger
 from config.settings import WECHAT_WEBHOOK, IS_PROD
+
+SMTP_SERVER   = os.getenv("SMTP_SERVER",   "smtp.yeah.net")
+SMTP_PORT     = int(os.getenv("SMTP_PORT",  "465"))
+SMTP_USER     = os.getenv("SMTP_USER",     "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+ALERT_EMAIL   = os.getenv("ALERT_EMAIL",   SMTP_USER)
+
+
+def _send_email(subject: str, body: str) -> bool:
+    """通过 SMTP 发送邮件告警。"""
+    if not SMTP_USER or not SMTP_PASSWORD:
+        logger.debug("SMTP 未配置，跳过邮件推送")
+        return False
+    try:
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["From"]    = SMTP_USER
+        msg["To"]      = ALERT_EMAIL
+        msg["Subject"] = Header(subject, "utf-8")
+        msg["Date"]    = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0800")
+
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=10) as s:
+            s.login(SMTP_USER, SMTP_PASSWORD)
+            s.sendmail(SMTP_USER, [ALERT_EMAIL], msg.as_string())
+        logger.info(f"邮件已发送: {subject}")
+        return True
+    except Exception as e:
+        logger.error(f"邮件发送失败: {e}")
+        return False
 
 
 def send_alert(content: str, level: str = "info") -> bool:
     """
-    推送企业微信告警。
+    多渠道告警。邮件为主，企业微信为辅助。
     level: 'info' | 'warning' | 'error'
     非生产环境只打日志，不实际推送。
     """
-    prefix = {"info": "ℹ️", "warning": "⚠️", "error": "🔴"}.get(level, "")
+    prefix = {"info": "", "warning": "⚠️", "error": "🔴"}.get(level, "")
     message = f"{prefix} {content}"
 
     if not IS_PROD:
         logger.info(f"[Alert-Mock] {message}")
         return True
 
-    if not WECHAT_WEBHOOK:
-        logger.warning("WECHAT_WEBHOOK_URL 未配置，告警未推送")
-        return False
+    sent = _send_email(f"[量化{level}] {content[:40]}...", message)
 
-    payload = {
-        "msgtype": "text",
-        "text": {"content": message},
-    }
-    try:
-        resp = httpx.post(WECHAT_WEBHOOK, json=payload, timeout=5)
-        ok = resp.status_code == 200 and resp.json().get("errcode") == 0
-        if not ok:
-            logger.error(f"企业微信推送失败: {resp.text}")
-        return ok
-    except Exception as e:
-        logger.error(f"企业微信推送异常: {e}")
-        return False
+    # 企业微信作为辅助通道
+    if WECHAT_WEBHOOK:
+        try:
+            payload = {"msgtype": "text", "text": {"content": message}}
+            resp = httpx.post(WECHAT_WEBHOOK, json=payload, timeout=5)
+            if resp.status_code != 200 or resp.json().get("errcode") != 0:
+                logger.warning(f"企微推送失败: {resp.text}")
+        except Exception as e:
+            logger.warning(f"企微推送异常: {e}")
+
+    return sent
 
 
 def send_daily_report(strategy_id: str, stats: dict) -> None:
