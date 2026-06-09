@@ -103,6 +103,15 @@ def main():
                 shares.pop(old_code, None)
                 print(f"\n  ⚠️  替换: 卖出 {old_code} {nmap.get(old_code,'?')}（{reason}）"
                       f" → 买入 {c} {nmap.get(c,'?')} {qty}股 @{cur:.2f}")
+                try:
+                    from monitoring.alerts import send_alert
+                    send_alert(
+                        f"【Top3篮子调仓】{today}\n"
+                        f"卖出: {old_code} {nmap.get(old_code,'?')}（{reason}）\n"
+                        f"买入: {c} {nmap.get(c,'?')} {qty}股 @{cur:.2f}\n"
+                        f"篮子: {', '.join(basket[:3])}"
+                    )
+                except Exception: pass
                 break
     data = {"holdings": basket, "cost_prices": cost_p, "shares": shares, "capital": CAPITAL}
     _save_basket(data)
