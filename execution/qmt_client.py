@@ -85,7 +85,7 @@ class QMTClient:
             return -1
 
         xt_direction = xtc.STOCK_BUY if direction == "buy" else xtc.STOCK_SELL
-        xt_price_type = xtc.FIX_PRICE if order_type == "limit" else xtc.MARKET_PRICE
+        if order_type == "market":\n            xt_price_type = getattr(xtc, "LATEST_PRICE", 5)\n        elif order_type == "best":\n            xt_price_type = getattr(xtc, "MARKET_BEST", 5)\n        else:\n            xt_price_type = xtc.FIX_PRICE
 
         order_id = self.trader.order_stock(
             self.account,
