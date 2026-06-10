@@ -189,9 +189,31 @@ def main():
     bought_dates = data.get("bought_dates", {})
     all_rank = score.rank(ascending=False)
     candidates = score.nlargest(30).index.tolist()
+    # 预取当前价格（用于盈亏+止盈判断）
+    prices_map = {}
     for code in basket:
+        df_p = load_daily(code, (date.today()-timedelta(days=5)).strftime("%Y-%m-%d"), today)
+        prices_map[code] = float(df_p["close"].iloc[-1]) if not df_p.empty else cost_p.get(code, 0)
+    for code in basket:
+        cp = cost_p.get(code, 0)
+        cur_p = prices_map.get(code, 0)
+        pnl = (cur_p / cp - 1) * 100 if cp > 0 else 0
+
         if code in ma10_exits:
             to_remove.append((code, "策略MA10止损"))
+
+        # ── 止盈：浮盈>25%全出，浮盈>15%+MA10拐头减半 ──
+        elif pnl > 0 and not ma10_exits.intersection({code}):
+            df_tp = load_daily(code, (date.today()-timedelta(days=15)).strftime("%Y-%m-%d"), today)
+            if len(df_tp) >= 11:
+                cls = df_tp["close"].values
+                ma_vals = [cls[max(0,i-10):i+1].mean() for i in range(max(0,len(cls)-5), len(cls)+1)]
+                ma_slope = ma_vals[-1] / ma_vals[0] - 1 if len(ma_vals) >= 2 and ma_vals[0] > 0 else 0
+                if pnl > 25:
+                    to_remove.append((code, f"🟢止盈 {pnl:+.1f}%超25%阈值，全部落袋"))
+                elif pnl > 15 and ma_slope < -0.01:
+                    to_remove.append((code, f"🟡止盈 {pnl:+.1f}%+MA10拐头{ma_slope:.1%}，减半仓"))
+
         elif code in strategy_sell:
             to_remove.append((code, "策略调仓卖出"))
         elif code not in strategy_holdings:
