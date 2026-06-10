@@ -187,6 +187,8 @@ def main():
     # ── 3. 检查是否需要换仓 ──────────────────────────
     to_remove = []
     bought_dates = data.get("bought_dates", {})
+    all_rank = score.rank(ascending=False)
+    candidates = score.nlargest(30).index.tolist()
     for code in basket:
         if code in ma10_exits:
             to_remove.append((code, "策略MA10止损"))
@@ -196,9 +198,19 @@ def main():
             to_remove.append((code, "已不在策略持仓"))
         elif bought_dates.get(code) == today:
             print(f"\n  ⏳ {code} {nmap.get(code,'?')} 今日买入，T+1暂不可换，明天执行")
+        else:
+            # 排名驱动：跌出前10且替补得分高20%以上
+            rank = int(all_rank.get(code, 9999))
+            if rank > 10:
+                sc = score.get(code, 0)
+                best_sub = sorted(
+                    [(c, score.get(c,0)) for c in candidates[:10] if c not in basket],
+                    key=lambda x: x[1], reverse=True
+                )
+                if best_sub and best_sub[0][1] > sc * 1.20:
+                    to_remove.append((code, f"排名跌至#{rank}，替补{best_sub[0][0]}强{best_sub[0][1]/sc-1:.0%}"))
 
     # ── 4. 选替补 ────────────────────────────────────
-    candidates = score.nlargest(30).index.tolist()
     for old_code, reason in to_remove:
         for c in candidates:
             if c not in basket and c not in [r[0] for r in to_remove if r != (old_code, reason)]:
