@@ -199,9 +199,10 @@ def main():
         elif bought_dates.get(code) == today:
             print(f"\n  ⏳ {code} {nmap.get(code,'?')} 今日买入，T+1暂不可换，明天执行")
         else:
-            # 排名驱动：跌出前10且替补得分高20%以上
+            # 排名驱动：跌出前10 + 替补强20% + 已持有≥3个交易日
             rank = int(all_rank.get(code, 9999))
-            if rank > 10:
+            held_days = (pd.Timestamp(today) - pd.Timestamp(bought_dates.get(code, today))).days
+            if rank > 10 and held_days >= 3:
                 sc = score.get(code, 0)
                 best_sub = sorted(
                     [(c, score.get(c,0)) for c in candidates[:10] if c not in basket],
