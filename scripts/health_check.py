@@ -232,6 +232,42 @@ def check_execution_quality() -> tuple[bool, str]:
     return True, summary
 
 
+def check_track_correlation() -> tuple[bool, str]:
+    """监控Track A/B净值滚动相关性。动量风格崩溃时两轨会同步回撤。"""
+    import re
+    logs = Path("logs")
+    a_files = sorted(logs.glob("paper_trade_2*.csv"))
+    b_files = sorted(logs.glob("paper_trade_b_2*.csv"))
+    if len(b_files) < 5:
+        return True, "Track B数据不足，跳过"
+    a_nav, b_nav = [], []
+    for f in a_files:
+        m = re.search(r'paper_trade_(\d{8})\.csv', f.name)
+        if not m: continue
+        df = pd.read_csv(f, encoding='utf-8-sig')
+        tot = df[df['代码'].astype(str).str.contains('合计', na=False)]
+        if tot.empty: continue
+        val_col = [c for c in df.columns if '市值' in c or '当前' in c][0]
+        a_nav.append({'date': pd.Timestamp(m.group(1)), 'val': float(str(tot.iloc[0][val_col]).replace(',',''))})
+    for f in b_files:
+        m = re.search(r'paper_trade_b_(\d{8})\.csv', f.name)
+        if not m: continue
+        df = pd.read_csv(f, encoding='utf-8-sig')
+        tot = df[df['代码'].astype(str).str.contains('合计', na=False)]
+        if tot.empty: continue
+        val_col = [c for c in df.columns if '市值' in c or '当前' in c][0]
+        b_nav.append({'date': pd.Timestamp(m.group(1)), 'val': float(str(tot.iloc[0][val_col]).replace(',',''))})
+    a = pd.DataFrame(a_nav).set_index('date').sort_index()
+    b = pd.DataFrame(b_nav).set_index('date').sort_index()
+    common = a.index.intersection(b.index)
+    if len(common) < 10:
+        return True, "相关数据样本不足"
+    corr = a['val'].pct_change()[common].corr(b['val'].pct_change()[common])
+    if abs(corr) > 0.70:
+        return False, f"Track A/B相关性{corr:.2f}（>0.70，动量同步风险高）"
+    return True, f"Track A/B相关性{corr:.2f}（正常）"
+
+
 def check_reconciliation() -> tuple[bool, str]:
     """检查QMT实际持仓与信号目标持仓是否一致。"""
     pos_file = Path("logs/qmt_positions_latest.json")
@@ -343,6 +379,7 @@ def run():
         ("股票元数据",       check_stock_meta_freshness),
         ("CSI 指数成分",    check_csi_index_freshness),
         ("持仓自动对账",    check_reconciliation),
+        ("Track A/B 相关性", check_track_correlation),
         ("执行质量监控",    check_execution_quality),
         ("策略滚动Beta",    check_rolling_beta),
         ("磁盘空间",        check_disk_space),
