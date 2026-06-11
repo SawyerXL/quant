@@ -125,25 +125,21 @@ def update_sector_state(prev_state: dict | None,
 
     states = {}
     for ind in current_scores.index:
-        pst, pd_ = (prev_state.get(ind, {}) or {}).get("state", "candidate"), \
-                    (prev_state.get(ind, {}) or {}).get("days", 0)
+        prev_d = prev_state.get(ind, {}) or {}
+        pst = prev_d.get("state", "candidate")
+        pd_ = prev_d.get("days_in_state", 0)
         in_conf = ind in confirm_pool
         in_exit = ind in exit_pool
 
         if in_conf:
-            ns = "confirmed" if pst in ("candidate", "confirmed") else "recovering"
             nd = pd_ + 1 if pst in ("candidate", "confirmed") else 1
+            ns = "confirmed" if nd >= cd else pst  # 确保持续性确认后才切换
         elif in_exit:
-            ns = "exiting" if pst in ("confirmed", "exiting") else "candidate"
             nd = pd_ + 1 if pst == "exiting" else 1
+            ns = "exiting" if nd >= ed else pst
         else:
             ns = "candidate" if pst != "confirmed" else "peak"
             nd = 0
-
-        if ns == "confirmed" and nd < cd:
-            ns = pst
-        if ns == "exiting" and nd < ed:
-            ns = pst
         states[ind] = {"state": ns, "days": nd}
 
     current_scores["state"] = [states.get(i, {}).get("state", "candidate")

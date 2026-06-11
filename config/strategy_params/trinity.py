@@ -52,7 +52,7 @@ STOCK_SCORE = {
         "max_mktcap_billion":  300,       # 流通市值上限（亿）
         "min_list_days":        60,       # 上市最少天数
         "min_daily_amount_wan": 200,      # 20日均成交额（万元）
-        "min_price_position":  0.85,      # 收盘/250最高 下限
+        "min_price_position":  0.60,      # 收盘/250最高 下限（强势股标准放宽，原0.85过严全空仓）
         "exclude_st":          True,
         "exclude_limit_up_today": True,   # 当日非一字板
     },
