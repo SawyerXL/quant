@@ -1,152 +1,165 @@
 """
-Track B 板块层：申万一级行业评分 → 选 top-3 行业。
+Track B 第二层：板块强度评分（三位一体 v2）。
 
-评分维度：
-  4周行业动量   60%：行业内股票等权4周收益率均值，截面 z-score
-  成交额增速    25%：近4周均额 / 近20周均额，截面 z-score
-  MA 强度      15%：行业内股票高于 MA20 的比例
+评分维度：5日动量(40%)+20日动量(25%)+涨停占比(20%)+成交额比(15%)
+板块状态机：candidate → confirmed → peak → exiting
 """
-import json
+import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import pandas as pd
+import numpy as np
+from datetime import date, timedelta
 from loguru import logger
-
-from config.strategy_params.trinity import STRATEGY_B
-
-_MANUAL_FILE   = Path("data_store/meta/manual_scores_b.json")
-_MANUAL_W      = STRATEGY_B["sector_score"]["rhythm_weight"]   # 0.25
-_MIN_SCORE     = STRATEGY_B["sector_score"]["min_score"]       # 60
-_MAX_SECTORS   = STRATEGY_B["sector_score"]["max_sectors"]     # 3
+from config.strategy_params.trinity import SECTOR
+from strategies.trinity.data_cache import get_sector_members, get_limit_up_down_stats
 
 
-def sector_scores(
-    panel: pd.DataFrame,
-    amount_panel: pd.DataFrame,
-    stock_info: pd.DataFrame,
-    date: pd.Timestamp,
-) -> pd.Series:
-    """
-    计算每个申万一级行业的量化得分（0–100）。
-    stock_info 需含 code / industry_l1 列。
-    """
-    hist_p = panel[panel.index <= date]
-    hist_a = amount_panel[amount_panel.index <= date]
-
-    if len(hist_p) < 20 or "industry_l1" not in stock_info.columns:
-        logger.warning("数据不足，板块得分全部返回50")
-        industries = stock_info["industry_l1"].dropna().unique()
-        return pd.Series(50.0, index=industries)
-
-    ind_map = stock_info.set_index("code")["industry_l1"].dropna()
-
-    ind_map = stock_info.set_index("code")["industry_l1"].dropna()
-    industries = ind_map.unique()
-
-    results = {}
-    for ind in industries:
-        codes = ind_map[ind_map == ind].index.tolist()
-        codes = [c for c in codes if c in hist_p.columns]
-        if len(codes) < 3:   # 成分股太少，行业信号不可靠
-            continue
-
-        p_ind = hist_p[codes]
-        a_ind = hist_a[[c for c in codes if c in hist_a.columns]] if not hist_a.empty else pd.DataFrame()
-
-        # 4周行业动量
-        if len(p_ind) >= 21:
-            ret4w = (p_ind.iloc[-1] / p_ind.iloc[-21] - 1).mean()
-        else:
-            ret4w = 0.0
-
-        # 成交额增速（近4周均 / 近20周均）
-        if not a_ind.empty and len(a_ind) >= 20:
-            recent4  = a_ind.iloc[-20:].mean().mean()
-            base20   = a_ind.iloc[-100:].mean().mean()
-            amt_ratio = (recent4 / base20 - 1) if base20 > 0 else 0.0
-        else:
-            amt_ratio = 0.0
-
-        # MA20 强度（保持不变）
-        if len(p_ind) >= 20:
-            ma20  = p_ind.rolling(20).mean().iloc[-1]
-            last  = p_ind.iloc[-1]
-            ma_pct = (last > ma20).mean()
-        else:
-            ma_pct = 0.5
-
-        results[ind] = {
-            "momentum": ret4w,
-            "amt_ratio": amt_ratio,
-            "ma_pct": ma_pct,
-        }
-
-    if not results:
+def _sector_index_ret(panel: pd.DataFrame, sector_map: dict, period: int) -> pd.Series:
+    """每个板块等权 N 日收益率。"""
+    if len(panel) < period + 1:
         return pd.Series(dtype=float)
-
-    df = pd.DataFrame(results).T
-
-    # 截面 z-score 标准化后合并
-    def _zscore_col(s):
-        mu, std = s.mean(), s.std()
-        if std < 1e-8:
-            return pd.Series(0.0, index=s.index)
-        return ((s - mu) / std).clip(-3, 3)
-
-    mom_z = _zscore_col(df["momentum"])
-    amt_z = _zscore_col(df["amt_ratio"])
-    ma_z  = _zscore_col(df["ma_pct"])
-
-    # 映射到 0–100
-    def _to_score(z):
-        return (z + 3) / 6 * 100
-
-    score = (
-        0.60 * _to_score(mom_z) +
-        0.25 * _to_score(amt_z) +
-        0.15 * _to_score(ma_z)
-    )
-    return score.rename("sector_score")
+    p_start = panel.iloc[-(period + 1)]
+    p_end = panel.iloc[-1]
+    rets = {}
+    for ind, codes in sector_map.items():
+        valid = [c for c in codes if c in panel.columns
+                 and pd.notna(p_start.get(c)) and pd.notna(p_end.get(c)) and p_start.get(c, 0) > 0]
+        if len(valid) < 3:
+            continue
+        rets[ind] = np.mean([float(p_end[c] / p_start[c] - 1) for c in valid])
+    return pd.Series(rets)
 
 
-def select_sectors(
-    quant_scores: pd.Series,
-    week_start: str = None,
-    top_n: int = _MAX_SECTORS,
-    min_score: float = _MIN_SCORE,
-) -> list[str]:
-    """
-    融合人工修正后，选出 top_n 个得分 >= min_score 的行业。
-    若达不到 top_n，则放宽到有数据的前 top_n 个。
-    """
-    scores = quant_scores.copy()
-
-    # 人工修正（融合权重 25%）
-    overrides = _load_sector_overrides(week_start)
-    if overrides:
-        for ind, manual_s in overrides.items():
-            if ind in scores.index:
-                scores[ind] = scores[ind] * (1 - _MANUAL_W) + manual_s * _MANUAL_W
-
-    # 选 top_n，尽量满足 min_score 门槛
-    candidates = scores[scores >= min_score].nlargest(top_n)
-    if len(candidates) < top_n:
-        candidates = scores.nlargest(top_n)   # 放宽门槛兜底
-
-    selected = candidates.index.tolist()
-    score_strs = [f"{s:.0f}" if pd.notna(s) else "N/A" for s in candidates.values]
-    logger.info(f"板块层选出: {selected}  (得分: {score_strs})")
-    return selected
+def _sector_amount_ratio(amount_panel: pd.DataFrame, sector_map: dict) -> pd.Series:
+    """板块成交额占全市场比 / 其60日均值。"""
+    if amount_panel is None or len(amount_panel.columns) < 10:
+        return pd.Series(dtype=float)
+    recent = amount_panel.iloc[-1]
+    total_all = float(recent.sum())
+    if total_all == 0:
+        return pd.Series(dtype=float)
+    ratios = {}
+    for ind, codes in sector_map.items():
+        valid = [c for c in codes if c in recent.index and pd.notna(recent[c])]
+        if len(valid) < 3:
+            continue
+        sec_amt = float(recent[valid].sum())
+        hist_sec = amount_panel.tail(60)[valid].sum(axis=1)
+        hist_mean = float(hist_sec.mean()) if not hist_sec.empty else sec_amt
+        ratio_60d = hist_sec.sum() / len(hist_sec) if len(hist_sec) > 0 else total_all
+        if ratio_60d == 0:
+            continue
+        ratios[ind] = (sec_amt / total_all) / (ratio_60d / total_all) if total_all > 0 else 0
+    return pd.Series(ratios)
 
 
-def _load_sector_overrides(week_start: str | None) -> dict[str, float]:
-    """读取人工板块修正分数。"""
-    if not _MANUAL_FILE.exists():
-        return {}
-    try:
-        data = json.loads(_MANUAL_FILE.read_text(encoding="utf-8"))
-        if week_start and data.get("week_start") != week_start:
-            return {}
-        return data.get("sector_overrides", {})
-    except Exception:
-        return {}
+def _sector_limit_up_ratio(panel: pd.DataFrame, sector_map: dict,
+                           trade_date: str) -> pd.Series:
+    """板块内涨幅>9.5%占比（近似涨停比）。"""
+    if len(panel) < 2:
+        return pd.Series(dtype=float)
+    ret_1d = (panel.iloc[-1] / panel.iloc[-2] - 1).dropna()
+    ratios = {}
+    for ind, codes in sector_map.items():
+        valid = [c for c in codes if c in ret_1d.index]
+        if len(valid) < 3:
+            continue
+        lu = sum(1 for c in valid if float(ret_1d.get(c, 0)) > 0.095)
+        ratios[ind] = lu / len(valid)
+    return pd.Series(ratios)
+
+
+def _zscore(s: pd.Series) -> pd.Series:
+    if s.empty or s.std() < 1e-8:
+        return pd.Series(0.0, index=s.index)
+    return ((s - s.mean()) / s.std()).clip(-3, 3)
+
+
+def compute_sector_scores(
+    panel: pd.DataFrame,
+    amount_panel: pd.DataFrame | None,
+    stock_info: pd.DataFrame,
+    trade_date: str,
+) -> pd.DataFrame:
+    """计算板块得分排名。返回 DataFrame(index=行业名)。"""
+    sector_map = get_sector_members(SECTOR["level"])
+    if not sector_map:
+        logger.warning("板块成分数据为空")
+        return pd.DataFrame()
+
+    w = SECTOR["score_weights"]
+    moms = {"momentum_5d": _sector_index_ret(panel, sector_map, 5),
+            "momentum_20d": _sector_index_ret(panel, sector_map, 20)}
+    lu   = _sector_limit_up_ratio(panel, sector_map, trade_date)
+    amt  = _sector_amount_ratio(amount_panel, sector_map)
+
+    score = pd.Series(0.0, index=sector_map.keys())
+    for name, s in [("momentum_5d", moms["momentum_5d"]),
+                     ("momentum_20d", moms["momentum_20d"]),
+                     ("limit_up_ratio", lu), ("amount_ratio", amt)]:
+        if not s.empty and name in w:
+            score = score.add(_zscore(s) * w[name], fill_value=0)
+
+    df = pd.DataFrame({"score": score,
+                       "momentum_5d": moms["momentum_5d"],
+                       "momentum_20d": moms["momentum_20d"],
+                       "limit_up_ratio": lu, "amount_ratio": amt})\
+        .sort_values("score", ascending=False)
+    return df
+
+
+def update_sector_state(prev_state: dict | None,
+                        current_scores: pd.DataFrame,
+                        trade_date: str) -> pd.DataFrame:
+    """板块状态机：candidate → confirmed → exiting。"""
+    top_n = SECTOR["top_n"]; conf_n = SECTOR["confirm_top_n"]
+    exit_n = SECTOR["exit_top_n"]; cd = SECTOR["confirm_days"]
+    ed = SECTOR["exit_days"]
+
+    confirm_pool = set(current_scores.head(conf_n).index)
+    exit_pool = set(current_scores.tail(max(1, len(current_scores) - exit_n + 1)).index)
+    if prev_state is None:
+        prev_state = {}
+
+    states = {}
+    for ind in current_scores.index:
+        pst, pd_ = (prev_state.get(ind, {}) or {}).get("state", "candidate"), \
+                    (prev_state.get(ind, {}) or {}).get("days", 0)
+        in_conf = ind in confirm_pool
+        in_exit = ind in exit_pool
+
+        if in_conf:
+            ns = "confirmed" if pst in ("candidate", "confirmed") else "recovering"
+            nd = pd_ + 1 if pst in ("candidate", "confirmed") else 1
+        elif in_exit:
+            ns = "exiting" if pst in ("confirmed", "exiting") else "candidate"
+            nd = pd_ + 1 if pst == "exiting" else 1
+        else:
+            ns = "candidate" if pst != "confirmed" else "peak"
+            nd = 0
+
+        if ns == "confirmed" and nd < cd:
+            ns = pst
+        if ns == "exiting" and nd < ed:
+            ns = pst
+        states[ind] = {"state": ns, "days": nd}
+
+    current_scores["state"] = [states.get(i, {}).get("state", "candidate")
+                               for i in current_scores.index]
+    current_scores["days_in_state"] = [states.get(i, {}).get("days", 0)
+                                       for i in current_scores.index]
+    return current_scores
+
+
+# ── CLI ─────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import argparse
+    smap = get_sector_members()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--date", default=date.today().strftime("%Y-%m-%d"))
+    args = parser.parse_args()
+    print(f"\n  板块评分模块  {args.date}")
+    print(f"  行业数: {len(smap)}")
+    print(f"  注: 完整评分需传入 price+amount panel，见 backtest_trinity.py\n")
