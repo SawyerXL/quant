@@ -24,32 +24,38 @@ RF_ANNUAL = 0.025
 
 
 def run_regime_backtest(start: str, end: str):
-    """回测 Regime Gate 择时效果。"""
+    """回测 Regime Gate 择时效果（仅用趋势+波动，无需API）。"""
     import akshare as ak
+    from strategies.trinity.regime import _trend_indicator, _vol_indicator
+
     bench_sym = REGIME["benchmark_index"]
     df = ak.stock_zh_index_daily(symbol=bench_sym)
     df["date"] = pd.to_datetime(df["date"])
     df = df.set_index("date").sort_index()
     close = df["close"][(df.index >= start) & (df.index <= end)]
 
-    gate = RegimeGate()
-    nav_bh = [1.0]
-    nav_regime = [1.0]
-    positions = []
+    nav_bh = []; nav_regime = []; positions = []
+    prev = None
 
     for i, (dt, p) in enumerate(close.items()):
-        if i == 0:
+        ret = 0 if prev is None else float(p / prev - 1)
+        if i < 250:
             positions.append(1.0)
-            continue
-        dt_str = dt.strftime("%Y-%m-%d")
-        regime = gate.evaluate(dt_str)
-        pos = regime["position_cap"]
-        positions.append(pos)
-        ret = float(p / close.iloc[i - 1] - 1)
-        bh = nav_bh[-1] * (1 + ret)
-        rg = nav_regime[-1] * (1 + ret * pos)
-        nav_bh.append(bh)
-        nav_regime.append(rg)
+        else:
+            sub_close = close[close.index <= dt]
+            trend = _trend_indicator(sub_close)
+            vol_ok = _vol_indicator(sub_close)
+            score = trend + vol_ok + 2
+            state = "ATTACK" if score >= 3 else ("NEUTRAL" if score == 2 else "DEFENSE")
+            positions.append(REGIME["state"][state]["position_cap"])
+
+        # first day: nav=1.0
+        base_bh = nav_bh[-1] if nav_bh else 1.0
+        base_rg = nav_regime[-1] if nav_regime else 1.0
+        nav_bh.append(base_bh * (1 + ret))
+        pos = positions[-1]
+        nav_regime.append(base_rg * (1 + ret * pos))
+        prev = p
 
     nav_bh_s = pd.Series(nav_bh, index=close.index)
     nav_rg_s = pd.Series(nav_regime, index=close.index)

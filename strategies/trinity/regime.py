@@ -95,10 +95,11 @@ class RegimeGate:
     def __init__(self):
         self._history: list[str] = []   # 最近几天的状态候选
 
-    def evaluate(self, trade_date: str) -> dict:
+    def evaluate(self, trade_date: str, fast_mode: bool = False) -> dict:
         """
         计算当日 Regime 状态。
-        返回: {date, score, state, position_cap, sub_indicators}
+        fast_mode=True: 仅趋势+波动（回测用，避免API限速）
+        fast_mode=False: 完整4指标（实盘用）
         """
         close = _load_benchmark(
             REGIME["benchmark_index"],
@@ -108,12 +109,20 @@ class RegimeGate:
         if close.empty:
             return self._fallback(trade_date)
 
-        sub = {
-            "trend":   _trend_indicator(close),
-            "vol":     _vol_indicator(close),
-            "breadth": _breadth_indicator(trade_date),
-            "blowup":  _blowup_indicator(trade_date),
-        }
+        if fast_mode:
+            sub = {
+                "trend":   _trend_indicator(close),
+                "vol":     _vol_indicator(close),
+                "breadth": 1,   # 回测模式默认通过
+                "blowup":  1,
+            }
+        else:
+            sub = {
+                "trend":   _trend_indicator(close),
+                "vol":     _vol_indicator(close),
+                "breadth": _breadth_indicator(trade_date),
+                "blowup":  _blowup_indicator(trade_date),
+            }
         score = sum(sub.values())
         raw_state = "ATTACK" if score >= 3 else ("NEUTRAL" if score == 2 else "DEFENSE")
         confirmed_state = self._confirm(raw_state)
