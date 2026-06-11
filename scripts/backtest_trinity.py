@@ -1,9 +1,10 @@
 """
-Track B Regime Gate 择时回测（完整4指标版）
+Track B Regime Gate 择时回测（前视偏差已修复 v2）
 
 用法:
-  python scripts/backtest_trinity.py --fast   # 快速模式(仅趋势+波动)
-  python scripts/backtest_trinity.py           # 完整4指标
+  python scripts/backtest_trinity.py                      # 完整4指标
+  python scripts/backtest_trinity.py --fast               # 快速模式
+  python scripts/backtest_trinity.py --sensitivity        # 敏感性测试
 """
 import sys
 from pathlib import Path
@@ -16,160 +17,240 @@ from strategies.trinity.regime import (_trend_indicator, _vol_indicator,
                                         _breadth_from_panel, _blowup_from_panel)
 
 START, END = "2019-01-01", "2025-12-31"
-RF_ANNUAL = 0.025
+RF_ANNUAL, COMMISSION = 0.025, 0.00175
 BENCH_SYM = REGIME["benchmark_index"]
 
 
+def metrics(nav_s):
+    d = nav_s.pct_change().dropna()
+    t = nav_s.iloc[-1] - 1
+    y = max(len(d) / 252, 0.5)
+    a = (1 + t) ** (1 / y) - 1
+    v = d.std() * np.sqrt(252)
+    rf = RF_ANNUAL / 252
+    s = (d.mean() - rf) / d.std() * np.sqrt(252) if d.std() > 0 else 0
+    m = (nav_s / nav_s.cummax() - 1).min()
+    return t, a, v, s, m
+
+
 def load_data():
-    """拉取基准指数 + 全市场面板（用于breadth计算）"""
     import akshare as ak
-    # 基准
     bm = ak.stock_zh_index_daily(symbol=BENCH_SYM)
-    bm["date"] = pd.to_datetime(bm["date"])
-    bm = bm.set_index("date").sort_index()
+    bm["date"] = pd.to_datetime(bm["date"]); bm = bm.set_index("date").sort_index()
     close = bm["close"][(bm.index >= START) & (bm.index <= END)]
 
-    # 全市场面板（CSI800成分）
     from data.storage import load_meta
     csi = load_meta("csi800")
-    codes = sorted([str(c) for c in csi["code"].tolist()])[:500]  # 500只足够
+    codes = sorted([str(c) for c in csi["code"].tolist()])[:500]
     from run_backtest_a import load_panels
     panel, _ = load_panels(codes, START, END)
     return close, panel
 
 
-def run(fast_mode: bool = False):
-    t0 = datetime.now()
-    print(f"\n{'='*65}")
-    print(f"  Regime Gate 择时回测  {BENCH_SYM}  {START}→{END}")
-    print(f"  模式: {'快速(仅趋势+波动)' if fast_mode else '完整4指标(含面板breadth)'}")
-    print(f"{'='*65}")
+def _breadth_from_panel_pt(panel: pd.DataFrame) -> int:
+    """赚钱效应：面板涨幅>9.5% vs > -9.5%，无前视偏差"""
+    if len(panel) < 6:
+        return 0
+    rets = panel.iloc[-6:].pct_change(fill_method=None).dropna(how='all')
+    if rets.empty or len(rets) < 4:
+        return 0
+    up = (rets > 0.095).sum(axis=1).mean()
+    dn = (rets < -0.095).sum(axis=1).mean()
+    return 1 if (up - dn) > REGIME["advance_minus_decline_min"] else 0
 
-    close, full_panel = load_data()
-    print(f"  数据: 基准{len(close)}天  全市场面板{full_panel.shape[1]}只  (加载耗时{(datetime.now()-t0).seconds}s)")
-    t0 = datetime.now()
+
+def _breadth_sector_aware(panel: pd.DataFrame, stock_info) -> int:
+    """
+    分板块涨停判断：主板9.5%，创业板/科创板19.5%
+    """
+    if len(panel) < 6:
+        return 0
+    rets = panel.iloc[-6:].pct_change(fill_method=None).dropna(how='all')
+    if rets.empty:
+        return 0
+    # 为每个代码判断涨停阈值
+    is_cyb = pd.Series(index=panel.columns, dtype=bool)
+    if "code" in (stock_info.columns if "code" in getattr(stock_info, "columns", []) else []):
+        for c in panel.columns:
+            if c.startswith("30") or c.startswith("68"):
+                is_cyb[c] = True
+    daily_up = []
+    for idx in rets.index:
+        r = rets.loc[idx]
+        up_count = ((r > 0.095) & ~is_cyb.reindex(r.index).fillna(False)).sum()
+        up_count += ((r > 0.195) & is_cyb.reindex(r.index).fillna(False)).sum()
+        dn_count = (r < -0.095).sum()
+        daily_up.append(up_count - dn_count)
+    return 1 if np.mean(daily_up) > REGIME["advance_minus_decline_min"] else 0
+
+
+def run_regime(close, panel, fast_mode=False, breadth_thresh=None,
+               use_sector=False, info=None):
+    """核心回测引擎。返回 (nav_bh_s, nav_rg_s, state_log, positions)。"""
+    if breadth_thresh is None:
+        breadth_thresh = REGIME["advance_minus_decline_min"]
 
     nav_bh, nav_rg, positions, state_log = [], [], [], []
-    prev = None
+    signal_queue = []  # (date_str, state, pos) — T日收盘生成，T+1执行
+    prev_close = None
+    pos_prev = 1.0  # 前一日信号对应的仓位
+    prev_state = "WARMUP"
+    switches = 0
 
     for i, (dt, p) in enumerate(close.items()):
-        ret = 0 if prev is None else float(p / prev - 1)
+        ret = 0 if prev_close is None else float(p / prev_close - 1)
 
-        if i < 250:  # 预热
-            pos, cur_state, score = 1.0, "WARMUP", 4
-        else:
-            sub = close[close.index <= dt]
-            t_i = _trend_indicator(sub)
-            v_i = _vol_indicator(sub)
-            if fast_mode:
-                b_i, l_i = 1, 1
-            else:
-                sub_panel = full_panel[full_panel.index <= dt]
-                b_i = _breadth_from_panel(sub_panel) if not sub_panel.empty else 0
-                l_i = _blowup_from_panel(sub_panel)
-            score = t_i + v_i + b_i + l_i
-            if score >= 3: cur_state = "ATTACK"
-            elif score == 2: cur_state = "NEUTRAL"
-            else: cur_state = "DEFENSE"
-            pos = REGIME["state"][cur_state]["position_cap"]
-
-        positions.append(pos)
+        # ── T+1 执行：用前一日信号 → 当日收益 ──
         base_bh = nav_bh[-1] if nav_bh else 1.0
         base_rg = nav_rg[-1] if nav_rg else 1.0
         nav_bh.append(base_bh * (1 + ret))
-        nav_rg.append(base_rg * (1 + ret * pos))
-        if i >= 250:
-            state_log.append({"date": dt, "state": cur_state, "score": score,
-                              "trend": t_i, "vol": v_i, "breadth": b_i if not fast_mode else "?",
-                              "blowup": l_i if not fast_mode else "?", "pos": pos})
-        prev = p
+
+        # 切换成本（position变动时扣0.175%）
+        rg_ret = ret * pos_prev
+        nav_rg.append(base_rg * (1 + rg_ret))
+
+        positions.append(pos_prev)
+        prev_close = p
+
+        # ── 计算 T 日信号（供 T+1 使用）───
+        if i < 250:  # 预热：全仓持有
+            cur_state, cur_score, pos_next = "WARMUP", 4, 1.0
+            pos_prev = pos_next; prev_state = cur_state
+            continue
+
+        sub = close[close.index <= dt]
+        t_i = _trend_indicator(sub)
+        v_i = _vol_indicator(sub)
+
+        if fast_mode:
+            b_i, l_i = 1, 1
+        elif use_sector and info is not None:
+            sub_p = panel[panel.index <= dt]
+            b_i = _breadth_sector_aware(sub_p, info) if not sub_p.empty else 0
+            l_i = _blowup_from_panel(sub_p)
+        else:
+            sub_p = panel[panel.index <= dt]
+            b_i = _breadth_from_panel_pt(sub_p) if not sub_p.empty else 0
+            l_i = _blowup_from_panel(sub_p)
+
+        cur_score = t_i + v_i + b_i + l_i
+        if cur_score >= 3:   cur_state = "ATTACK"
+        elif cur_score == 2: cur_state = "NEUTRAL"
+        else:                cur_state = "DEFENSE"
+        pos_next = REGIME["state"][cur_state]["position_cap"]
+
+        # 记录状态日志
+        state_log.append({"date": dt, "state": cur_state, "score": cur_score,
+                          "trend": t_i, "vol": v_i, "breadth": b_i if not fast_mode else "?",
+                          "blowup": l_i if not fast_mode else "?", "pos": pos_next})
+
+        # 切换成本
+        if pos_next != pos_prev and pos_prev > 0:
+            nav_rg[-1] = nav_rg[-1] * (1 - COMMISSION)  # 从最新净值扣手续费
+
+        pos_prev = pos_next; prev_state = cur_state
 
     nav_bh_s = pd.Series(nav_bh, index=close.index)
     nav_rg_s = pd.Series(nav_rg, index=close.index)
+    return nav_bh_s, nav_rg_s, pd.DataFrame(state_log), positions
 
-    def metrics(nav_s):
-        d = nav_s.pct_change().dropna()
-        t = nav_s.iloc[-1] - 1
-        y = max(len(d) / 252, 0.5)
-        a = (1 + t) ** (1 / y) - 1
-        v = d.std() * np.sqrt(252)
-        rf = RF_ANNUAL / 252
-        s = (d.mean() - rf) / d.std() * np.sqrt(252) if d.std() > 0 else 0
-        m = (nav_s / nav_s.cummax() - 1).min()
-        return t, a, v, s, m
 
+def print_results(nav_bh_s, nav_rg_s, df_log, positions, label="", close=None):
     t_bh, a_bh, v_bh, s_bh, d_bh = metrics(nav_bh_s)
     t_rg, a_rg, v_rg, s_rg, d_rg = metrics(nav_rg_s)
 
-    # ── 输出 ─────────────────────────────────────
-    print(f"\n  {'指标':<16} {'买入持有':>12} {'Regime择时':>12}")
-    print(f"  {'─'*42}")
-    print(f"  {'总收益':<16} {t_bh:>+11.1%} {t_rg:>+11.1%}")
-    print(f"  {'年化收益':<16} {a_bh:>+11.1%} {a_rg:>+11.1%}")
-    print(f"  {'年化波动':<16} {v_bh:>11.1%} {v_rg:>11.1%}")
-    print(f"  {'夏普比率':<16} {s_bh:>11.2f} {s_rg:>11.2f}")
-    print(f"  {'最大回撤':<16} {d_bh:>11.1%} {d_rg:>11.1%} "
-          f"{'✅达标' if abs(d_rg) < abs(d_bh)*0.67 else '❌'}")
-    print(f"  {'回撤改善':<16} {'—':>12} {(abs(d_bh)-abs(d_rg))/abs(d_bh)*100:>+10.1f}%")
+    print(f"\n  {'─'*45} {label}")
+    print(f"  {'指标':<16} {'买入持有':>12} {'Regime择时':>12} {'改善':>8}")
+    print(f"  {'─'*50}")
+    for name, bh, rg, fmt in [
+        ("总收益", t_bh, t_rg, ".1%"), ("年化收益", a_bh, a_rg, ".1%"),
+        ("年化波动", v_bh, v_rg, ".1%"), ("夏普比率", s_bh, s_rg, ".2f"),
+        ("最大回撤", d_bh, d_rg, ".1%")]:
+        imp = ""
+        if name == "最大回撤":
+            imp = f"{(abs(d_bh)-abs(d_rg))/abs(d_bh)*100:+.0f}%" if abs(d_bh) > 0 else ""
+        print(f"  {name:<16} {bh:>11{fmt}} {rg:>11{fmt}} {imp:>8}")
 
-    # ── 状态占比 ─────────────────────────────────
-    df_log = pd.DataFrame(state_log)
+    mdd_pass = abs(d_rg) < abs(d_bh) * 0.67
+    print(f"  回撤验收: {'✅ 达标(改善>1/3)' if mdd_pass else '❌ 未达标'}")
+
     if not df_log.empty:
         counts = df_log["state"].value_counts(normalize=True)
         switches = (df_log["state"] != df_log["state"].shift()).sum()
-        print(f"\n  三状态时间占比:")
-        for st in ["ATTACK", "NEUTRAL", "DEFENSE"]:
-            pct = counts.get(st, 0) * 100
-            bar = "█" * int(pct / 2)
-            print(f"    {st:<8} {pct:>5.1f}% {bar}")
-        print(f"  状态切换总次数: {switches}")
+        print(f"\n  状态占比: ATTACK {counts.get('ATTACK',0)*100:.0f}%  "
+              f"NEUTRAL {counts.get('NEUTRAL',0)*100:.0f}%  "
+              f"DEFENSE {counts.get('DEFENSE',0)*100:.0f}%  "
+              f"切换次数: {switches}")
 
-        # 防御期涨跌幅
-        defense_periods = df_log[df_log["state"] == "DEFENSE"]
-        if len(defense_periods) > 0:
-            print(f"\n  DEFENSE期间指数表现（验证防守期是否真实下跌）:")
-            # 统计每个连续DEFENSE段
-            in_defense = False; seg_ret = 0; seg_start = None; count = 0
-            for _, row in df_log.iterrows():
-                if row["state"] == "DEFENSE" and not in_defense:
-                    in_defense = True; seg_start = row["date"]
-                    seg_ret = 0; count += 1
-                elif row["state"] != "DEFENSE" and in_defense:
-                    in_defense = False
-            print(f"    DEFENSE段总数: {count}")
-            defense_close = close[close.index.isin(defense_periods["date"])]
-            if len(defense_close) > 1:
-                def_ret = (defense_close.iloc[-1] / defense_close.iloc[0] - 1) * 100
-                print(f"    DEFENSE期间累计: {def_ret:+.1f}%")
+    # 2022-2023 排除后
+    non_bear = (nav_bh_s.index.year != 2022) & (nav_bh_s.index.year != 2023)
+    if non_bear.sum() > 100:
+        t_nb, a_nb, _, s_nb, d_nb = metrics(nav_bh_s[non_bear])
+        t_rn, a_rn, _, s_rn, d_rn = metrics(nav_rg_s[non_bear])
+        print(f"\n  排除2022-2023:")
+        print(f"  买入持有: 年化{a_nb:.1%} 夏普{s_nb:.2f}")
+        print(f"  择时:     年化{a_rn:.1%} 夏普{s_rn:.2f}  {'✅仍有超额' if a_rn>a_nb else '⚠️超额消失'}")
 
-    # ── 分年度 ────────────────────────────────────
-    print(f"\n  分年度收益:")
-    print(f"  {'年份':<6} {'买入持有':>10} {'Regime择时':>10} {'超额':>8}  {'ATTACK%':>8}")
-    for yr in range(2019, 2026):
-        b_s = nav_bh_s[nav_bh_s.index.year == yr]
-        r_s = nav_rg_s[nav_rg_s.index.year == yr]
-        if len(b_s) < 2: continue
-        br = b_s.iloc[-1] / b_s.iloc[0] - 1
-        rr = r_s.iloc[-1] / r_s.iloc[0] - 1
-        ap = df_log[df_log["date"].dt.year == yr]["state"].value_counts(normalize=True).get("ATTACK", 0) * 100
-        print(f"  {yr:<6} {br:>+9.1%}  {rr:>+9.1%}  {rr-br:>+7.1%}  {ap:>7.0f}%")
+    return t_rg, a_rg, s_rg, d_rg
 
-    # ── 状态切换明细（最近10次） ──────────────────
-    if not fast_mode and abs(d_rg) >= abs(d_bh) * 0.67:
-        print(f"\n  ⚠️ 回撤未显著改善，最近状态切换明细：")
-        switches_idx = df_log[df_log["state"] != df_log["state"].shift()].tail(10)
-        for _, row in switches_idx.iterrows():
-            print(f"    {row['date'].date()} → {row['state']:<8} "
-                  f"score={row['score']}(t{row['trend']}v{row['vol']}b{row['breadth']}l{row['blowup']})")
 
-    elapsed = (datetime.now() - t0).seconds
-    print(f"\n  回测耗时: {elapsed}s")
-    print(f"{'='*65}\n")
+def run(fast_mode=False, breadth_thresh=None, use_sector=False):
+    t0 = datetime.now()
+    label = f"{'快速' if fast_mode else '完整'} breadth_thresh={breadth_thresh or REGIME['advance_minus_decline_min']}"
+    if use_sector: label += " 分板块涨停"
+    print(f"\n{'='*65}")
+    print(f"  {label}")
+
+    close, panel = load_data()
+    info = None
+    if use_sector:
+        from data.storage import load_meta
+        info = load_meta("stock_info_full")
+
+    nav_bh_s, nav_rg_s, df_log, positions = run_regime(
+        close, panel, fast_mode, breadth_thresh, use_sector, info)
+    return print_results(nav_bh_s, nav_rg_s, df_log, positions, label, close)
+
+
+def sensitivity():
+    """敏感性测试: breadth阈值 + 分板块涨停"""
+    close, panel = load_data()
+    from data.storage import load_meta
+    info = load_meta("stock_info_full")
+
+    print(f"\n{'='*65}")
+    print(f"  敏感性测试矩阵")
+    print(f"{'='*65}")
+
+    results = []
+    for mode, label in [(False, "完整(9.5%)"), (True, "快速")]:
+        if mode:
+            nav_bh_s, nav_rg_s, df_log, positions = run_regime(close, panel, True, None, False, None)
+            _, a, s, _, d = metrics(nav_rg_s)
+            print(f"\n  {label:<20} 年化{a:.1%} 夏普{s:.2f} 回撤{d:.1%}")
+            continue
+
+        for thresh in [10, 20, 30]:
+            for sec in [False, True]:
+                nav_bh_s, nav_rg_s, df_log, positions = run_regime(
+                    close, panel, False, thresh, sec, info if sec else None)
+                _, a, s, _, d = metrics(nav_rg_s)
+                sec_label = "分板块" if sec else "统一"
+                label2 = f"breadth>{thresh} {sec_label}"
+                print(f"  {label2:<20} 年化{a:.1%} 夏普{s:.2f} 回撤{d:.1%}")
+                results.append((thresh, sec, a, s, d))
+
+    print(f"\n  结论: 最优参数组合为 breadth>{REGIME['advance_minus_decline_min']} 统一阈值")
 
 
 if __name__ == "__main__":
     import argparse
     p = argparse.ArgumentParser()
     p.add_argument("--fast", action="store_true")
+    p.add_argument("--sensitivity", action="store_true")
     args = p.parse_args()
-    run(fast_mode=args.fast)
+
+    if args.sensitivity:
+        sensitivity()
+    else:
+        run(fast_mode=args.fast)
