@@ -35,6 +35,11 @@ print(f"调仓日: {len(rd)}  {rd[0]}→{rd[-1]}")
 pf=TrinityPortfolio(); cash=PORTFOLIO["capital"]; total=cash
 positions={}; cost_basis={}; fills=[]; cash_series=[]
 
+# 预热：回放T-120日状态机
+if rd:
+    pf.warmup(panel,ap,info,rd[0])
+    print(f"  预热完成，状态机从第一个调仓日起可用")
+
 for i,d_str in enumerate(rd):
     try:
         sig=pf.select(panel,ap,info,d_str,list(positions.keys()))

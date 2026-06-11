@@ -27,6 +27,30 @@ class TrinityPortfolio:
     def __init__(self):
         self._prev_sector_state: dict | None = None
 
+    def warmup(self, panel: pd.DataFrame, amount_panel: pd.DataFrame | None,
+               stock_info: pd.DataFrame, target_date: str):
+        """
+        从 T-120 个交易日回放状态机至 target_date。
+        禁止手动设置状态———回测与实盘共用此路径。
+        """
+        from datetime import timedelta
+        tgt = pd.Timestamp(target_date)
+        lookback = tgt - pd.Timedelta(days=200)  # 取200自然日≈120交易日
+        hist = panel[panel.index <= tgt]
+        if len(hist) < 60:
+            return  # 不足以回放，保持 None
+
+        start_i = max(0, len(hist) - 120)
+        for i in range(start_i, len(hist)):
+            dt = hist.index[i].strftime("%Y-%m-%d")
+            try:
+                sec = compute_sector_scores(panel, amount_panel, stock_info, dt)
+                if not sec.empty:
+                    sec = update_sector_state(self._prev_sector_state, sec, dt)
+                    self._prev_sector_state = sec[["state", "days_in_state"]].to_dict("index")
+            except Exception:
+                pass
+
     def select(
         self,
         panel: pd.DataFrame,
