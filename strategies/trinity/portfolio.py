@@ -124,6 +124,8 @@ class TrinityPortfolio:
             new_set = set(selected)
             result["sell"] = list(cur_set - new_set)
             result["buy"]  = list(new_set - cur_set)
+        else:
+            result["buy"] = list(selected)  # 初始建仓全部买入
 
         # 仓位计算（单票≤20%，未分配部分持现金）
         cap = PORTFOLIO["capital"]
