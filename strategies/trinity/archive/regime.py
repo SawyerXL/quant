@@ -1,3 +1,6 @@
+# ARCHIVED 2026-06-11: Regime Gate 已验证无效。详见 BACKTEST_AUDIT.md
+# 前视偏差修复后夏普0.23，不达标。MA200择时CSI2000同样失败(年化-0.2%)。
+# 结论: CSI2000不适合任何技术指标择时。
 """
 Track B 第一层：大势 Regime Gate。
 
