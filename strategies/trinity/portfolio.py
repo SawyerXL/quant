@@ -1,36 +1,32 @@
 """
-Track B 组合层：三层门控串联 → 选出最多6只持仓。
+Track B 组合层（v2 — 两层架构，无独立择时）
 
-门控逻辑（AND，任一层不通过则无信号）：
-  Layer1: Regime Gate → ATTACK/NEUTRAL/DEFENSE
-  Layer2: 主线板块池（confirmed 状态）
-  Layer3: 板块内 stock_score Top 2
+架构：
+  Layer 1: 板块强度 → confirmed 板块池（top 5）
+  Layer 2: 个股打分 → 每板块 top 2，总持仓≤6
 
-风控：T+1、MA10连续3天止损、单票≤20%
+风控（满仓运行，靠个股级风控）：
+  MA10 连续3天止损、单票≤20%、板块退出标记后只减不增
+  仓位 100%（不调仓时满仓），CSI2000 MA200调节已在审计中否定
 """
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import pandas as pd
-import numpy as np
 from datetime import date
 from loguru import logger
-from config.strategy_params.trinity import PORTFOLIO, REGIME
-from strategies.trinity.regime import RegimeGate
+from config.strategy_params.trinity import PORTFOLIO, SECTOR
 from strategies.trinity.sector import compute_sector_scores, update_sector_state
 from strategies.trinity.stock_score import compute_stock_scores
+from strategies.trinity.data_cache import get_sector_members
 
 
 class TrinityPortfolio:
 
     def __init__(self):
-        self.gate = RegimeGate()
         self._prev_sector_state: dict | None = None
 
-    # ------------------------------------------------------------------
-    # 主接口：完整选股
-    # ------------------------------------------------------------------
     def select(
         self,
         panel: pd.DataFrame,
@@ -41,98 +37,89 @@ class TrinityPortfolio:
         days_below_ma10: dict[str, int] | None = None,
     ) -> dict:
         """
-        返回信号字典，格式对齐 daily_signal_a.py：
-          {signal_date, holdings, buy, sell, shares, prices, ...}
+        返回信号字典（对齐 daily_signal_a.py 格式）。
         """
         result = {
             "signal_date": trade_date, "holdings": [], "buy": [], "sell": [],
-            "shares": {}, "prices": {}, "regime": "", "note": "",
+            "shares": {}, "prices": {}, "regime": "FULL", "note": "",
         }
 
-        # ── Layer 1: Regime ────────────────────────────
-        regime = self.gate.evaluate(trade_date)
-        result["regime"] = regime["state"]
-        result["position_cap"] = regime["position_cap"]
-        if regime["position_cap"] <= 0:
-            result["note"] = f"DEFENSE 模式，清仓"
-            if current_holdings:
-                result["sell"] = list(current_holdings)
-            return result
-
-        # ── Layer 2: 板块 ──────────────────────────────
+        # ── Layer 1: 板块 ───────────────────────────────
         sec_scores = compute_sector_scores(panel, amount_panel, stock_info, trade_date)
         if sec_scores.empty:
             result["note"] = "板块数据不足"
             return result
+
         sec_scores = update_sector_state(self._prev_sector_state, sec_scores, trade_date)
         self._prev_sector_state = sec_scores[["state", "days_in_state"]].to_dict("index")
         confirmed = sec_scores[sec_scores["state"] == "confirmed"]
-        top_pool  = set(confirmed.head(PORTFOLIO["max_stocks"]).index)
 
-        # ── Layer 3: 个股 ──────────────────────────────
+        if confirmed.empty:
+            # 无确认主线：保留现有持仓，不新开
+            result["holdings"] = current_holdings or []
+            result["note"] = "无确认主线板块，持有现有仓位"
+            return result
+
+        # ── Layer 2: 个股 ───────────────────────────────
+        smap = get_sector_members(SECTOR["level"])
         candidates = []
-        from strategies.trinity.data_cache import get_sector_members
-        smap = get_sector_members()
-        for ind in confirmed.head(5).index:
+        top_pool = confirmed.head(SECTOR["top_n"])
+
+        for ind in top_pool.index:
             codes = smap.get(ind, [])
             stock_df = compute_stock_scores(panel, amount_panel, stock_info, codes, trade_date)
             if stock_df.empty:
                 continue
-            # 每板块取 Top 2
             top2 = stock_df.head(PORTFOLIO["max_per_sector"])
             for code, row in top2.iterrows():
                 candidates.append((code, ind, row["score"]))
 
         candidates.sort(key=lambda x: x[2], reverse=True)
-        # 最多6只
         selected = []
         seen_ind = {}
+        max_n = PORTFOLIO["max_stocks"]
+        max_ps = PORTFOLIO["max_per_sector"]
+
         for code, ind, sc in candidates:
-            if len(selected) >= PORTFOLIO["max_stocks"]:
+            if len(selected) >= max_n:
                 break
-            if seen_ind.get(ind, 0) >= PORTFOLIO["max_per_sector"]:
+            if seen_ind.get(ind, 0) >= max_ps:
+                continue
+            # 板块退出标记：该板块持仓只减不增
+            sector_st = sec_scores.loc[ind, "state"] if ind in sec_scores.index else "candidate"
+            if sector_st == "exiting" and code not in (current_holdings or []):
                 continue
             selected.append(code)
             seen_ind[ind] = seen_ind.get(ind, 0) + 1
 
-        # ── NEUTRAL: 不新开仓，只保留现有 ──────────────
-        if regime["state"] == "NEUTRAL":
-            if current_holdings:
-                result["holdings"] = list(current_holdings)
-                result["sell"] = [c for c in current_holdings if c not in selected]
-                result["note"] = "NEUTRAL 模式，只减不增"
-            else:
-                result["note"] = "NEUTRAL 模式，禁止新开仓"
-            return result
-
-        # ── ATTACK: 正常选股 ───────────────────────────
         result["holdings"] = selected
+
+        # 买卖差量
         if current_holdings:
             cur_set = set(current_holdings)
             new_set = set(selected)
             result["sell"] = list(cur_set - new_set)
             result["buy"]  = list(new_set - cur_set)
 
-        # 等权计算股数（简化：每只约 CAP/6 元）
-        cap_per_stock = PORTFOLIO["capital"] / max(len(selected), 1)
+        # 仓位计算（满仓等权）
+        cap = PORTFOLIO["capital"]
+        per = cap / max(len(selected), 1)
         hist = panel[panel.index <= trade_date]
         cur_p = hist.iloc[-1] if len(hist) > 0 else pd.Series()
         for code in selected:
             price = float(cur_p.get(code, 0))
             if price > 0:
-                shares = max(int(cap_per_stock / price / 100) * 100, 100)
-                result["shares"][code] = shares
+                qty = max(int(per / price / 100) * 100, 100)
+                result["shares"][code] = qty
                 result["prices"][code] = price
-            else:
-                result["shares"][code] = 0
-                result["prices"][code] = 0
 
-        # MA10 止损检查
+        # MA10 止损
         if days_below_ma10:
-            ma10_exits = [c for c in selected if days_below_ma10.get(c, 0) >= PORTFOLIO["ma_exit_days"]]
-            if ma10_exits:
-                result["sell"] = list(set(result.get("sell", []) + ma10_exits))
-                result["holdings"] = [c for c in result["holdings"] if c not in ma10_exits]
-                result["ma10_exits"] = ma10_exits
+            exits = [c for c in (current_holdings or [])
+                     if days_below_ma10.get(c, 0) >= PORTFOLIO["ma_exit_days"]]
+            if exits:
+                result["sell"] = list(set(result.get("sell", []) + exits))
+                result["holdings"] = [c for c in result["holdings"] if c not in exits]
+                result["ma10_exits"] = exits
 
         return result
