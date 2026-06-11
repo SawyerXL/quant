@@ -55,37 +55,76 @@ def _vol_indicator(close: pd.Series) -> int:
     return 1 if ratio < REGIME["vol_ratio_threshold"] else 0
 
 
-def _breadth_indicator(trade_date: str) -> int:
-    """③ 赚钱效应：(涨停-跌停) 5日均值 > 20"""
-    total = 0; count = 0
-    d = date.fromisoformat(trade_date)
-    for i in range(5):
-        dt = (d - timedelta(days=i)).strftime("%Y-%m-%d")
-        try:
-            s = get_limit_up_down_stats(dt)
-            total += s["limit_up"] - s["limit_down"]
-            count += 1
-        except Exception:
-            pass
-    if count == 0:
+def _breadth_from_panel(panel: pd.DataFrame) -> int:
+    """
+    ③ 赚钱效应：(涨幅>9.5%家数 - 跌幅>9.5%家数) 5日均值 > 20
+    使用全市场日线面板计算，无需API。
+    panel: 全市场收盘价矩阵 (date × code)
+    """
+    if len(panel) < 6:
         return 0
-    return 1 if (total / count) > REGIME["advance_minus_decline_min"] else 0
+    rets = panel.tail(5).pct_change().dropna(how='all')
+    if rets.empty:
+        return 0
+    # 每天：涨>9.5%个数 - 跌>9.5%个数
+    up_count   = (rets > 0.095).sum(axis=1)
+    dn_count   = (rets < -0.095).sum(axis=1)
+    net = (up_count - dn_count).mean()
+    return 1 if net > REGIME["advance_minus_decline_min"] else 0
+
+
+def _blowup_from_panel(panel: pd.DataFrame) -> int:
+    """
+    ④ 亏钱效应：炸板率近似。无日内数据，用尾盘回落股占比替代。
+    规则：若当日最高价涨幅>9.5%但收盘涨幅<5%的股票数 / 最高价涨幅>9.5%总数 > 40%，
+    视为炸板率偏高。
+    回测用简化版：涨超9.5%家数 vs 市场情绪，炸板率默认<40%（偏乐观）。
+    """
+    # 无日内数据时，回测默认通过（指数化简化处理）
+    return 1  # 回测默认：炸板率正常
+
+
+def _breadth_indicator(trade_date: str) -> int:
+    """③ 赚钱效应：优先用面板计算，API不可用时用缓存。"""
+    # 实盘模式：用 akshare API
+    try:
+        s = get_limit_up_down_stats(trade_date)
+        if s["limit_up"] > 0:
+            # 近5日均值
+            total = s["limit_up"] - s["limit_down"]; count = 1
+            d = date.fromisoformat(trade_date)
+            for i in range(1, 5):
+                dt = (d - timedelta(days=i)).strftime("%Y-%m-%d")
+                try:
+                    prev = get_limit_up_down_stats(dt)
+                    total += prev["limit_up"] - prev["limit_down"]
+                    count += 1
+                except Exception:
+                    pass
+            return 1 if (total / max(count, 1)) > REGIME["advance_minus_decline_min"] else 0
+    except Exception:
+        pass
+    return 0  # API不可用，默认不通过（保守）
 
 
 def _blowup_indicator(trade_date: str) -> int:
-    """④ 亏钱效应：炸板率 5日均值 < 40%"""
-    rates = []
-    d = date.fromisoformat(trade_date)
-    for i in range(5):
-        dt = (d - timedelta(days=i)).strftime("%Y-%m-%d")
-        try:
-            s = get_limit_up_down_stats(dt)
-            rates.append(s["blowup_rate"])
-        except Exception:
-            pass
-    if not rates:
-        return 0
-    return 1 if (sum(rates) / len(rates)) < REGIME["blowup_rate_max"] else 0
+    """④ 亏钱效应：API优先，不可用时默认通过。"""
+    try:
+        s = get_limit_up_down_stats(trade_date)
+        if s["blowup_rate"] > 0:
+            rates = [s["blowup_rate"]]
+            d = date.fromisoformat(trade_date)
+            for i in range(1, 5):
+                dt = (d - timedelta(days=i)).strftime("%Y-%m-%d")
+                try:
+                    rates.append(get_limit_up_down_stats(dt)["blowup_rate"])
+                except Exception:
+                    pass
+            avg = sum(rates) / len(rates)
+            return 1 if avg < REGIME["blowup_rate_max"] else 0
+    except Exception:
+        pass
+    return 1  # API不可用，默认通过
 
 
 # ── 状态机 ──────────────────────────────────────────────────
