@@ -101,9 +101,11 @@ class TrinityPortfolio:
             result["sell"] = list(cur_set - new_set)
             result["buy"]  = list(new_set - cur_set)
 
-        # 仓位计算（满仓等权）
+        # 仓位计算（单票≤20%，未分配部分持现金）
         cap = PORTFOLIO["capital"]
-        per = cap / max(len(selected), 1)
+        max_per = cap * PORTFOLIO["max_single_pct"]
+        equal   = cap / max(len(selected), 1)
+        per = min(equal, max_per)
         hist = panel[panel.index <= trade_date]
         cur_p = hist.iloc[-1] if len(hist) > 0 else pd.Series()
         for code in selected:
