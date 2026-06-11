@@ -27,6 +27,24 @@ DISK_WARN_GB = 5.0      # 磁盘剩余低于 5GB 告警
 
 # ── 检查项 ────────────────────────────────────────────────────────────
 
+def check_signal_heartbeat() -> tuple[bool, str]:
+    """信号心跳检查：确认今早信号已生成（防cron失败后无信号）"""
+    sig_f = Path("data_store/meta/signal_a_latest.json")
+    if not sig_f.exists():
+        return False, "信号文件不存在，cron可能失败！"
+    import json
+    sig = json.loads(sig_f.read_text(encoding="utf-8"))
+    sig_date = sig.get("signal_date", "")
+    gen_at   = sig.get("generated_at", "")[:10]
+    try:
+        days_old = (date.today() - date.fromisoformat(sig_date)).days
+    except Exception:
+        days_old = 999
+    if days_old > 14:
+        return False, f"信号{days_old}天未更新(最后:{sig_date})，cron可能失效！"
+    return True, f"信号心跳正常({sig_date}, 生成{gen_at})"
+
+
 def check_daily_data_freshness() -> tuple[bool, str]:
     """最近5个交易日是否都有日线更新。"""
     cal = load_meta("trade_calendar")
@@ -214,6 +232,24 @@ def check_execution_quality() -> tuple[bool, str]:
     return True, summary
 
 
+def check_reconciliation() -> tuple[bool, str]:
+    """检查QMT实际持仓与信号目标持仓是否一致。"""
+    pos_file = Path("logs/qmt_positions_latest.json")
+    sig_file = Path("data_store/meta/signal_a_latest.json")
+    if not pos_file.exists():
+        return True, "暂无QMT持仓数据（首次调仓后自动采集）"
+    qmt = json.loads(pos_file.read_text(encoding="utf-8"))
+    sig = json.loads(sig_file.read_text(encoding="utf-8"))
+    qmt_codes = {c.split(".")[0] for c in qmt.get("positions",{}).keys()
+                 if qmt["positions"][c].get("volume",0) > 0}
+    sig_codes = set(sig.get("holdings", []))
+    missing = sorted(sig_codes - qmt_codes)
+    extra   = sorted(qmt_codes - sig_codes)
+    if missing or extra:
+        return False, f"对账差异：缺{len(missing)}只({missing[:3]}) 多{len(extra)}只({extra[:3]})"
+    return True, f"对账一致({len(qmt_codes)}只)"
+
+
 def check_rolling_beta() -> tuple[bool, str]:
     """
     计算策略过去12个月滚动单因子Beta（vs CSI 800）。
@@ -300,11 +336,13 @@ def run():
     logger.info("=" * 50)
 
     checks = [
+        ("信号心跳(08:55)", check_signal_heartbeat),
         ("日线数据新鲜度",   check_daily_data_freshness),
         ("Track A 信号",    check_signal_a_freshness),
         ("Track B 信号",    check_signal_b_freshness),
         ("股票元数据",       check_stock_meta_freshness),
         ("CSI 指数成分",    check_csi_index_freshness),
+        ("持仓自动对账",    check_reconciliation),
         ("执行质量监控",    check_execution_quality),
         ("策略滚动Beta",    check_rolling_beta),
         ("磁盘空间",        check_disk_space),
