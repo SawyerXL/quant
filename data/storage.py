@@ -44,7 +44,10 @@ def save_daily(code: str, df: pd.DataFrame) -> None:
         df["code"] = df["code"].astype(str).str.zfill(6)
     for col in df.select_dtypes(include="object").columns:
         if col not in ("date", "code"):
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+            try:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+            except Exception:
+                df.drop(columns=[col], inplace=True)  # 转换失败的辅助列直接丢弃
     for year, grp in df.groupby(df["date"].dt.year):
         path = _daily_path(code, year)
         if path.exists():
