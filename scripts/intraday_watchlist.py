@@ -34,9 +34,16 @@ def get_quotes() -> list[dict]:
             data = xtdata.get_market_data(['close','open','high','low','volume'],
                                           [xt_code], period='1d', count=15)
             if not data or 'close' not in data: continue
-            closes = [v for v in data['close'].values() if v and v[0]>0]
+            raw = data['close'].values()
+            closes = []
+            for v in raw:
+                try:
+                    val = float(v.item()) if hasattr(v, 'item') else float(v[0])
+                    if val > 0: closes.append(val)
+                except Exception:
+                    continue
             if len(closes) < 5: continue
-            flat_c = [c[0] for c in closes]
+            flat_c = closes
             cur = flat_c[-1]; ma10 = sum(flat_c[-10:]) / min(len(flat_c), 10)
             ret_5d = (cur / flat_c[-6] - 1) * 100 if len(flat_c) >= 6 else 0
             below = 0
