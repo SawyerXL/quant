@@ -5,7 +5,7 @@
 用法: python scripts/monitor_watchlist.py
 Cron: 0 16 * * 1-5 (收盘后运行)
 """
-import sys; from pathlib import Path
+import sys, json; from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pandas as pd
@@ -25,6 +25,20 @@ MA_WINDOW = 10; EXIT_DAYS = 3
 
 
 def check(code: str, name: str, today: str) -> dict:
+    # 优先读盘中实时数据
+    intra = Path("logs/intraday_watchlist.json")
+    if intra.exists():
+        try:
+            d = json.loads(intra.read_text(encoding="utf-8"))
+            updated=pd.Timestamp(d["updated"]); now=pd.Timestamp.now()
+            if (now-updated).seconds<600:  # 10分钟内
+                for s in d["stocks"]:
+                    if s["code"]==code and "error" not in s:
+                        return {"code":code,"name":name,"cur":s["cur"],"ma10":s["ma10"],
+                                "ret_5d":s["ret_5d"],"below":s["below"],"signal":s["signal"],
+                                "bounce":False,"bounce_drop":0,"source":"intraday"}
+        except Exception: pass
+
     df = load_daily(code, (date.today() - pd.Timedelta(days=30)).strftime("%Y-%m-%d"), today)
     if df.empty or len(df) < 10:
         return {"code": code, "name": name, "signal": "?"}
