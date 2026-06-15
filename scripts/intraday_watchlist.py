@@ -50,15 +50,42 @@ def get_quotes() -> list[dict]:
             for c in reversed(flat_c):
                 if c < ma10: below += 1
                 else: break
+            # 超跌反弹检测
+            bounce=False; bounce_drop=0
+            high_30d=max(flat_c); drop=(cur/high_30d-1)*100
+            opens=[float(o.item()) if hasattr(o,'item') else float(o[0]) for o in data['open'].values() if o is not None and (hasattr(o,'item') or o[0])>0]
+            open_today=opens[-1] if len(opens)>0 else cur
+            if drop<=-15 and cur>open_today: bounce=True; bounce_drop=round(drop,1)
+
             if below >= 3: sig = "SELL"
+            elif bounce: sig = "BOUNCE"
             elif cur > ma10 and ret_5d > 2: sig = "BUY"
             elif cur > ma10: sig = "HOLD"
             else: sig = "WAIT"
             results.append({"code":code,"name":WATCHLIST[code],"cur":cur,"ma10":round(ma10,2),
-                           "ret_5d":round(ret_5d,1),"below":below,"signal":sig})
+                           "ret_5d":round(ret_5d,1),"below":below,"signal":sig,
+                           "bounce":bounce,"bounce_drop":bounce_drop})
         except Exception as e:
             results.append({"code":code,"name":WATCHLIST[code],"error":str(e)[:40]})
     return results
+
+
+def send_email(subject: str, body: str):
+    """通过Linux环境变量中的SMTP发送邮件。"""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.header import Header
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env")
+    user = os.getenv("SMTP_USER", ""); pw = os.getenv("SMTP_PASSWORD", "")
+    if not user or not pw: raise RuntimeError("SMTP not configured")
+    srv = os.getenv("SMTP_SERVER", "smtp.yeah.net")
+    port = int(os.getenv("SMTP_PORT", "465"))
+    msg = MIMEText(body, "plain", "utf-8")
+    msg["From"]=user; msg["To"]=os.getenv("ALERT_EMAIL", user)
+    msg["Subject"]=Header(subject,"utf-8")
+    with smtplib.SMTP_SSL(srv, port, timeout=10) as s:
+        s.login(user, pw); s.sendmail(user, [msg["To"]], msg.as_string())
 
 
 def main():
@@ -80,6 +107,42 @@ def main():
     local.parent.mkdir(exist_ok=True)
     local.write_text(json.dumps(data, ensure_ascii=False, indent=2))
     print(f"OK ({len(results)}只)")
+
+    # 检测重要信号（SELL/BOUNCE/BUY）并邮件告警
+    alert_file = ROOT / "logs/intraday_alerts_sent.json"
+    sent = {}
+    if alert_file.exists():
+        try: sent = json.loads(alert_file.read_text(encoding="utf-8"))
+        except Exception: pass
+
+    new_alerts = []
+    for s in results:
+        if s.get("signal") in ("SELL", "BOUNCE", "BUY") and "error" not in s:
+            key = f"{s['code']}_{s['signal']}"
+            if key not in sent:
+                tag = {"SELL":"SELL","BOUNCE":"BOUNCE","BUY":"BUY"}[s["signal"]]
+                extra = ""
+                if s["signal"] == "SELL": extra = f" MA10连续{s['below']}天跌破"
+                elif s["signal"] == "BOUNCE": extra = f" 从高点跌{s['bounce_drop']}%后反弹"
+                elif s["signal"] == "BUY": extra = f" MA10收复+5日{s['ret_5d']:+.1f}%"
+                new_alerts.append(f"{tag} {s['code']} {s['name']} {s['cur']:.2f}{extra}")
+                sent[key] = now.strftime("%m-%d %H:%M")
+
+    if new_alerts:
+        try:
+            msg = " | ".join(new_alerts)
+            subject = f"Quant Intraday Alert: {len(new_alerts)} signals"
+            body = f"{now.strftime('%H:%M')}\n" + "\n".join(new_alerts)
+            send_email(subject, body)
+            print(f"  Email sent: {len(new_alerts)} alerts")
+        except Exception as e:
+            print(f"  Email failed: {e}")
+
+    # 仅保留今天的已发送记录
+    today_prefix = now.strftime("%m-%d")
+    sent = {k: v for k, v in sent.items() if v.startswith(today_prefix)}
+    alert_file.parent.mkdir(exist_ok=True)
+    alert_file.write_text(json.dumps(sent, ensure_ascii=False))
 
     # SCP推回Linux
     ssh_opts = ["-o","StrictHostKeyChecking=no","-o","ConnectTimeout=8"]
