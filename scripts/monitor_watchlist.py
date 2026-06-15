@@ -37,13 +37,23 @@ def check(code: str, name: str, today: str) -> dict:
         if c < ma10: below += 1
         else: break
 
+    # 超跌反弹检测
+    bounce = False; bounce_drop = 0
+    if len(closes) >= 20:
+        recent_high = max(closes[-30:]) if len(closes) >= 30 else max(closes)
+        drop = (cur / recent_high - 1) * 100
+        opens = df["open"].values; open_today = opens[-1] if len(opens) > 0 else cur
+        if drop <= -15 and cur > open_today:
+            bounce = True; bounce_drop = round(drop, 1)
+
     if below >= EXIT_DAYS:      signal = "SELL"
     elif cur > ma10 and ret_5d > 2: signal = "BUY"
     elif cur > ma10:            signal = "HOLD"
     else:                       signal = "WAIT"
 
     return {"code": code, "name": name, "cur": cur, "ma10": round(ma10, 2),
-            "ret_5d": round(ret_5d, 1), "below": below, "signal": signal}
+            "ret_5d": round(ret_5d, 1), "below": below, "signal": signal,
+            "bounce": bounce, "bounce_drop": bounce_drop}
 
 
 def main():
@@ -58,6 +68,10 @@ def main():
         if s in ("SELL", "BUY"):
             alerts.append(f"{tag} {r['code']} {r['name']} "
                           f"MA10={r.get('ma10',0):.2f} 5日={r.get('ret_5d',0):+.1f}%")
+        if r.get("bounce"):
+            print(f"     👀 超跌反弹: 从高点跌{r['bounce_drop']}%后收阳，值得关注")
+            alerts.append(f"👀超跌反弹 {r['code']} {r['name']} "
+                          f"跌{r['bounce_drop']}%后收阳，可以考虑抄底")
 
     if alerts:
         try:
