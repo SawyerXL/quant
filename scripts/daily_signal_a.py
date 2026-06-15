@@ -46,7 +46,7 @@ from monitoring.alerts import send_alert
 
 logger.add("logs/signal_a_{time:YYYY-MM-DD}.log", rotation="1 day", retention="60 days")
 
-TRACK_A_CAPITAL  = 600_000
+TRACK_A_CAPITAL  = 1_000_000
 N_HOLDINGS       = 30
 MA10_EXIT_DAYS   = 3       # 连续跌破10日均线几天出清
 SIGNAL_FILE      = Path("data_store/meta/signal_a_latest.json")
