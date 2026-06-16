@@ -32,6 +32,17 @@ def analyze(code: str, name: str, cost_price: float, shares: int,
     本工具不生成买入信号——returns dict with 'action' in [sell, reduce, warn, hold, locked]
     """
     today = date.today().strftime("%Y-%m-%d")
+    # 优先从MCP拉取今日最新数据
+    try:
+        from data.source.mcp_source import MCPSource
+        src = MCPSource()
+        fresh = src.get_daily(code, today, today)
+        if not fresh.empty:
+            from data.storage import save_daily
+            if '量比' in fresh.columns: fresh = fresh.drop(columns=['量比'])
+            try: save_daily(code, fresh)
+            except Exception: pass
+    except Exception: pass
     df = load_daily(code, (date.today() - pd.Timedelta(days=90)).strftime("%Y-%m-%d"), today)
     if df.empty or len(df) < 10:
         return {"code": code, "name": name, "action": "nodata", "cur": None,
