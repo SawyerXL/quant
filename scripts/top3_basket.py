@@ -260,7 +260,9 @@ def main():
                         f"买入: {c} {nmap.get(c,'?')} {qty}股 @{cur:.2f}\n"
                         f"篮子: {', '.join(basket[:3])}"
                     )
-                except Exception: pass
+                except Exception as e:
+                    from loguru import logger
+                    logger.warning(f"Top3告警发送失败: {e}")
                 break
     data = {"holdings": basket, "cost_prices": cost_p, "shares": shares,
             "capital": CAPITAL, "bought_dates": bought_dates}
