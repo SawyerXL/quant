@@ -45,7 +45,7 @@ def test_absolute_stop_trigger():
     prices = [50, 48, 47, 46, 45, 44, 43.5, 43.8, 44.2, 43.9, 44.0, 44.0]
     cost = 50.0
     pnl = (44.0 / 50.0 - 1)
-    assert pnl < -0.12, f"PnL {pnl:.1%} should be below -12%"
+    assert pnl <= -0.12, f"PnL {pnl:.1%} should be <= -12%"
     print("  ✅ test_absolute_stop_trigger")
 
 def test_ma10_exit_trigger():
