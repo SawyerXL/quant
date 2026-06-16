@@ -11,8 +11,19 @@ from datetime import datetime
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
-WATCHLIST = {"601899": "紫金矿业","603392": "万泰生物","600893": "航发动力",
-             "300124": "汇川技术","002559": "亚威股份"}
+# 从my_holdings.csv动态加载（与个人持仓监控同步）
+WATCHLIST = {}
+try:
+    import pandas as pd
+    df=pd.read_csv(ROOT/"config/my_holdings.csv",dtype={"code":str})
+    df["code"]=df["code"].str.zfill(6)
+    for _,r in df.iterrows():
+        if r.get("monitor",True):
+            WATCHLIST[r["code"]]=r["name"]
+except Exception:
+    WATCHLIST = {"601899":"紫金矿业","600893":"航发动力","300124":"汇川技术",
+                 "002559":"亚威股份","000538":"云南白药","300408":"三环集团",
+                 "518880":"黄金ETF"}
 
 LINUX_SERVER = os.getenv("LINUX_SERVER", "47.116.166.139")
 LINUX_USER   = os.getenv("LINUX_USER", "root")

@@ -81,6 +81,7 @@ def analyze(code: str, name: str, cost_price: float, shares: int,
         result["action"] = "locked"; result["reason"] = "T+1锁定，今日不可卖"
         return result
 
+    # ETF也适用绝对止损和追踪止损（之前豁免不合理）
     if below >= EXIT_DAYS:
         result["action"] = "sell"; result["reason"] = f"MA10连续{below}日跌破({cur:.2f}<{ma10:.2f})"
     elif pnl <= ABSOLUTE_STOP:
