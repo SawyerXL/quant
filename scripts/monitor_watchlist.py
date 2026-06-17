@@ -65,10 +65,11 @@ def check(code: str, name: str, today: str) -> dict:
         if drop <= -15 and cur > open_today:
             bounce = True; bounce_drop = round(drop, 1)
 
-    if below >= EXIT_DAYS:      signal = "SELL"
-    elif cur > ma10 and ret_5d > 2: signal = "BUY"
-    elif cur > ma10:            signal = "HOLD"
-    else:                       signal = "WAIT"
+    held = code in MY_COST
+    if below >= EXIT_DAYS:      signal = "SELL" if held else "AVOID"
+    elif cur > ma10 and ret_5d > 2: signal = "HOLD" if held else "STRONG"
+    elif cur > ma10:            signal = "HOLD" if held else "OK"
+    else:                       signal = "WATCH" if held else "WAIT"
 
     return {"code": code, "name": name, "cur": cur, "ma10": round(ma10, 2),
             "ret_5d": round(ret_5d, 1), "below": below, "signal": signal,
@@ -81,16 +82,18 @@ def main():
     alerts = []
     for r in results:
         s = r["signal"]
-        tag = {"SELL": "🔴卖出", "BUY": "🟢买入", "HOLD": "✅持有", "WAIT": "⚠️观望", "?": "❓无数据"}[s]
+        tag = {"SELL": "🔴卖出", "AVOID": "🚫避开", "STRONG": "🔥强势(可买)", "OK": "✅尚可", "HOLD": "✅继续持有",
+               "WATCH": "⚠️观察(已有)", "WAIT": "⏳等待", "?": "❓无数据"}[s]
         pnl_extra = ""
         if r['code'] in MY_COST:
             pnl = (r.get('cur', 0) / MY_COST[r['code']] - 1) * 100
             pnl_extra = f"  个人盈亏{pnl:+.1f}% ({MY_SHARES[r['code']]}股@{MY_COST[r['code']]:.2f})"
         print(f"  {r['code']} {r['name']:<8} 现价{r.get('cur',0):.2f} "
               f"MA10={r.get('ma10',0):.2f} {r.get('ret_5d',0):+.1f}%  {tag}{pnl_extra}")
-        if s in ("SELL", "BUY"):
-            alerts.append(f"{tag} {r['code']} {r['name']} "
-                          f"MA10={r.get('ma10',0):.2f} 5日={r.get('ret_5d',0):+.1f}%")
+        if s in ("SELL",):
+            alerts.append(f"🔴卖出 {r['code']} {r['name']} MA10={r.get('ma10',0):.2f}")
+        if s in ("STRONG",) and r['code'] not in MY_COST:
+            alerts.append(f"🔥可关注 {r['code']} {r['name']} 5日{r.get('ret_5d',0):+.1f}%")
         if r.get("bounce"):
             print(f"     👀 超跌反弹: 从高点跌{r['bounce_drop']}%后收阳，值得关注")
             alerts.append(f"👀超跌反弹 {r['code']} {r['name']} "
