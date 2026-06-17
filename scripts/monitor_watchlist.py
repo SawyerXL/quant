@@ -88,8 +88,12 @@ def main():
         if r['code'] in MY_COST:
             pnl = (r.get('cur', 0) / MY_COST[r['code']] - 1) * 100
             pnl_extra = f"  个人盈亏{pnl:+.1f}% ({MY_SHARES[r['code']]}股@{MY_COST[r['code']]:.2f})"
+        meanings={"SELL":"MA10跌破3天","AVOID":"趋势走坏","STRONG":"强势可关注","OK":"趋势尚可",
+                  "HOLD":"持有中,走势好","WATCH":"MA10边缘持有中","WAIT":"等方向明确","?":""}
+        actions={"SELL":"明天开盘卖出","AVOID":"","STRONG":"可考虑买入","OK":"",
+                 "HOLD":"","WATCH":"等收复MA10","WAIT":"","?":""}
         print(f"  {r['code']} {r['name']:<8} 现价{r.get('cur',0):.2f} "
-              f"MA10={r.get('ma10',0):.2f} {r.get('ret_5d',0):+.1f}%  {tag}{pnl_extra}")
+              f"MA10={r.get('ma10',0):.2f} {r.get('ret_5d',0):+.1f}%  {tag:<14} {meanings.get(s,''):<12} {actions.get(s,'')}{pnl_extra}")
         if s in ("SELL",):
             alerts.append(f"🔴卖出 {r['code']} {r['name']} MA10={r.get('ma10',0):.2f}")
         if s in ("STRONG",) and r['code'] not in MY_COST:
