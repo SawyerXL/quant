@@ -19,7 +19,12 @@ WATCHLIST = {
     "600893": "航发动力",
     "300124": "汇川技术",
     "002559": "亚威股份",
+    "000538": "云南白药",
+    "300408": "三环集团",
 }
+# 个人成本价+持仓
+MY_COST = {"000538": 50.36, "300408": 154.382}
+MY_SHARES = {"000538": 300, "300408": 100}
 
 MA_WINDOW = 10; EXIT_DAYS = 3
 
@@ -77,8 +82,12 @@ def main():
     for r in results:
         s = r["signal"]
         tag = {"SELL": "🔴卖出", "BUY": "🟢买入", "HOLD": "✅持有", "WAIT": "⚠️观望", "?": "❓无数据"}[s]
+        pnl_extra = ""
+        if r['code'] in MY_COST:
+            pnl = (r.get('cur', 0) / MY_COST[r['code']] - 1) * 100
+            pnl_extra = f"  个人盈亏{pnl:+.1f}% ({MY_SHARES[r['code']]}股@{MY_COST[r['code']]:.2f})"
         print(f"  {r['code']} {r['name']:<8} 现价{r.get('cur',0):.2f} "
-              f"MA10={r.get('ma10',0):.2f} {r.get('ret_5d',0):+.1f}%  {tag}")
+              f"MA10={r.get('ma10',0):.2f} {r.get('ret_5d',0):+.1f}%  {tag}{pnl_extra}")
         if s in ("SELL", "BUY"):
             alerts.append(f"{tag} {r['code']} {r['name']} "
                           f"MA10={r.get('ma10',0):.2f} 5日={r.get('ret_5d',0):+.1f}%")
