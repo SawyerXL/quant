@@ -42,6 +42,9 @@ def save_daily(code: str, df: pd.DataFrame) -> None:
     # code 列统一为6位零填充字符串
     if "code" in df.columns:
         df["code"] = df["code"].astype(str).str.zfill(6)
+    # 丢弃已知问题列（akshare格式不稳定）
+    for bad in ["量比","成交笔数（笔）","换手率","振幅（%）","涨跌幅","前收盘（元）","均价（元）","涨跌（元）","股票名称","股票代码"]:
+        if bad in df.columns: df=df.drop(columns=[bad])
     for col in df.select_dtypes(include="object").columns:
         if col not in ("date", "code"):
             try:
