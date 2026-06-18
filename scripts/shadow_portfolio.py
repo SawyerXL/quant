@@ -73,6 +73,27 @@ def main():
     print(f"  与主策略重叠: {overlap}/{MAX_STOCKS} 只")
     print(f"  下次换仓: 跟随主策略调仓日自动更新\n")
 
+    # 换仓时发邮件
+    prev = {}
+    old_state = Path("logs/shadow_portfolio_prev.json")
+    if old_state.exists():
+        try: prev = json.loads(old_state.read_text())
+        except: pass
+    prev_codes = {h['code'] for h in prev.get('holdings', [])} if prev else set()
+    new_codes = {h['code'] for h in bought}
+    if prev_codes and prev_codes != new_codes:
+        try:
+            from monitoring.alerts import send_alert
+            sold = prev_codes - new_codes
+            added = new_codes - prev_codes
+            msg = f"【影子组合换仓】{today}\n"
+            if sold: msg += f"卖出: {', '.join(sold)}\n"
+            if added: msg += f"买入: {', '.join(added)}\n"
+            msg += f"当前: {', '.join(f'{h[\"code\"]} {h[\"name\"]}' for h in bought)}"
+            send_alert(msg)
+        except Exception: pass
+    old_state.write_text(json.dumps(state, ensure_ascii=False))
+
 
 if __name__ == "__main__":
     main()
