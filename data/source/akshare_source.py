@@ -10,20 +10,26 @@ class AkshareSource(DataSource):
     # ------------------------------------------------------------------
     # 日线行情
     # ------------------------------------------------------------------
+    _COLS = ["date", "code", "open", "high", "low", "close", "volume", "amount", "pct_chg"]
+
     def get_daily(self, code: str, start: str, end: str) -> pd.DataFrame:
         """
-        code 传 '000001' 格式（不带市场后缀）。
-        使用前复权(qfq)：历史价格向下调整使当前价接近实际交易价，
-        适合动量/技术因子计算和直观校验。
-        注意：分红除权后历史价格会重新调整，同一股票不同时间拉取的历史价格可能略有差异。
+        code 传 '000001' 格式（不带市场后缀）。全程前复权(qfq)，与历史库一致。
+
+        东财(stock_zh_a_hist)主用；若东财被封/超时返回空，自动落新浪(stock_zh_a_daily)。
+        两端点同为 qfq，输出列契约一致，调用方无感知。
         """
+        df = self._daily_em(code, start, end)
+        if df.empty:
+            df = self._daily_sina(code, start, end)
+        return df
+
+    def _daily_em(self, code: str, start: str, end: str) -> pd.DataFrame:
         try:
             df = ak.stock_zh_a_hist(
-                symbol=code,
-                period="daily",
-                start_date=start.replace("-", ""),
-                end_date=end.replace("-", ""),
-                adjust="qfq",   # 前复权：当前价接近实际价格
+                symbol=code, period="daily",
+                start_date=start.replace("-", ""), end_date=end.replace("-", ""),
+                adjust="qfq",
             )
             df = df.rename(columns={
                 "日期": "date", "开盘": "open", "最高": "high",
@@ -32,10 +38,27 @@ class AkshareSource(DataSource):
             })
             df["date"] = df["date"].astype(str)
             df["code"] = code
-            return df[["date", "code", "open", "high", "low",
-                        "close", "volume", "amount", "pct_chg"]].sort_values("date")
+            return df[self._COLS].sort_values("date")
         except Exception as e:
-            logger.warning(f"get_daily {code} failed: {e}")
+            logger.warning(f"get_daily(东财) {code} failed: {e} -> 转新浪")
+            return pd.DataFrame()
+
+    def _daily_sina(self, code: str, start: str, end: str) -> pd.DataFrame:
+        # 新浪要带市场前缀；沪6/京489/其余深
+        prefix = "sh" if code.startswith("6") else ("bj" if code[:1] in "489" else "sz")
+        try:
+            df = ak.stock_zh_a_daily(
+                symbol=f"{prefix}{code}",
+                start_date=start.replace("-", ""), end_date=end.replace("-", ""),
+                adjust="qfq",
+            )
+            df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+            df["code"] = code
+            # 新浪不返回涨跌幅，用收盘价自算以保持契约
+            df["pct_chg"] = (df["close"].astype(float).pct_change() * 100).round(4)
+            return df[self._COLS].sort_values("date")
+        except Exception as e:
+            logger.warning(f"get_daily(新浪) {code} failed: {e}")
             return pd.DataFrame()
 
     def get_daily_all(self, date: str) -> pd.DataFrame:
