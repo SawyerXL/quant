@@ -12,7 +12,7 @@ import pandas as pd; from pathlib import Path; from datetime import date
 from scripts.paper_trade_update import fetch_prices, calc_pnl
 
 today=date.today().strftime('%Y-%m-%d')
-for tag,fn in [('csi500','logs/paper_trade_csi500_start.csv'),('shadow','logs/paper_trade_shadow_start.csv')]:
+for tag,fn in [('shadow','logs/paper_trade_shadow_start.csv')]:   # CSI500 N=6 已否决(日期错位bug,真实OOS+2.7%),停止重估
     start=pd.read_csv(fn,dtype={'代码':str},encoding='utf-8-sig')
     start['代码']=start['代码'].astype(str).str.zfill(6)
     prices=fetch_prices(start['代码'].tolist(),today)
