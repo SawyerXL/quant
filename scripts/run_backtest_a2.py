@@ -155,12 +155,56 @@ def _get_eps_factor(date: pd.Timestamp, ind_map: pd.Series) -> pd.Series:
     return ind_zscore(eps_raw, ind_map)
 
 
+# ── ③b 价值因子缓存（EP=eps_ttm/价, BP=bvps/价）─────────────────────────────
+_value_cache: pd.DataFrame | None = None
+
+
+def _load_value_cache() -> pd.DataFrame:
+    global _value_cache
+    if _value_cache is not None:
+        return _value_cache
+    fp = Path("data_store/meta/value_factors.parquet")
+    if fp.exists():
+        _value_cache = pd.read_parquet(fp)
+        _value_cache["report_date"] = _value_cache["report_date"].astype(str)
+    else:
+        _value_cache = pd.DataFrame(columns=["code", "report_date", "eps_ttm", "bvps"])
+    return _value_cache
+
+
+def _get_value_factor(date: pd.Timestamp, ind_map: pd.Series, price: pd.Series) -> pd.Series:
+    """
+    价值因子 = 0.5·EP + 0.5·BP（行业Z-score）。
+    EP=eps_ttm/价（盈利收益率），BP=bvps/价（账面收益率）——除以价格才是"便宜度"，
+    区别于已有的 EPS 水平因子。同款 point-in-time 滞后（季报60天/年报120天）。
+    """
+    cache = _load_value_cache()
+    if cache.empty:
+        return pd.Series(0.0, index=ind_map.index)
+    lag = 120 if date.month <= 4 else 60
+    cutoff = (date - pd.Timedelta(days=lag)).strftime("%Y%m%d")
+    avail = cache[cache["report_date"] <= cutoff]
+    if avail.empty:
+        return pd.Series(0.0, index=ind_map.index)
+    latest = avail.sort_values("report_date").groupby("code").tail(1).set_index("code")
+    ep = pd.Series(0.0, index=ind_map.index)
+    bp = pd.Series(0.0, index=ind_map.index)
+    for code in ind_map.index:
+        if code in latest.index:
+            pr = price.get(code)
+            if pr and not pd.isna(pr) and pr > 0:
+                ep[code] = float(latest.loc[code, "eps_ttm"]) / pr
+                bp[code] = float(latest.loc[code, "bvps"]) / pr
+    return 0.5 * ind_zscore(ep, ind_map) + 0.5 * ind_zscore(bp, ind_map)
+
+
 # ── ④ 策略A-2 综合打分 ─────────────────────────────────────────────────────
 def compute_score_a2(
     panel: pd.DataFrame,
     date: pd.Timestamp,
     amount_panel: pd.DataFrame | None,
     stock_info: pd.DataFrame | None,
+    value_weight: float = 0.0,   # >0 时在base_score里注入价值倾斜（默认0=对现有A-4零改变）
 ) -> pd.Series:
     """
     多周期动量（行业内标准化）× 量价加成 × 波动率调控 × 质量因子
@@ -232,6 +276,11 @@ def compute_score_a2(
     mom_safe     = mom_score.reindex(p.index).fillna(0)
     eps_safe     = eps_z.reindex(p.index).fillna(0)
     base_score   = (0.63 * mom_safe + 0.27 * quality_safe + 0.10 * eps_safe).fillna(0)
+
+    # 价值倾斜（默认关闭；>0时在base层注入，早于vol/量价乘子）
+    if value_weight > 0:
+        value_z = _get_value_factor(date, ind_map, p).reindex(p.index).fillna(0)
+        base_score = (1 - value_weight) * base_score + value_weight * value_z
 
     # ③ 波动率调控：20日历史波动率高 → 权重降低
     if len(hist) >= 21:
