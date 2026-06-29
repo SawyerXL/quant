@@ -46,6 +46,8 @@ class QMTClient:
         if result != 0:
             raise RuntimeError(f"QMT 连接失败(result={result})，请确认 Matrix 终端已登录")
         time.sleep(1)
+        self.trader.subscribe(self.account)   # 订阅账户后才能下单
+        time.sleep(1)
         logger.info(f"QMT 连接成功: account={QMT_ACCOUNT_ID}")
 
     def get_positions(self) -> dict:

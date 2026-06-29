@@ -371,6 +371,23 @@ def run():
     logger.info(f"健康检查开始: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     logger.info("=" * 50)
 
+    def check_qmt_snapshot():
+        snap = Path("logs/qmt_positions_latest.json")
+        if not snap.exists(): return "QMT快照: 文件不存在"
+        mtime = datetime.fromtimestamp(snap.stat().st_mtime)
+        if mtime.date() < date.today(): return f"QMT快照: 最后{mtime.strftime('%m/%d %H:%M')}(非今日)"
+        data = json.loads(snap.read_text(encoding="utf-8"))
+        return None
+
+    def check_tunnel():
+        import subprocess
+        try:
+            r = subprocess.run(["ssh","-p","2222","-i","/root/.ssh/id_rsa","-o","ConnectTimeout=5",
+                "-o","StrictHostKeyChecking=no","Administrator@127.0.0.1","echo ok"],
+                capture_output=True, timeout=10)
+            return None if b"ok" in r.stdout else "SSH隧道不通"
+        except: return "SSH隧道连接失败"
+
     checks = [
         ("信号心跳(08:55)", check_signal_heartbeat),
         ("日线数据新鲜度",   check_daily_data_freshness),
@@ -380,6 +397,8 @@ def run():
         ("CSI 指数成分",    check_csi_index_freshness),
         ("持仓自动对账",    check_reconciliation),
         ("Track A/B 相关性", check_track_correlation),
+        ("QMT持仓快照",    check_qmt_snapshot),
+        ("SSH隧道状态",    check_tunnel),
         ("执行质量监控",    check_execution_quality),
         ("策略滚动Beta",    check_rolling_beta),
         ("磁盘空间",        check_disk_space),
