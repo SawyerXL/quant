@@ -1,0 +1,363 @@
+"""
+回测引擎 — 可配置参数 + 止损止盈 + 业绩计算
+"""
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import pandas as pd, numpy as np
+from dataclasses import dataclass
+from loguru import logger; logger.remove(); logger.add(sys.stderr, level='ERROR')
+
+from scripts.backtest_config import BacktestConfig
+
+
+def apply_filters(pool_codes, panel, idx, config, return_tags=False):
+    """
+    三层漏斗过滤。
+    return_tags: 若为True，返回 (codes_list, {code: is_overheated}) 元组
+    """
+    if idx < 65:
+        codes = pool_codes[:min(len(pool_codes), config.pool_size)]
+        return (codes, {c: False for c in codes}) if return_tags else codes
+
+    eligible = []
+    tags = {}
+    for code in pool_codes:
+        if code not in panel.columns:
+            continue
+        cl = panel[code]
+        cur_val = cl.iloc[idx]
+        if pd.isna(cur_val) or cur_val <= 0:
+            continue
+
+        hist = cl.iloc[:idx+1].dropna()
+        if len(hist) < 60:
+            continue
+
+        cur_hist = hist.iloc[-1]
+
+        # ── 过热检查 ──
+        overheat = False; overheat_reasons = []
+        if len(hist) >= 21:
+            ret20 = (cur_hist / hist.iloc[-21] - 1) * 100
+            if ret20 > config.max_20d_return:
+                overheat = True; overheat_reasons.append(f'20日{ret20:.0f}%')
+        cons_up = 0
+        for j in range(len(hist)-1, max(0, len(hist)-16), -1):
+            if hist.iloc[j] > hist.iloc[j-1]: cons_up += 1
+            else: break
+        if cons_up >= config.max_consec_up_days:
+            overheat = True; overheat_reasons.append(f'连涨{cons_up}天')
+        if len(hist) >= 6:
+            ret5 = (cur_hist / hist.iloc[-6] - 1) * 100
+            if ret5 > config.max_5d_return:
+                overheat = True; overheat_reasons.append(f'5日{ret5:.0f}%')
+        high20 = hist.iloc[-20:].max()
+        dh = (cur_hist / high20 - 1) * 100
+
+        if config.enable_entry_filter:
+            if config.ma10_entry_mode == "near_ma10":
+                ma10_val = hist.iloc[-10:].mean()
+                dist_ma10 = abs(cur_hist / ma10_val - 1) * 100
+                if dist_ma10 > config.ma10_tolerance:
+                    overheat = True; overheat_reasons.append(f'离MA10{dist_ma10:.0f}%')
+            else:
+                if dh > -config.min_dist_from_high:
+                    overheat = True; overheat_reasons.append(f'近高{dh:.0f}%')
+
+        # Mode: eliminate vs reduce
+        if config.overheat_mode == "eliminate" and overheat:
+            continue
+
+        eligible.append(code)
+        tags[code] = overheat
+
+    def _select(codes):
+        if len(codes) >= config.pool_size:
+            return codes[:config.pool_size]
+        elif len(codes) > 0:
+            return codes
+        return pool_codes[:min(len(pool_codes), config.pool_size)]
+
+    selected = _select(eligible)
+    if return_tags:
+        return selected, {c: tags.get(c, False) for c in selected}
+    return selected
+
+
+def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
+    """
+    主回测引擎。
+    返回: (nav_series, metrics_dict)
+    """
+    all_dates = panel.index
+    rebal_set = set(rebal_dates)
+
+    port_rets = pd.Series(0.0, index=all_dates)
+    cur_weights = {}; entry_prices = {}
+    days_below_ma10 = {}; trail_hwm = {}
+    overheat_tags = {}  # code -> bool, updated on rebalance and persists across days
+    cumul_nav = 1.0
+
+    trade_count = 0; total_sells = 0; total_buys = 0
+    total_commission_paid = 0.0  # track cumulative commission
+    max_single_track = []; top3_track = []
+
+    for i, date in enumerate(all_dates):
+        date_str = str(date.date())
+
+        # ── Step 1: Mark-to-market ──
+        if cur_weights and i > 0:
+            ret = 0.0
+            for code, w in cur_weights.items():
+                pp = panel.iloc[i-1].get(code)
+                cp = panel.iloc[i].get(code)
+                if pp and cp and not pd.isna(pp) and not pd.isna(cp) and pp > 0:
+                    ret += w * (cp/pp - 1)
+            port_rets.iloc[i] += ret
+
+        # ── Step 2: Stops & exits (daily check) ──
+        if cur_weights and i >= 10 and config.enable_stops:
+            exits = []
+            for code in list(cur_weights.keys()):
+                col = panel[code] if code in panel.columns else None
+                if col is None: continue
+                cp = panel.iloc[i].get(code)
+                if pd.isna(cp) or cp <= 0: continue
+                ep = entry_prices.get(code, cp)
+                if ep <= 0: ep = cp
+
+                # Tighten stops for overheated stocks
+                stop_tighten = config.overheat_stop_tighten if overheat_tags.get(code, False) else 1.0
+                abs_stop = config.absolute_stop * stop_tighten
+                trail_stop = config.trailing_stop * stop_tighten
+
+                # Absolute stop
+                if config.enable_absolute_stop and cp/ep - 1 <= abs_stop:
+                    exits.append(code); continue
+
+                # Trailing stop
+                if config.enable_trailing_stop:
+                    if code not in trail_hwm or cp > trail_hwm[code]:
+                        trail_hwm[code] = cp
+                    th = trail_hwm.get(code, cp)
+                    if th > 0 and cp/th - 1 <= trail_stop:
+                        exits.append(code); continue
+
+                # MA10 exit
+                if config.enable_ma10_exit:
+                    hist_ma = col.iloc[max(0,i-11):i+1].dropna()
+                    if len(hist_ma) >= 5:
+                        ma10 = hist_ma.mean()
+                        if cp < ma10:
+                            days_below_ma10[code] = days_below_ma10.get(code, 0) + 1
+                        else:
+                            days_below_ma10[code] = 0
+                        if days_below_ma10.get(code, 0) >= config.ma_exit_days:
+                            exits.append(code)
+
+            for code in set(exits):
+                w = cur_weights.pop(code, 0)
+                total_commission_paid += w * config.commission
+                port_rets.iloc[i] -= w * config.commission
+                entry_prices.pop(code, None); days_below_ma10.pop(code, None)
+                trail_hwm.pop(code, None)
+                trade_count += 1; total_sells += 1
+
+        # ── Step 3: Take profit (partial sells) ──
+        if cur_weights and i > 0 and config.enable_stops and config.enable_take_profit:
+            sells = []
+            for code in list(cur_weights.keys()):
+                ep = entry_prices.get(code)
+                if not ep or ep <= 0: continue
+                cp = panel.iloc[i].get(code)
+                if pd.isna(cp): continue
+                pnl = cp/ep - 1
+
+                if pnl >= config.take_profit_2 and cur_weights.get(code, 0) > 0:
+                    reduce_w = cur_weights[code] * 0.33
+                    sells.append((code, reduce_w))
+                elif pnl >= config.take_profit_1 and cur_weights.get(code, 0) > 0:
+                    reduce_w = cur_weights[code] * 0.33
+                    sells.append((code, reduce_w))
+
+            for code, reduce_w in sells:
+                cur_weights[code] = cur_weights.get(code, 0) - reduce_w
+                if cur_weights[code] <= 0.001:
+                    cur_weights.pop(code)
+                    entry_prices.pop(code, None)
+                total_commission_paid += reduce_w * config.commission
+                port_rets.iloc[i] -= reduce_w * config.commission
+                trade_count += 1; total_sells += 1
+
+        # ── Step 4: Rebalance ──
+        if date_str in rebal_set and i >= config.min_bars:
+            pos_ratio = 1.0
+            if index_close is not None:
+                try:
+                    from run_backtest_a2 import get_position_ratio as gpr
+                    pos_ratio = gpr(index_close, date)
+                except: pass
+
+            if pos_ratio <= 0.3:
+                cur_weights = {}; entry_prices = {}; days_below_ma10 = {}
+                trail_hwm = {}; overheat_tags = {}
+            else:
+                pool = amount_panel.iloc[max(0,i-20):i].mean().dropna().nlargest(config.pool_size * 2).index.tolist()
+                selected, sel_tags = apply_filters(pool, panel, i, config, return_tags=True)
+                n = min(len(selected), config.pool_size)
+                if n == 0: continue
+
+                # Update overheat tags for the new portfolio
+                overheat_tags = {c: sel_tags.get(c, False) for c in selected[:n]}
+
+                old_set = set(cur_weights.keys())
+                new_set = set(selected[:n])
+
+                # Keep existing weights for stocks that stay, cap at max_single
+                new_w = {}
+                for c in old_set & new_set:
+                    w = cur_weights[c] * pos_ratio
+                    if w > config.max_single:
+                        w = config.max_single
+                    new_w[c] = w
+
+                # Remaining cash = pos_ratio - old_weights + excess from capping
+                remaining_cash = pos_ratio - sum(new_w.values())
+                new_only = [c for c in selected[:n] if c not in old_set]
+                if new_only and remaining_cash > 0.01:
+                    w_per_base = min(config.max_position_pct, remaining_cash / len(new_only))
+                    for c in new_only:
+                        w = w_per_base
+                        # 过热股仓位打折
+                        if config.overheat_mode == "reduce" and overheat_tags.get(c, False):
+                            w *= config.overheat_position_ratio
+                        new_w[c] = w
+
+                # Calculate turnover & commission
+                enter_w = sum(new_w.get(c, 0) for c in set(new_w) - old_set)
+                exit_w = sum(cur_weights.get(c, 0) for c in old_set - set(new_w))
+                rebal_cost = (enter_w + exit_w) / 2 * config.commission * 2
+                total_commission_paid += rebal_cost
+                port_rets.iloc[i] -= rebal_cost
+
+                # Update entry prices for new stocks
+                cp_s = panel.ffill().iloc[i]
+                for c in set(new_w) - old_set:
+                    ep = cp_s.get(c)
+                    if ep and not pd.isna(ep):
+                        entry_prices[c] = float(ep)
+                        total_buys += 1; trade_count += 1
+                # Remove tracking for sold stocks
+                for c in old_set - set(new_w.keys()):
+                    entry_prices.pop(c, None); days_below_ma10.pop(c, None)
+                    total_sells += 1; trade_count += 1
+
+                cur_weights = new_w
+                # Track concentration
+                if cur_weights:
+                    wvals = sorted(cur_weights.values(), reverse=True)
+                    max_single_track.append(wvals[0] if wvals else 0)
+                    top3_track.append(sum(wvals[:3]) if len(wvals)>=3 else sum(wvals))
+
+        # ── Step 5: Cash yield ──
+        cash_r = max(0, 1.0 - sum(cur_weights.values())) if cur_weights else 1.0
+        port_rets.iloc[i] += cash_r * config.cash_yield / 252
+
+        cumul_nav *= (1 + port_rets.iloc[i])
+
+    nav = (1 + port_rets).cumprod()
+    # ── Diagnostics ──
+    max_single_seen = max(max_single_track) if max_single_track else 0.0
+    top3_avg = np.mean(top3_track) if top3_track else 0.0
+
+    # Annualized cost drag
+    n_days = (all_dates[-1] - all_dates[0]).days
+    ann_factor = 365 / max(n_days, 1)
+    annual_cost_drag = total_commission_paid * ann_factor
+
+    return nav, {
+        "trades": trade_count, "buys": total_buys, "sells": total_sells,
+        "total_commission": total_commission_paid,
+        "annual_cost_drag": annual_cost_drag,
+        "max_single_weight": max_single_seen,
+        "top3_concentration": top3_avg,
+    }
+
+
+def calc_metrics(nav_series, label=""):
+    """计算年化收益、夏普、最大回撤等"""
+    n = len(nav_series)
+    if n < 2:
+        return {"年化收益率": "0.00%", "夏普比率": "0.00", "最大回撤": "0.00%", "年化波动率": "0.00%", "胜率": "0.00%"}
+
+    # Total return
+    total_ret = nav_series.iloc[-1] / nav_series.iloc[0] - 1
+    days = (nav_series.index[-1] - nav_series.index[0]).days
+    ann_ret = (1 + total_ret) ** (365 / max(days, 1)) - 1
+
+    # Daily returns
+    daily_r = nav_series.pct_change().dropna()
+
+    # Sharpe
+    if daily_r.std() > 0:
+        sharpe = (daily_r.mean() * 252 - 0.02) / (daily_r.std() * np.sqrt(252))
+    else:
+        sharpe = 0.0
+
+    # Max drawdown
+    cummax = nav_series.cummax()
+    max_dd = (nav_series / cummax - 1).min()
+
+    # Annualized volatility
+    ann_vol = daily_r.std() * np.sqrt(252)
+
+    # Win rate
+    win_rate = (daily_r > 0).mean()
+
+    # Calmar
+    calmar = ann_ret / abs(max_dd) if max_dd != 0 else 0
+
+    return {
+        "年化收益率": f"{ann_ret*100:.2f}%",
+        "夏普比率": f"{sharpe:.2f}",
+        "最大回撤": f"{max_dd*100:.2f}%",
+        "年化波动率": f"{ann_vol*100:.2f}%",
+        "胜率": f"{win_rate*100:.1f}%",
+        "Calmar": f"{calmar:.2f}",
+        "年化_float": ann_ret,
+        "夏普_float": sharpe,
+        "回撤_float": max_dd,
+        "波动_float": ann_vol,
+        "胜率_float": win_rate,
+    }
+
+
+def make_rebal_dates(calendar, freq="biweekly"):
+    """生成调仓日期列表: weekly=每周五, biweekly=每月15日+月末, monthly=每月最后交易日"""
+    dates = pd.to_datetime(calendar)
+    if freq == "weekly":
+        return sorted([str(d.date()) for d in dates if d.weekday() == 4])
+    elif freq == "biweekly":
+        # 每月15日和最后交易日 (约两周一次)
+        result = []
+        for d in dates:
+            last_day = pd.Timestamp(d.year, d.month, 1) + pd.offsets.MonthEnd(0)
+            if d.day == 15 or d == last_day:
+                result.append(str(d.date()))
+        return sorted(set(result))
+    elif freq == "monthly":
+        # 每月最后一个交易日
+        result = []
+        for ym in set((d.year, d.month) for d in dates):
+            month_dates = [d for d in dates if d.year == ym[0] and d.month == ym[1]]
+            if month_dates:
+                result.append(str(month_dates[-1].date()))
+        return sorted(result)
+    else:
+        # 默认双周
+        result = []
+        for d in dates:
+            last_day = pd.Timestamp(d.year, d.month, 1) + pd.offsets.MonthEnd(0)
+            if d.day == 15 or d == last_day:
+                result.append(str(d.date()))
+        return sorted(set(result))
