@@ -89,7 +89,8 @@ def main():
             msg = f"【影子组合换仓】{today}\n"
             if sold: msg += f"卖出: {', '.join(sold)}\n"
             if added: msg += f"买入: {', '.join(added)}\n"
-            msg += f"当前: {', '.join(f'{h[\"code\"]} {h[\"name\"]}' for h in bought)}"
+            cur = ', '.join(f"{h['code']} {h['name']}" for h in bought)
+            msg += f"当前: {cur}"
             send_alert(msg)
         except Exception: pass
     old_state.write_text(json.dumps(state, ensure_ascii=False))

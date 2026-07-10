@@ -169,8 +169,22 @@ def run():
 
     force = os.getenv("FORCE_REBAL", "0") == "1"
     if not is_rebalance_day(today, calendar) and not force:
-        if not ma10_exits: logger.info(f"{today} 非调仓日, MA10正常, 持仓{len(current_holdings)}只")
-        return
+        # 即使非调仓日, 也必须刷新信号文件日期, 防止QMT用过期信号对账
+        if not ma10_exits:
+            # 更新日期+重新保存, 持仓池不变
+            if SIGNAL_FILE.exists():
+                sig = json.loads(SIGNAL_FILE.read_text(encoding="utf-8"))
+                sig["date"] = today
+                sig["signal_date"] = today
+                # 非调仓日无新增买卖: 清空buy/sell, 否则执行器(按signal_date==today判新鲜)
+                # 会把上次调仓的buy/sell当"今天的单"每天重复下 → 靠reconcile(目标对账)兜底补漏
+                sig["buy"] = []
+                sig["sell"] = []
+                SIGNAL_FILE.write_text(json.dumps(sig, ensure_ascii=False, indent=2), encoding="utf-8")
+            logger.info(f"{today} 非调仓日, MA10正常, 持仓{len(current_holdings)}只, 已刷新信号日期")
+            return
+        # MA10 exits detected: fall through to save signal with updated holdings
+        logger.info(f"{today} 非调仓日, 但MA10出清{len(ma10_exits)}只→需保存信号")
 
     # ── 调仓日: 成交额TOP30 + MA200择时 ──
     logger.info(f"\n{'='*60}\n[Track A v2] 调仓日: {today}\n{'='*60}")
@@ -364,6 +378,19 @@ def _save_and_alert(signal, pos_ratio):
             for c in holdings:
                 ind = ind_map.get(c, "其他"); ind_cnt[ind] = ind_cnt.get(ind, 0) + 1
             ind_str = "  ".join(f"{k}({v})" for k, v in sorted(ind_cnt.items(), key=lambda x: x[1], reverse=True)[:3])
+        # Build execution checklist
+        exec_lines = ""
+        if sell or buy:
+            exec_lines = "\n\n📋 执行清单:\n"
+            if sell:
+                exec_lines += f"  ① 卖出 {len(sell)}只: {', '.join(sell)}\n"
+                exec_lines += f"     时间: 14:50 挂卖出委托(竞价/限价)\n"
+            if buy:
+                exec_lines += f"  ② 补买 {len(buy)}只: {', '.join(buy)}\n"
+                exec_lines += f"     时间: 卖出确认后立即挂买入, 等权分配\n"
+            exec_lines += f"  ③ 确认: 持仓数应回到 {len(holdings)-len(sell)+len(buy)}只\n"
+            exec_lines += f"  ④ 若卖出未成交 → 次日开盘继续卖; 买入也顺延"
+
         msg = (
             f"【Track A v2 信号】{today}\n"
             f"📊 仓位: {pos_ratio:.0%} | 持仓: {len(holdings)}只 | 行业: {ind_str}\n"
@@ -371,6 +398,7 @@ def _save_and_alert(signal, pos_ratio):
             f"🟢 买入({len(buy)}): {', '.join(buy[:4])}{'...' if len(buy)>4 else ''}\n"
             f"💰 投入: {signal.get('effective_capital',0):,}元 | 等权 1/{N_HOLDINGS}\n"
             f"⏰ 14:57前提交竞价收盘委托"
+            f"{exec_lines}"
         )
     logger.info(msg); send_alert(msg)
 
