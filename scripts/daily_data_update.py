@@ -13,10 +13,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import akshare as ak
+import pandas as pd
 from datetime import date, timedelta
 from loguru import logger
 from data.source import get_source
-from data.storage import save_daily, save_meta, load_meta
+from data.storage import save_daily, save_meta, load_meta, load_daily
 from data.cleaner import validate_data_completeness
 from monitoring.alerts import send_alert
 
@@ -89,6 +90,82 @@ def _update_stock_meta_full():
             logger.warning(f"{name} 更新失败: {e}")
 
 
+def _update_index_daily(target_date: str):
+    """增量更新4个有代码冲突的指数日线（不影响个股数据）。"""
+    import akshare as ak
+    indices = [
+        ("000001", "sh000001"),   # 上证指数
+        ("000688", "sh000688"),   # 科创50
+        ("000905", "sh000905"),   # 中证500
+        ("000906", "sh000906"),   # 中证800
+    ]
+    for code, ak_symbol in indices:
+        try:
+            raw = ak.stock_zh_index_daily(symbol=ak_symbol)
+            if raw.empty:
+                continue
+            raw = raw.rename(columns={
+                "date": "date", "open": "open", "high": "high",
+                "low": "low", "close": "close", "volume": "volume",
+            })
+            raw["date"] = pd.to_datetime(raw["date"])
+            raw["code"] = code
+            if "amount" not in raw.columns:
+                raw["amount"] = 0.0
+            if "pct_chg" not in raw.columns:
+                raw["pct_chg"] = 0.0
+            raw = raw.sort_values("date")
+
+            # 只写目标日期（当天增量）
+            day_rows = raw[raw["date"] == target_date]
+            if day_rows.empty:
+                continue
+
+            yr = str(pd.Timestamp(target_date).year)
+            out_path = Path(f"data_store/daily/{yr}/{code}.parquet")
+            if out_path.exists():
+                existing = pd.read_parquet(out_path)
+                existing["date"] = pd.to_datetime(existing["date"])
+                merged = pd.concat([existing, day_rows]).drop_duplicates(subset=["date"], keep="last")
+                merged = merged.sort_values("date")
+                merged.to_parquet(out_path, index=False)
+            else:
+                day_rows.to_parquet(out_path, index=False)
+            logger.info(f"  指数{code}: {target_date} close={day_rows['close'].iloc[-1]:.2f}")
+        except Exception as e:
+            logger.debug(f"  指数{code}更新跳过: {e}")
+
+
+def _sync_csi800_index_meta():
+    """把 daily/000906(干净指数日线) 的新日期同步进 csi800_index meta。
+    策略择时 get_position_ratio 读的是 meta, 而 meta 一直没人写 → MA200会冻结(曾停在7/7)。
+    这里做增量追加, 保留完整历史。"""
+    try:
+        idx = load_daily("000906", "2005-01-01", date.today().strftime("%Y-%m-%d"))
+        if idx.empty:
+            return
+        idx = idx.copy(); idx["date"] = pd.to_datetime(idx["date"])
+        meta = load_meta("csi800_index")
+        if meta.empty:
+            save_meta("csi800_index", idx[["date", "close"]]); return
+        meta["date"] = pd.to_datetime(meta["date"])
+        add = idx[~idx["date"].isin(set(meta["date"]))]
+        if add.empty:
+            return
+        rows = []
+        for _, r in add.iterrows():
+            row = {c: None for c in meta.columns}
+            row["date"] = r["date"]; row["close"] = r["close"]
+            rows.append(row)
+        merged = pd.concat([meta, pd.DataFrame(rows)], ignore_index=True)
+        merged["date"] = pd.to_datetime(merged["date"])
+        merged = merged.drop_duplicates(subset=["date"], keep="last").sort_values("date")
+        save_meta("csi800_index", merged)
+        logger.info(f"  csi800_index meta 同步: +{len(add)}天 → 最新{merged['date'].max().date()}")
+    except Exception as e:
+        logger.warning(f"  csi800_index meta 同步失败: {e}")
+
+
 def update_today():
     today = date.today().strftime("%Y-%m-%d")
     src   = get_source()
@@ -115,24 +192,51 @@ def update_today():
         send_alert("数据更新失败：stock_info 为空，请检查", level="error")
         return
 
-    codes = stock_info["code"].tolist()
+    # 跳过与个股代码冲突的指数代码（由 rebuild_index_data.py 通过 stock_zh_index_daily 更新）
+    INDEX_CODES = {"000001", "000688", "000905", "000906"}
+    codes = [c for c in stock_info["code"].tolist() if c not in INDEX_CODES]
     failed = []
+    dirty_rejected = 0
     for i, code in enumerate(codes):
         try:
             df = src.get_daily(code, today, today)
             if df.empty:
                 failed.append(code)
             else:
+                # ── 脏数据过滤：新收盘价vs最近有效收盘价，跳变>50%拒绝 ──
+                if "close" in df.columns:
+                    new_close = pd.to_numeric(df["close"], errors="coerce").iloc[-1]
+                    if not pd.isna(new_close) and new_close > 0:
+                        try:
+                            old = load_daily(code, None, today)  # 全部历史
+                            if not old.empty and "close" in old.columns:
+                                old_close = pd.to_numeric(old["close"], errors="coerce").dropna()
+                                if len(old_close) > 0:
+                                    last_valid = old_close.iloc[-1]
+                                    if last_valid > 0:
+                                        jump = abs(new_close / last_valid - 1)
+                                        if jump > 0.5:  # 跳变>50% = 脏数据
+                                            logger.warning(f"{code}: 脏数据拒绝 (新¥{new_close:.2f} vs 旧¥{last_valid:.2f}, 跳变{jump:.0%})")
+                                            dirty_rejected += 1
+                                            continue
+                        except Exception:
+                            pass  # 首次入库不检查
                 save_daily(code, df)
         except Exception as e:
-            # 单只股票失败（如"暂无数据"解析错误）不影响整体流程
             logger.debug(f"{code}: 更新失败 — {e}")
             failed.append(code)
         if (i + 1) % 500 == 0:
             logger.info(f"进度: {i+1}/{len(codes)}")
+    if dirty_rejected:
+        logger.warning(f"脏数据拒绝: {dirty_rejected}只")
+
+    # 3.5. 更新指数日线（用stock_zh_index_daily, 避开个股代码冲突）
+    _update_index_daily(today)
+
+    # 3.6. 同步 csi800_index meta(策略MA200择时用的基准, 否则会冻结)
+    _sync_csi800_index_meta()
 
     # 4. 更新交易日历（先于日报，确保日历及时保存）
-    import pandas as pd
     cal_df = pd.DataFrame({"trade_date": calendar})
     save_meta("trade_calendar", cal_df)
 
