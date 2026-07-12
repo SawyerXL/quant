@@ -156,7 +156,9 @@ def check_northbound_data():
                 elif net_dead:
                     return True, f"⚠️ 北向净买额缺失(API限制, 自2024-08), 日期列{last_date}"
                 else:
-                    return False, f"🟡 北向数据滞后{days_behind}天 (最新{last_date})"
+                    # 北向日流向源自2024-08已停(东财接口变更), 剩余数据更新不频繁;
+                    # 且北向非本策略(TOP30+MA200)输入 → 不作硬异常, 仅提示
+                    return True, f"🟡 北向滞后{days_behind}天(源已降级, 非策略输入, 仅参考)"
             else:
                 return True, f"✅ {f.name}: {len(df)}行 (无日期列)"
         except Exception as e:
