@@ -119,6 +119,31 @@ def _calc_shares(holdings, prices, total_capital):
     return shares
 
 # ══════════════════════════════════════════════════════════════════
+def _load_actual_qmt_holdings(calendar):
+    """读实盘QMT快照(logs/qmt_positions_latest.json)的真实持仓代码, 把信号校正到实盘。
+    Windows的stop_monitor会独立止损卖出, 信号并不知情 → 不校正就会漂移。
+    快照缺失/早于上一交易日/为空 → 返回None(退回信号记忆, 不强行校正)。"""
+    snap = Path("logs/qmt_positions_latest.json")
+    if not snap.exists():
+        return None
+    try:
+        d = json.loads(snap.read_text(encoding="utf-8"))
+        exported = (d.get("exported_at") or "")[:10]
+        today_str = date.today().strftime("%Y-%m-%d")
+        past = [x for x in calendar if x < today_str]
+        prev_td = past[-1] if past else today_str
+        if exported and exported < prev_td:
+            logger.warning(f"[持仓校正] QMT快照({exported})早于上一交易日({prev_td}), 不校正")
+            return None
+        pos = d.get("positions", {})
+        codes = sorted({str(c).split(".")[0] for c, v in pos.items()
+                        if isinstance(v, dict) and v.get("volume", 0) > 0})
+        return codes if codes else None
+    except Exception as e:
+        logger.warning(f"[持仓校正] 读QMT快照失败: {e}")
+        return None
+
+
 def run():
     today    = date.today().strftime("%Y-%m-%d")
     calendar = _get_trade_calendar()
@@ -128,6 +153,15 @@ def run():
     prev_signal      = _load_prev_signal()
     current_holdings = prev_signal.get("holdings", [])
     days_below_ma10  = {str(k): int(v) for k, v in prev_signal.get("days_below_ma10", {}).items()}
+
+    # 把信号记忆校正到实盘真相: stop_monitor(Windows)独立止损卖出, 信号并不知情。
+    # 不校正 → holdings漂移(信号以为30只,实盘13只) → 调仓增量算错 + reconcile天天假报差异。
+    actual = _load_actual_qmt_holdings(calendar)
+    if actual is not None and set(actual) != set(current_holdings):
+        gone = sorted(set(current_holdings) - set(actual))
+        logger.warning(f"[持仓漂移] 信号{len(current_holdings)}只 vs 实盘{len(actual)}只 → 以实盘为准; 实盘已无: {gone}")
+        current_holdings = actual
+        days_below_ma10  = {k: v for k, v in days_below_ma10.items() if k in set(actual)}
 
     # ── 每日: MA10出清检查(含自动补买) ──
     ma10_exits, days_below_ma10 = _check_ma10_exits(current_holdings, today, days_below_ma10)
@@ -180,6 +214,11 @@ def run():
                 # 会把上次调仓的buy/sell当"今天的单"每天重复下 → 靠reconcile(目标对账)兜底补漏
                 sig["buy"] = []
                 sig["sell"] = []
+                # 持仓校正到实盘真相(止损可能已卖掉一些), 否则reconcile天天报假差异
+                sig["holdings"] = current_holdings
+                sig["days_below_ma10"] = days_below_ma10
+                if isinstance(sig.get("shares"), dict):
+                    sig["shares"] = {c: s for c, s in sig["shares"].items() if c in set(current_holdings)}
                 SIGNAL_FILE.write_text(json.dumps(sig, ensure_ascii=False, indent=2), encoding="utf-8")
             logger.info(f"{today} 非调仓日, MA10正常, 持仓{len(current_holdings)}只, 已刷新信号日期")
             return
