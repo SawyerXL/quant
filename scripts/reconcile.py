@@ -15,7 +15,7 @@
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -98,6 +98,13 @@ def reconcile(track: str = "a") -> dict:
     sig = load_signal(track)
     if not sig:
         return {"ok": False, "error": "信号文件读取失败"}
+
+    # 护栏: 信号过期(非今天)就跳过对账, 避免拿旧目标去误判/误清仓(源自Windows手改, 回流)
+    sig_date = sig.get("signal_date", sig.get("date", ""))
+    today_str = date.today().strftime("%Y-%m-%d")
+    if sig_date and sig_date != today_str:
+        logger.warning(f"Signal stale ({sig_date} != {today_str}), skip reconcile to avoid wrong liquidation")
+        return {"ok": True, "skipped": True, "reason": f"Signal date {sig_date} != {today_str}"}
 
     target_holdings = set(sig.get("holdings", []))
     target_shares   = sig.get("shares", {})
