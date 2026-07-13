@@ -213,19 +213,25 @@ def check_index_code_contamination():
 
 # ── 检查7: CSI800数据新鲜度 (2026-07-07修复后新增) ──
 def check_csi800_freshness():
-    """CSI800(000906)是策略仓位计算的核心基准, 不能落后超过2天。"""
+    """CSI800(000906)是策略仓位计算的核心基准。用交易日历判"应有的最新交易日",
+    避免周一/节后把上一交易日数据误报为落后(同check_signal_freshness的日历化)。"""
     try:
-        df = load_daily('000906', '2026-07-01', date.today().strftime('%Y-%m-%d'))
+        df = load_daily('000906', '2026-06-01', date.today().strftime('%Y-%m-%d'))
         if df.empty:
-            return False, "🔴 CSI800(000906)无7月数据"
+            return False, "🔴 CSI800(000906)无数据"
         df['date'] = pd.to_datetime(df['date'])
-        last_date = df['date'].max().date()
-        days = (date.today() - last_date).days
-        if days > 2:
-            return False, f"🔴 CSI800数据落后{days}天 (最新{last_date})"
-        return True, f"✅ CSI800最新{last_date}"
-    except:
-        return False, "🔴 CSI800数据读取失败"
+        last_date = df['date'].max().strftime('%Y-%m-%d')
+        cal = load_meta('trade_calendar')
+        tdays = sorted(cal['trade_date'].tolist()) if not cal.empty else []
+        today_str = date.today().strftime('%Y-%m-%d')
+        past = [d for d in tdays if d < today_str]
+        expected = past[-1] if past else today_str  # 上一交易日(当天收盘前数据还没入库)
+        if last_date >= expected:
+            return True, f"✅ CSI800最新{last_date}"
+        behind = len([d for d in tdays if last_date < d <= expected])  # 真实落后的交易日数
+        return False, f"🔴 CSI800落后{behind}个交易日 (最新{last_date}, 应到{expected})"
+    except Exception as e:
+        return False, f"🔴 CSI800数据读取失败: {e}"
 
 # ── 检查8: 信号文件新鲜度 (2026-07-07修复后新增) ──
 def check_signal_freshness():
