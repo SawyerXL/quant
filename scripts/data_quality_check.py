@@ -276,11 +276,22 @@ def check_qmt_snapshot():
             snap_date = exported[:10]
             today_str = date.today().strftime("%Y-%m-%d")
             if snap_date != today_str:
-                # 16:00前(快照15:45生成), 昨日快照正常
-                now_hour = datetime.now().hour
-                if now_hour < 16:
-                    return True, f"QMT昨日快照(正常, {snap_date}), 当日15:45更新"
-                return False, f"QMT snapshot stale: {snap_date} != {today_str}"
+                # 用交易日历判定: 快照应不早于上一个交易日
+                cal = load_meta('trade_calendar')
+                tdays = sorted(cal['trade_date'].tolist()) if not cal.empty else []
+                past = [d for d in tdays if d < today_str]
+                prev_td = past[-1] if past else today_str
+                # 交易日15:45前: 快照=上一交易日 → 正常; 早于上一交易日 → 失效
+                if today_str in tdays and datetime.now().hour < 16:
+                    if snap_date == prev_td:
+                        return True, f"QMT昨日快照(正常, {snap_date}), 当日15:45更新"
+                    else:
+                        return False, f"QMT快照失效: {snap_date} vs 上一交易日{prev_td}, 快照管道可能断了"
+                # 16:00后(快照应已刷新) 或非交易日: 快照应>=上一交易日
+                if snap_date < (prev_td or today_str):
+                    return False, f"QMT快照失效: {snap_date} < {prev_td or today_str}, 快照管道可能断了"
+                # 非交易日, 快照=上一交易日 → 正常
+                return True, f"QMT快照{sanp_date} (非交易日, 正常)"
         
         n = len(pos)
         if n < 10:
