@@ -14,8 +14,14 @@ for line in open(env_f, encoding="utf-8"):
     if line.startswith("QMT_PATH="):
         qmt_path = line.strip().split("=", 1)[1].strip()
         break
-print(f"QMT_PATH: {qmt_path}")
-print(f"path存在: {os.path.exists(qmt_path)}")
+print(f"QMT_PATH(.env): {qmt_path}")
+print(f".env路径存在: {os.path.exists(qmt_path)}")
+# 同时解析.env里的QMT_PATH再拼 datadir
+if qmt_path:
+    alt1 = os.path.join(qmt_path, "datadir")
+    alt2 = qmt_path.replace("userdata_mini", "bin.x64")
+    print(f"  datadir存在: {os.path.exists(alt1)}")
+    print(f"  bin.x64存在: {os.path.exists(alt2)}")
 
 # 2. 查lock/session/pid文件
 ud = qmt_path
@@ -36,14 +42,53 @@ try:
 except Exception as e:
     print(f"xtdata.connect() FAIL: {e}")
 
-# 4. 标准连接
+# 4. 用xtdata查miniQMT实际datadir+账户
+try:
+    from xtquant import xtdata
+    info = xtdata.get_service_info()
+    print(f"xtdata service_info: {info}")
+except Exception as e:
+    print(f"xtdata get_service_info FAIL: {e}")
+
+# 5. XtQuantTrader用不同路径/参数组合试
+from xtquant import xttrader
+from xtquant.xttype import StockAccount
+QMT_ACCOUNT_ID = ""
+for line in open(env_f, encoding="utf-8"):
+    if line.startswith("QMT_ACCOUNT_ID="):
+        QMT_ACCOUNT_ID = line.strip().split("=", 1)[1].strip()
+        break
+
+# 尝试1: .env的QMT_PATH
+print(f"\n--- 尝试1: .env QMT_PATH ---")
+try:
+    t = xttrader.XtQuantTrader(qmt_path, int(time.time())%100000)
+    t.start(); time.sleep(2)
+    r = t.connect()
+    print(f"  结果: connect()={r}")
+except Exception as e:
+    print(f"  FAIL: {e}")
+
+# 尝试2: .env QMT_PATH + '/datadir' (xtdata汇报过datadir路径)
+if qmt_path:
+    try2 = qmt_path + "/datadir"
+    print(f"\n--- 尝试2: {try2} ---")
+    try:
+        t2 = xttrader.XtQuantTrader(try2, int(time.time())%100000)
+        t2.start(); time.sleep(2)
+        r2 = t2.connect()
+        print(f"  结果: connect()={r2}")
+    except Exception as e:
+        print(f"  FAIL: {e}")
+
+# 6. 标准连接(用默认get_client, 对比)
 try:
     from execution.qmt_client import get_client
     c = get_client()
     pos = c.get_positions()
-    print(f"get_client() OK: {len(pos)} positions")
+    print(f"\nget_client() OK: {len(pos)} positions")
 except Exception as e:
-    print(f"get_client() FAIL: {e}")
+    print(f"\nget_client() FAIL: {e}")
 
 # 5. 进程确认
 import subprocess
