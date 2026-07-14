@@ -3,6 +3,7 @@ QMT连接诊断 — 深层排查connect=-1根因。
 跳过ssh, 在Windows本地跑, 避免中文路径编码问题。
 """
 import os, sys, glob, json, time
+sys.stdout.reconfigure(encoding='utf-8')
 os.environ["ENV"] = "simulation"
 sys.path.insert(0, "H:/quant")
 
