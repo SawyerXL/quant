@@ -62,7 +62,7 @@ def update_nav():
 def backfill_exec_record():
     """收盘后补拉成交数据, 覆盖执行记录中的fill_rate/滑点。"""
     cmd = ["ssh"] + SSH_OPTS + [WIN_HOST,
-           f'"{WIN_PY}" H:\quant\scripts\fetch_and_execute.py --backfill']
+           f'"{WIN_PY}" H:/quant/scripts/fetch_and_execute.py --backfill']
     try:
         r = subprocess.run(cmd, capture_output=True, text=True,
                            encoding="utf-8", errors="replace", timeout=120)
