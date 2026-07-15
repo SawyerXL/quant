@@ -13,7 +13,7 @@ except ImportError:
 
 _STRATEGY_RISK = {
     "track_a": STRATEGY_A["risk"],
-    "track_b": STRATEGY_B["risk"],
+    "track_b": STRATEGY_B["risk"] if STRATEGY_B else {},
 }
 
 
