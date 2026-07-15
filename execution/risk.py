@@ -5,7 +5,10 @@
 from loguru import logger
 from config.settings import MAX_SINGLE_ORDER_VALUE, MAX_ACCOUNT_DRAWDOWN
 from config.strategy_params.multi_factor import STRATEGY_A
-from config.strategy_params.trinity import STRATEGY_B
+try:
+    from config.strategy_params.trinity import STRATEGY_B
+except ImportError:
+    STRATEGY_B = None  # Track B 未启用/配置缺失 → Track A 不受影响
 
 
 _STRATEGY_RISK = {
