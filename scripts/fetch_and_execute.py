@@ -36,7 +36,7 @@ LINUX_USER    = os.getenv("LINUX_USER",   "root")
 SSH_KEY       = os.getenv("SSH_KEY", "")
 SIGNAL_DIR    = "data_store/meta"
 EXEC_RESULT_DIR = ROOT / "logs"
-FILL_WAIT_SECS  = 45   # 委托后等待成交确认的秒数
+FILL_WAIT_SECS  = 300  # 委托后等待成交确认的秒数 (原45s太短, 填单还没撮合就取数→fill_rate=0%)
 
 
 def push_result_to_linux(result_file: Path) -> bool:
@@ -261,15 +261,75 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
         send_alert(f"[执行失败] Track {track.upper()}: {e}", level="error")
 
 
+def backfill_fills():
+    """
+    收盘后补拉成交数据, 覆盖执行记录——调仓日14:30执行时成交未出(FILL_WAIT_SECS太短或
+    执行崩溃导致fill_rate=0%), 15:45再跑一次取真实成交率/滑点。
+    独立模式: python scripts/fetch_and_execute.py --backfill
+    """
+    import json as _json
+    from pathlib import Path as _Path
+    today_str = date.today().strftime("%Y%m%d")
+    result_file = EXEC_RESULT_DIR / f"execution_result_{today_str}.json"
+    logger.info(f"补拉今日成交: {today_str}")
+    try:
+        from execution.qmt_client import get_client as _gc
+        c = _gc()
+        orders = c.get_today_orders()
+        if not orders:
+            logger.warning("今日无委托记录, 跳过补拉"); return
+        buys = [o for o in orders if o.get("direction") == "buy"]
+        sells = [o for o in orders if o.get("direction") == "sell"]
+        filled_buy = [o for o in buys if o.get("filled", 0) > 0]
+        filled_sell = [o for o in sells if o.get("filled", 0) > 0]
+        total_buy = len(buys)
+        fill_rate = len(filled_buy) / total_buy * 100 if total_buy else 100
+        # 读信号取参考价算滑点
+        sig_path = _Path("data_store/meta/signal_a_latest.json")
+        ref_prices = {}
+        if sig_path.exists():
+            sig = _json.loads(sig_path.read_text(encoding="utf-8"))
+            ref_prices = sig.get("prices", {})
+        slippages = []
+        for o in filled_buy + filled_sell:
+            code = o.get("code", "").split(".")[0]
+            ref = ref_prices.get(code, 0)
+            actual = float(o.get("price", 0))
+            if ref > 0 and actual > 0:
+                slippages.append({"code": code, "ref": round(ref, 2),
+                                  "actual": round(actual, 2),
+                                  "slip_pct": round((actual / ref - 1) * 100, 2)})
+        avg_slip = round(sum(s["slip_pct"] for s in slippages) / len(slippages), 2) if slippages else 0
+        max_slip = round(max(abs(s["slip_pct"]) for s in slippages), 2) if slippages else 0
+        record = {"signal_date": today_str, "track": "a",
+                  "exec_confirmed_at": datetime.now().isoformat(), "backfilled": True,
+                  "target_buy": total_buy, "filled_buy": len(filled_buy),
+                  "target_sell": len(sells), "filled_sell": len(filled_sell),
+                  "fill_rate_pct": round(fill_rate, 1),
+                  "avg_slippage_pct": avg_slip, "max_slippage_pct": max_slip,
+                  "slippage_detail": slippages}
+        result_file.parent.mkdir(parents=True, exist_ok=True)
+        result_file.write_text(_json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+        logger.info(f"补拉完成: fill_rate={fill_rate:.0f}% avg_slip={avg_slip:+.2f}% → {result_file}")
+        push_result_to_linux(result_file)
+    except Exception as e:
+        logger.error(f"补拉失败: {e}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="从 Linux 拉取信号并通过 QMT 执行")
     parser.add_argument("--track",   default="a", choices=["a", "b"], help="执行哪个策略")
     parser.add_argument("--dry-run", action="store_true", help="仅打印，不真正下单")
     parser.add_argument("--setup",   action="store_true",
                         help="建仓初始化：跳过日期检查，全量买入holdings（首次使用）")
+    parser.add_argument("--backfill", action="store_true",
+                        help="收盘后补拉成交数据，覆盖执行记录(fill_rate/滑点)")
     args = parser.parse_args()
 
-    execute(track=args.track, dry_run=args.dry_run, setup=args.setup)
+    if args.backfill:
+        backfill_fills()
+    else:
+        execute(track=args.track, dry_run=args.dry_run, setup=args.setup)
 
 
 if __name__ == "__main__":

@@ -58,10 +58,26 @@ def update_nav():
         logger.info(f"NAV: {last['n_pos']}只 投入{last['invested_pct']:.0f}% "
                     f"NAV={last['nav']:.4f} 累计{last['nav']-1:+.2%}")
 
+
+def backfill_exec_record():
+    """收盘后补拉成交数据, 覆盖执行记录中的fill_rate/滑点。"""
+    cmd = ["ssh"] + SSH_OPTS + [WIN_HOST,
+           f'"{WIN_PY}" H:\quant\scripts\fetch_and_execute.py --backfill']
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=120)
+        if r.returncode == 0:
+            logger.info("成交补拉完成")
+        else:
+            logger.warning(f"成交补拉失败(rc={r.returncode}): {(r.stderr or r.stdout)[-200:]}")
+    except Exception as e:
+        logger.warning(f"成交补拉异常: {e}")
+
 def run():
     logger.info("QMT snapshot...")
     if trigger_export() and pull_file():
         update_nav()
+        backfill_exec_record()  # 收盘后补拉成交数据覆盖fill_rate/滑点
         logger.info("Done")
 
 if __name__ == "__main__":
