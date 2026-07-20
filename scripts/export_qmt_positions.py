@@ -12,6 +12,7 @@ Windows 端运行：导出 QMT 实际持仓，推送到 Linux 供对账使用。
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime
@@ -102,6 +103,12 @@ def main():
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUT_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info(f"已保存: {OUT_FILE}")
+
+    # 每日本地归档: 隧道断了也不丢, 等Linux侧补拉
+    today_archive = ROOT / "logs" / f"qmt_positions_{datetime.now().strftime('%Y%m%d')}.json"
+    if not today_archive.exists():
+        shutil.copy(OUT_FILE, today_archive)
+        logger.info(f"本地归档: {today_archive}")
 
     if not args.no_push:
         push_to_linux(OUT_FILE)

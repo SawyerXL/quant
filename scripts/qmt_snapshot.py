@@ -73,11 +73,47 @@ def backfill_exec_record():
     except Exception as e:
         logger.warning(f"成交补拉异常: {e}")
 
+
+def pull_missing_snapshots():
+    """从Windows补拉本地缺失的每日快照。Windows侧每日本地归档, 隧道断了也不丢,
+    等Linux侧恢复后批量补回。"""
+    # 列出Windows上的所有日期归档
+    list_cmd = ["ssh"] + SSH_OPTS + [WIN_HOST,
+                'dir /b H:\\quant\\logs\\qmt_positions_????????.json 2>nul']
+    try:
+        r = subprocess.run(list_cmd, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=30)
+        if r.returncode != 0:
+            return
+        win_files = set(r.stdout.strip().splitlines())
+    except Exception:
+        return
+    # 列出本地已有的
+    local_files = {f.name for f in Path("logs").glob("qmt_positions_????????.json")}
+    missing = win_files - local_files
+    if not missing:
+        return
+    pulled = 0
+    for fn in sorted(missing):
+        scp_cmd = ["scp"] + SCP_OPTS + [f"{WIN_HOST}:H:/quant/logs/{fn}", f"logs/{fn}"]
+        try:
+            rr = subprocess.run(scp_cmd, capture_output=True, text=True,
+                                encoding="utf-8", errors="replace", timeout=30)
+            if rr.returncode == 0:
+                pulled += 1
+        except Exception:
+            pass
+    if pulled:
+        logger.info(f"补拉缺失快照: {pulled}个 → 重建NAV")
+        from qmt_nav_track import rebuild_and_save
+        rebuild_and_save()
+
 def run():
     logger.info("QMT snapshot...")
     if trigger_export() and pull_file():
         update_nav()
-        backfill_exec_record()  # 收盘后补拉成交数据覆盖fill_rate/滑点
+        backfill_exec_record()
+        pull_missing_snapshots()
         logger.info("Done")
 
 if __name__ == "__main__":
