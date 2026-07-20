@@ -291,7 +291,7 @@ def check_qmt_snapshot():
                 if snap_date < (prev_td or today_str):
                     return False, f"QMT快照失效: {snap_date} < {prev_td or today_str}, 快照管道可能断了"
                 # 非交易日, 快照=上一交易日 → 正常
-                return True, f"QMT快照{sanp_date} (非交易日, 正常)"
+                return True, f"QMT快照{snap_date} (非交易日, 正常)"
         
         n = len(pos)
         if n < 10:
