@@ -23,4 +23,7 @@ python scripts\fetch_and_execute.py --track a
 REM Reconcile after execution
 python scripts\reconcile.py --track a
 
+REM Save daily snapshot locally (Windows archive, survives tunnel outages)
+python scripts\export_qmt_positions.py --no-push
+
 echo [%date% %time%] ===== Done =====
