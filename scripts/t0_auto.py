@@ -33,11 +33,26 @@ def _is_filled(status):
 
 
 def rt_price(code):
-    """实时价格+昨收。"""
+    """实时价格+昨收。优先xtdata本地QMT行情(不走外网), sina兜底(绕系统代理)。"""
+    # 1. xtdata 本地行情(Windows有坏代理127.0.0.1:7892会卡死requests, 用这个最稳)
+    try:
+        from xtquant import xtdata
+        xt = code + ('.SH' if code.startswith(('6', '5', '9', '11')) else '.SZ')
+        xtdata.subscribe_quote(xt, period='tick')
+        time.sleep(0.3)
+        t = xtdata.get_full_tick([xt]).get(xt, {})
+        cur = float(t.get('lastPrice') or 0)
+        prev = float(t.get('lastClose') or 0)
+        if cur > 0 and prev > 0:
+            return cur, prev
+    except Exception:
+        pass
+    # 2. sina 兜底(trust_env=False 绕过系统代理设置)
     exch = 'sh' if code.startswith(('5', '6', '9', '11')) else 'sz'
     try:
         r = requests.get(f'http://hq.sinajs.cn/list={exch}{code}',
-                         headers={'Referer': 'https://finance.sina.com.cn'}, timeout=3)
+                         headers={'Referer': 'https://finance.sina.com.cn'},
+                         timeout=3, trust_env=False)
         r.encoding = 'gb2312'
         d = r.text.split('"')[1].split(',')
         cur = float(d[3]) if d[3] else 0
