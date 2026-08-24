@@ -82,7 +82,7 @@ def log_trade(code, name, direction, sell_p, buy_p, shares):
     rec = {
         "date": str(date.today()),
         "code": code, "name": name, "direction": direction,
-        "sell_price": round(sell_p, 3), "buy_price": round(buy_p, 3),
+        "sell_price": round(sell_p, 2), "buy_price": round(buy_p, 2),
         "shares": int(shares), "pnl": round(pnl, 2),
         "settled": "是", "settle_date": str(date.today()),
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -163,7 +163,7 @@ def run_cycle(client, quiet=False):
                 if o.get("order_id") == oid and _is_filled(o.get("status")):
                     # 卖成交 → 挂接回买单
                     sell_p = st["price"]
-                    buy_p = round(sell_p * (1 - SETTLE), 3)
+                    buy_p = round(sell_p * (1 - SETTLE), 2)
                     nb = client.place_order(code, "buy", st["shares"], buy_p)
                     st["phase"] = "waiting_buyback"
                     st["buy_price"] = buy_p
@@ -187,7 +187,7 @@ def run_cycle(client, quiet=False):
             for o in orders:
                 if o.get("order_id") == oid and _is_filled(o.get("status")):
                     buy_p = st["price"]
-                    sell_p = round(buy_p * (1 + SETTLE), 3)
+                    sell_p = round(buy_p * (1 + SETTLE), 2)
                     ns = client.place_order(code, "sell", st["shares"], sell_p)
                     st["phase"] = "waiting_sellout"
                     st["sell_price"] = sell_p
@@ -226,7 +226,7 @@ def run_cycle(client, quiet=False):
 
         if chg >= TRIGGER:
             # 正T: 挂卖@昨收*1.02
-            sell_p = round(prev * (1 + TRIGGER), 3)
+            sell_p = round(prev * (1 + TRIGGER), 2)
             oid = client.place_order(code, "sell", t_shares, sell_p)
             if oid and oid > 0:
                 state[code] = {
@@ -238,7 +238,7 @@ def run_cycle(client, quiet=False):
                 logger.info(f"正T触发 {code} +{chg*100:.1f}% → 挂卖{t_shares}股@{sell_p}")
         elif chg <= -TRIGGER:
             # 反T: 挂买@昨收*0.98（需现金）
-            buy_p = round(prev * (1 - TRIGGER), 3)
+            buy_p = round(prev * (1 - TRIGGER), 2)
             oid = client.place_order(code, "buy", t_shares, buy_p)
             if oid and oid > 0:
                 state[code] = {
