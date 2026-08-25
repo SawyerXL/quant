@@ -223,9 +223,11 @@ def get_holding_signal_alerts() -> dict:
             })
 
     # 全局市场警报 — 与上方持仓行同源，避免"横幅报警但持仓写无信号"的自相矛盾。
-    # 恒生分支已删：对次日A股相关系数仅0.003~0.039，零预测力，不配上横幅。
+    # 恒生→当晚美股：2026-08-25 复验通过（SOX -1.15%/S&P -1.13%, t=-1.86/-2.55，3019/3120样本）。
+    # 唯一用途是防御"今晚美股"，不预测次日A股（那条件链已证零预测力）。
     market_alert = None
     sox = signals.get('sox')
+    hsi = signals.get('hsi')
     if sox and sox['chg_pct'] <= -SIGNAL_MAP['sox']['thresh']:
         tag = '盘中' if sox.get('live') else '收盘'
         market_alert = {
@@ -233,6 +235,13 @@ def get_holding_signal_alerts() -> dict:
             'advice': f"美股{tag}SOX {sox['chg_pct']}% → 明早科技股大概率低开0.8~1.1%。"
                       f"回测：低开后盘中平均反弹+0.25~0.32%，开盘减半扣费后反而少赚2.5~5.3pp/年 —— "
                       f"做好低开心理准备即可，不要开盘杀跌。",
+        }
+    elif hsi and hsi.get('live') and hsi['chg_pct'] <= -2.0:
+        market_alert = {
+            'signal': '恒生→美股', 'chg': hsi['chg_pct'],
+            'advice': f"恒生盘中{hsi['chg_pct']}% → 今晚美股大概率跟跌（复验：SOX当晚-1.15%/S&P-1.13%，"
+                      f"3019样本，全框架唯一两轮验证存活的外盘信号）。仅提示今晚美股风险，"
+                      f"不用于预测明天A股，也不建议据此对A股持仓操作。",
         }
 
     result = {
