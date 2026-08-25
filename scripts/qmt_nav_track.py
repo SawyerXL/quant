@@ -8,15 +8,17 @@ QMT 实盘 NAV 追踪 — 正确口径的净值曲线。
     (出现 +6459%、-61% 这种垃圾), 不可用。
 
 本模块口径:
-  - 完全忽略账户 total_assets / cash, 只用【持仓 volume × 本地日线收盘价】做 mark-to-market。
+  - 完全忽略账户 total_assets / cash, 只用持仓做 mark-to-market。
+  - **价格来源: 快照自带的 market_value/volume (QMT导出时实时报的, 天天都有, 不依赖本地日线)**;
+    只有"快照日之间被卖掉的票"需要期末价时才用本地日线兜底, 且兜底价过期>5天会告警。
+    此前只靠本地日线, 日线管道一断NAV就假持平(8/18-8/21事故)。
   - 种子 = 100万 notional, 每个快照日之间按"期初持仓的价格变动"算收益, 复利成 NAV。
   - 现金部分(未投入的 notional)按 CASH_YIELD 计息; 换手按 COMMISSION 扣费。
-  - 这样 NAV 独立于被污染的账户现金, 是干净的相对净值曲线。
 
 局限(诚实说明):
   - 快照非严格收盘时点(有的盘中导出), 期间买卖近似发生在期末 → 日内择时被忽略(影响小)。
   - 种子日把累计盈亏清零重新计时(旧追踪已坏, 无法恢复真实历史盈亏)。
-  - 样本极短(上线才几天): 年化/夏普在 ≥20 个交易日前只是参考, 不具统计意义。
+  - 样本极短: 年化/夏普在 ≥20 个交易日前只是参考, 不具统计意义。
 
 用法:
     python scripts/qmt_nav_track.py          # 重建并打印
@@ -38,10 +40,11 @@ NOTIONAL   = 1_000_000
 SNAP_DIR   = Path("logs")
 NAV_FILE   = Path("logs/qmt_nav_history.parquet")
 SNAP_RE    = re.compile(r"qmt_positions_(\d{8})(?:_\d{4})?\.json$")
+STALE_DAYS = 5  # 兜底收盘价超过5天未更新视为过期 → 告警
 
 
-def load_snapshots() -> dict[str, dict[str, int]]:
-    """读所有 logs/qmt_positions_YYYYMMDD[_HHMM].json → {date: {code: volume}}。
+def load_snapshots() -> dict[str, dict[str, dict]]:
+    """读所有 logs/qmt_positions_YYYYMMDD[_HHMM].json → {date: {code: {vol, mv}}}。
     同一天多份取导出时间最晚的一份。"""
     by_date: dict[str, tuple[str, dict]] = {}
     for f in SNAP_DIR.glob("qmt_positions_*.json"):
@@ -60,12 +63,15 @@ def load_snapshots() -> dict[str, dict[str, int]]:
     for d8, (_, data) in by_date.items():
         date_str = f"{d8[:4]}-{d8[4:6]}-{d8[6:]}"
         pos = data.get("positions", {})
-        out[date_str] = {c: int(v.get("volume", 0)) for c, v in pos.items() if v.get("volume", 0) > 0}
+        out[date_str] = {
+            c: {"vol": int(v.get("volume", 0)), "mv": float(v.get("market_value", 0))}
+            for c, v in pos.items() if v.get("volume", 0) > 0
+        }
     return dict(sorted(out.items()))
 
 
 def _close_panel(codes: set[str], start: str, end: str) -> pd.DataFrame:
-    """本地日线收盘价矩阵(不做>200根过滤, 短史持仓也要能标价)。index=date, col=code。"""
+    """本地日线收盘价矩阵(兜底用)。index=date, col=code。"""
     ser = {}
     for c in codes:
         df = load_daily(c, start, end)
@@ -83,23 +89,48 @@ def build_nav() -> pd.DataFrame:
 
     dates = list(snaps.keys())
     all_codes = set().union(*[set(h) for h in snaps.values()])
-    px = _close_panel(all_codes, dates[0], dates[-1])
-    if px.empty:
-        logger.warning("本地无这些持仓的收盘价"); return pd.DataFrame()
+    px_local = _close_panel(all_codes, dates[0], dates[-1])
 
-    def close_on(code, dstr):
-        """取 <=dstr 的最近收盘价(容忍快照日无交易/停牌)。"""
-        if code not in px.columns:
-            return np.nan
-        s = px[code].loc[:pd.Timestamp(dstr)].dropna()
-        return float(s.iloc[-1]) if len(s) else np.nan
+    # 快照自带价格: (date, code) -> mv/vol (QMT导出时的实时价, 最可靠)
+    snap_price: dict[tuple[str, str], float] = {}
+    for dstr, hold in snaps.items():
+        for c, v in hold.items():
+            if v["vol"] > 0 and v["mv"] > 0:
+                snap_price[(dstr, c)] = v["mv"] / v["vol"]
+
+    warnings: list[str] = []
+
+    def local_close(code, dstr):
+        """本地日线 <=dstr 最近收盘价, 返回 (price, last_date_str)。"""
+        if code not in px_local.columns:
+            return np.nan, None
+        s = px_local[code].loc[:pd.Timestamp(dstr)].dropna()
+        if not len(s):
+            return np.nan, None
+        return float(s.iloc[-1]), str(s.index[-1].date())
+
+    def price_on(code, dstr):
+        """价格: 快照自带价优先, 本地日线兜底(过期告警)。"""
+        p = snap_price.get((dstr, code))
+        if p is not None:
+            return p
+        p, last_d = local_close(code, dstr)
+        if p is not None and not np.isnan(p):
+            if last_d and (pd.Timestamp(dstr) - pd.Timestamp(last_d)).days > STALE_DAYS:
+                warnings.append(f"{code}@{dstr}: 本地日线过期(最新{last_d}), 用旧价标值")
+            return p
+        return np.nan
 
     rows = []
     equity = float(NOTIONAL)
     prev_date, prev_hold = None, {}
     for dstr in dates:
         hold = snaps[dstr]
-        invested_now = sum(v * close_on(c, dstr) for c, v in hold.items() if not np.isnan(close_on(c, dstr)))
+        invested_now = 0.0
+        for c, v in hold.items():
+            p = price_on(c, dstr)
+            if not np.isnan(p):
+                invested_now += v["vol"] * p
 
         if prev_date is None:
             ret = 0.0
@@ -107,22 +138,27 @@ def build_nav() -> pd.DataFrame:
             # 期初(prev)持仓的价格 P&L
             pnl = 0.0
             for c, v in prev_hold.items():
-                p0, p1 = close_on(c, prev_date), close_on(c, dstr)
+                p0 = price_on(c, prev_date)
+                p1 = price_on(c, dstr)
                 if not np.isnan(p0) and not np.isnan(p1):
-                    pnl += v * (p1 - p0)
-            prev_invested = sum(v * close_on(c, prev_date) for c, v in prev_hold.items()
-                                if not np.isnan(close_on(c, prev_date)))
+                    pnl += v["vol"] * (p1 - p0)
+            prev_invested = 0.0
+            for c, v in prev_hold.items():
+                p = price_on(c, prev_date)
+                if not np.isnan(p):
+                    prev_invested += v["vol"] * p
             cash = max(0.0, equity - prev_invested)
             days = (pd.Timestamp(dstr) - pd.Timestamp(prev_date)).days
             interest = cash * CASH_YIELD * days / 365
-            # 换手手续费(期初vs期末持仓市值差异的近似)
+            # 换手手续费(期初vs期末持仓变动 × 期末价的近似)
             traded = 0.0
-            codes = set(prev_hold) | set(hold)
-            for c in codes:
-                p1 = close_on(c, dstr)
+            for c in set(prev_hold) | set(hold):
+                p1 = price_on(c, dstr)
                 if np.isnan(p1):
                     continue
-                traded += abs(hold.get(c, 0) - prev_hold.get(c, 0)) * p1
+                v0 = prev_hold.get(c, {}).get("vol", 0)
+                v1 = hold.get(c, {}).get("vol", 0)
+                traded += abs(v1 - v0) * p1
             fee = traded * COMMISSION
             equity_new = equity + pnl + interest - fee
             ret = equity_new / equity - 1
@@ -135,6 +171,10 @@ def build_nav() -> pd.DataFrame:
         })
         prev_date, prev_hold = dstr, hold
 
+    # 护栏: 汇总兜底价过期告警(只在有真问题时吵, 不静默)
+    if warnings:
+        uniq = sorted(set(warnings))
+        logger.warning(f"NAV护栏: {len(uniq)}处本地日线兜底价过期: {uniq[:5]}{'...' if len(uniq)>5 else ''}")
     return pd.DataFrame(rows)
 
 
