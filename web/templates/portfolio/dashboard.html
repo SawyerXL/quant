@@ -398,7 +398,13 @@ function loadAdvice() {
                 h += '<tr>';
                 h += '<td><b>' + r.code + '</b></td><td>' + (r.name||'') + '</td>';
                 h += '<td>' + r.cost.toFixed(2) + '</td><td>' + r.price.toFixed(2) + '</td>';
-                h += '<td class="' + pctCls(r.pnl_pct) + '">' + (r.pnl_pct>=0?'+':'') + r.pnl_pct.toFixed(1) + '%</td>';
+                // 负成本票(做T摊薄)没有有意义的百分比，显示金额
+                if (r.pnl_pct === null || r.pnl_pct === undefined) {
+                    h += '<td class="' + pctCls(r.pnl_amt) + '">' + (r.pnl_amt>=0?'+':'') +
+                         '¥' + Math.abs(r.pnl_amt).toLocaleString() + '</td>';
+                } else {
+                    h += '<td class="' + pctCls(r.pnl_pct) + '">' + (r.pnl_pct>=0?'+':'') + r.pnl_pct.toFixed(1) + '%</td>';
+                }
                 h += '<td class="' + pctCls(r.chg_today) + '">' + (r.chg_today>=0?'+':'') + r.chg_today.toFixed(1) + '%</td>';
                 h += '<td>' + (r.ma10 ? r.ma10.toFixed(2) : '—') + '</td>';
                 h += '<td><span class="badge ' + (r.action_color||'') + '">' + r.action + '</span></td>';
