@@ -64,6 +64,8 @@ def get_t_signals(is_admin: bool = False, user_id: str = "") -> dict:
                 "code": code, "name": pos.get("name", ""),
                 "direction": "正T",
                 "chg_pct": round(chg, 2),
+                # leg1=先出手的那腿, leg2=了结腿。结构化落盘, 供 settle_t_signals.py 精确判定成交
+                "leg1_price": sell_target, "leg2_price": buy_target,
                 "action": f"挂卖{sell_target} 卖1/3 → 挂买{buy_target}接回",
                 "tone": "up",
                 "shares_frac": f"{int(POSITION_FRAC * pos['shares'])}股(1/3)",
@@ -75,6 +77,7 @@ def get_t_signals(is_admin: bool = False, user_id: str = "") -> dict:
                 "code": code, "name": pos.get("name", ""),
                 "direction": "反T",
                 "chg_pct": round(chg, 2),
+                "leg1_price": buy_target, "leg2_price": sell_target,
                 "action": f"挂买{buy_target} 买1/3 → 挂卖{sell_target}卖出",
                 "tone": "dn",
                 "shares_frac": f"{int(POSITION_FRAC * pos['shares'])}股(1/3)",
@@ -112,6 +115,8 @@ def _log_signals(signals: list) -> None:
             "name": s.get("name", ""),
             "direction": s["direction"],
             "chg_pct": s["chg_pct"],
+            "leg1_price": s.get("leg1_price"),
+            "leg2_price": s.get("leg2_price"),
             "action": s["action"],
         })
     if not rows: return
