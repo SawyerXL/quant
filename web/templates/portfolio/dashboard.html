@@ -460,7 +460,16 @@ function loadTRecords() {
         var records = data.records || [];
         var stats = data.stats || {};
         var stEl = document.getElementById('t-stats');
-        if (stEl) stEl.innerHTML = '总' + (stats.total||0) + '笔 · 已了结' + (stats.settled_count||0) + ' · 胜率<b>' + (stats.win_rate||0) + '%</b> · 盈亏<b class="' + ((stats.total_pnl||0)>=0?'text-red':'text-green') + '">' + ((stats.total_pnl||0)>=0?'+':'') + (stats.total_pnl||0) + '</b>元';
+        var sh = '';
+        // 验证期自动结算战报(分钟线精确, 基准: 胜率≥90% 单次≥+0.15%)
+        if (stats.v_count) {
+            var ok1 = stats.v_win_rate >= 90, ok2 = stats.v_avg >= 0.15;
+            sh = '验证期 ' + stats.v_count + '笔 · 胜率<b class="' + (ok1?'text-red':'text-green') + '">' + stats.v_win_rate + '%</b>' +
+                 ' · 单次<b class="' + (ok2?'text-red':'text-green') + '">' + (stats.v_avg>=0?'+':'') + stats.v_avg + '%</b>' +
+                 ' · 次日强平' + (stats.v_forced||0) + '笔 ' + (ok1&&ok2?'✅ 达标':'❌ 未达标') + ' | ';
+        }
+        sh += '手工 ' + (stats.total||0) + '笔 · 胜率' + (stats.win_rate||0) + '%';
+        if (stEl) stEl.innerHTML = sh;
 
         var h = '';
         if (!records.length) {
@@ -468,19 +477,24 @@ function loadTRecords() {
         } else {
             var recent = records.slice(-15).reverse();
             h += '<div class="table-wrap"><table style="font-size:12px;">';
-            h += '<tr><th>日期</th><th>代码</th><th>名称</th><th>方向</th><th>卖价</th><th>买价</th><th>股数</th><th>盈亏</th><th>了结</th></tr>';
+            h += '<tr><th>日期</th><th>代码</th><th>名称</th><th>方向</th><th>卖价</th><th>买价</th><th>盈亏</th><th>了结</th></tr>';
             recent.forEach(function(r) {
-                var pnlCls = (r.pnl||0) >= 0 ? 'text-red' : 'text-green';
-                h += '<tr>';
-                h += '<td>' + (r.date||'') + '</td>';
-                h += '<td><b>' + (r.code||'') + '</b></td>';
-                h += '<td>' + (r.name||'') + '</td>';
-                h += '<td>' + (r.direction||'') + '</td>';
-                h += '<td>' + (r.sell_price||'') + '</td>';
-                h += '<td>' + (r.buy_price||'') + '</td>';
-                h += '<td>' + (r.shares||'') + '</td>';
-                h += '<td class="' + pnlCls + '"><b>' + ((r.pnl||0)>=0?'+':'') + (r.pnl||0) + '</b></td>';
-                h += '<td>' + (r.settled === '是' ? '✅' : '⏳') + '</td></tr>';
+                if (r.auto) {
+                    // 自动结算行: 盈亏是百分比, 了结列显示了结方式
+                    var pnlCls = (r.pnl_pct||0) >= 0 ? 'text-red' : 'text-green';
+                    h += '<tr><td>' + (r.date||'') + '</td><td><b>' + (r.code||'') + '</b></td>';
+                    h += '<td>' + (r.name||'') + '</td><td>' + (r.direction||'') + '</td>';
+                    h += '<td>' + (r.sell_price||'') + '</td><td>' + (r.buy_price||'') + '</td>';
+                    h += '<td class="' + pnlCls + '"><b>' + ((r.pnl_pct||0)>=0?'+':'') + (r.pnl_pct||0) + '%</b></td>';
+                    h += '<td>' + (r.exit_kind||'') + '</td></tr>';
+                } else {
+                    var pnlCls2 = (r.pnl||0) >= 0 ? 'text-red' : 'text-green';
+                    h += '<tr><td>' + (r.date||'') + '</td><td><b>' + (r.code||'') + '</b></td>';
+                    h += '<td>' + (r.name||'') + '</td><td>' + (r.direction||'') + '</td>';
+                    h += '<td>' + (r.sell_price||'') + '</td><td>' + (r.buy_price||'') + '</td>';
+                    h += '<td class="' + pnlCls2 + '"><b>' + ((r.pnl||0)>=0?'+':'') + (r.pnl||0) + '</b></td>';
+                    h += '<td>' + (r.settled === '是' ? '✅' : '⏳') + '</td></tr>';
+                }
             });
             h += '</table></div>';
         }

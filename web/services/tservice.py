@@ -14,6 +14,8 @@ from config.settings import ROOT, DATA_STORE
 T_RECORD_FILE = ROOT / "config" / "t_trade_log.csv"
 # 信号历史存CSV (每次检测到信号都记录, 漏看可回查)
 T_SIGNAL_LOG = ROOT / "config" / "t_signal_log.csv"
+# 验证期结算结果 (settle_t_signals.py 输出, 分钟线精确判定)
+T_SETTLE_LOG = ROOT / "config" / "t_settle_log.csv"
 
 # 回测验证参数
 TRIGGER_PCT = 2.0    # 涨跌≥2%触发
@@ -214,15 +216,46 @@ def save_t_record(code: str, name: str, direction: str, sell_price: float,
     }
 
 
+def load_t_settlements() -> list:
+    """验证期结算明细(分钟线精确)。反T: buy=leg1/sell=exit; 正T: sell=leg1/buy=exit。"""
+    if not T_SETTLE_LOG.exists():
+        return []
+    import pandas as pd
+    df = pd.read_csv(T_SETTLE_LOG, dtype={"code": str})
+    out = []
+    for _, r in df.iterrows():
+        if r.get("status") != "已结算":
+            continue
+        buy = r["leg1_price"] if r["direction"] == "反T" else r["exit_price"]
+        sell = r["leg1_price"] if r["direction"] == "正T" else r["exit_price"]
+        out.append({
+            "date": str(r["date"]), "code": str(r["code"]).zfill(6),
+            "name": r.get("name", ""), "direction": r["direction"],
+            "sell_price": sell, "buy_price": buy,
+            "pnl_pct": r.get("pnl_pct"), "exit_kind": r.get("exit_kind", ""),
+            "method": r.get("method", ""), "settled": "是", "auto": True,
+        })
+    return out
+
+
 def get_t_stats() -> dict:
-    """做T统计。"""
+    """做T统计：手工记录 + 验证期自动结算战报。"""
     records = load_t_records()
     settled = [r for r in records if r.get("settled") == "是"]
     wins = [r for r in settled if r.get("pnl", 0) > 0]
+
+    auto = [s for s in load_t_settlements()]
+    auto_pnl = [float(s["pnl_pct"]) for s in auto if s.get("pnl_pct") not in (None, "")]
+    auto_wins = [p for p in auto_pnl if p > 0]
     return {
         "total": len(records),
         "pending": len(records) - len(settled),
         "settled_count": len(settled),
         "win_rate": round(len(wins)/len(settled)*100, 1) if settled else 0,
         "total_pnl": round(sum(r.get("pnl", 0) for r in settled), 2),
+        # 验证期战报(基准: 胜率≥90%, 单次≥+0.15%)
+        "v_count": len(auto_pnl),
+        "v_win_rate": round(len(auto_wins)/len(auto_pnl)*100, 1) if auto_pnl else 0,
+        "v_avg": round(sum(auto_pnl)/len(auto_pnl), 3) if auto_pnl else 0,
+        "v_forced": sum(1 for s in auto if s.get("exit_kind", "").startswith("次日")),
     }

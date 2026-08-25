@@ -65,8 +65,9 @@ async def t_signals(user=Depends(current_user)):
 @router.get("/t-records")
 async def t_records(user=Depends(current_user)):
     """做T记录 + 统计."""
-    from web.services.tservice import load_t_records, get_t_stats
-    return {"records": load_t_records(), "stats": get_t_stats()}
+    from web.services.tservice import load_t_records, get_t_stats, load_t_settlements
+    # 结算明细排在手工记录前面(自动结算为主口径)
+    return {"records": load_t_settlements() + load_t_records(), "stats": get_t_stats()}
 
 
 @router.get("/t-signal-history")

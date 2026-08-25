@@ -166,7 +166,7 @@ def _update_index_daily(target_date: str, calendar=None):
 
 # 本地日线库原先只有个股 + 4个指数，ETF 全缺 —— 588000科创50ETF 是最大持仓却没日线，
 # MA10/止损监控对它一直是瞎的。东财已封本机IP，走新浪 fund_etf_hist_sina。
-ETF_BASE = ["588000", "510300", "510500", "159915"]
+ETF_BASE = ["588000", "510300", "510500", "159915", "518880"]   # 518880=黄金ETF
 
 
 def _etf_sina_symbol(code: str):
