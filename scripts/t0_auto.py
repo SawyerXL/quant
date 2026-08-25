@@ -116,21 +116,27 @@ def settle_check(client, state):
         cur_vol = {x.split(".")[0]: int(v.get("volume", 0)) for x, v in raw.items()}
     except Exception:
         cur_vol = {}
+    if not cur_vol:
+        # 取不到持仓(连接断开)时不能做任何判断, 否则会把未卖的多余仓误判为"已卖"漂在账上
+        logger.error("settle_check: 持仓读取失败, 跳过本轮了结")
+        return state
     for code, st in list(state.items()):
         if st.get("date") == today:
             continue
         if st.get("phase") not in ("waiting_buyback", "waiting_sellout"):
             continue
         t_shares = int(st.get("shares", 0))
+        has_base = st.get("base") is not None
         base = int(st.get("base", 0))
         if st["direction"] == "反T":
-            if cur_vol.get(code, 0) <= base:
+            # 无base的旧条目不做跳过判断, 直接市价卖(宁卖勿漂)
+            if has_base and cur_vol.get(code, 0) <= base:
                 logger.info(f"{code} 反T多余仓已不在(卖单已成交), 只销状态不重复卖")
                 st["phase"] = "force_settled"; st["settle_date"] = today; changed = True
                 continue
             oid = client.place_order(code, "sell", t_shares, -1, "market")
         else:  # 正T: 卖飞了没接回 → 买回
-            if cur_vol.get(code, 0) >= base:
+            if has_base and cur_vol.get(code, 0) >= base:
                 logger.info(f"{code} 正T已接回, 只销状态")
                 st["phase"] = "force_settled"; st["settle_date"] = today; changed = True
                 continue
@@ -176,10 +182,25 @@ def run_cycle(client, quiet=False):
         return state
 
     # 2.5 清理陈旧状态(昨日force_settled/首腿未成交的), 防止封锁今日触发
+    # 但首腿若其实已成交(实仓有变化), 不能删——转隔夜了结, 否则多余股数漂在账上
     pruned = False
     for code in list(state.keys()):
         st = state.get(code, {})
-        if st.get("date") != today and st.get("phase") in ("force_settled", "waiting_buy", "waiting_sell"):
+        if st.get("date") == today:
+            continue
+        base = int(st.get("base", 0))
+        cur = int(positions.get(code, {}).get("volume", 0))
+        if st.get("phase") == "waiting_buy" and st.get("base") is not None and cur > base:
+            st["phase"] = "waiting_sellout"  # 买单已成交没检测到 → 隔夜卖出
+            logger.warning(f"{code} 昨反T买单已成交未了结, 转隔夜卖出")
+            pruned = True
+            continue
+        if st.get("phase") == "waiting_sell" and st.get("base") is not None and cur < base:
+            st["phase"] = "waiting_buyback"  # 卖单已成交没检测到 → 隔夜买回
+            logger.warning(f"{code} 昨正T卖单已成交未接回, 转隔夜买回")
+            pruned = True
+            continue
+        if st.get("phase") in ("force_settled", "waiting_buy", "waiting_sell"):
             del state[code]
             pruned = True
     if pruned:
