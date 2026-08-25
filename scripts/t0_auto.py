@@ -25,6 +25,7 @@ RECORD_FILE = ROOT / "config" / "t_trade_log.csv"
 TRIGGER = 0.02   # ±2%触发
 SETTLE = 0.01    # ±1%了结
 FRAC = 1/3       # 1/3仓位
+_last_empty_warn = 0.0  # 空持仓告警节流(秒时间戳)
 
 # QMT订单状态码: 48未报 49待报 50已报 51已报待撤 52撤单中 53已撤 54部撤 55部成 56已成 57废单
 # Mock客户端返回字符串 "filled"，兼容两者
@@ -105,25 +106,40 @@ def is_trading_time():
 
 
 def settle_check(client, state):
-    """次日开盘强制了结：昨天没接回/没卖出的，开盘市价平仓。"""
+    """次日强制了结：昨天没接回/没卖出的，市价平仓。
+    双卖保护: 先核对实际持仓 — 多余股数已不在(卖单其实成交了)就不再卖, 只销状态。
+    正T要买回(现仓<base), 反T要卖出(现仓>base)才执行。"""
     today = str(date.today())
     changed = False
+    try:
+        raw = client.get_positions()
+        cur_vol = {x.split(".")[0]: int(v.get("volume", 0)) for x, v in raw.items()}
+    except Exception:
+        cur_vol = {}
     for code, st in list(state.items()):
         if st.get("date") == today:
             continue
-        # 隔夜未了结
-        if st.get("phase") in ("waiting_buyback", "waiting_sellout"):
-            logger.warning(f"隔夜未了结 {code} {st['direction']} → 开盘市价平仓")
-            if st["direction"] == "正T":
-                # 卖飞了没接回 → 市价买回
-                oid = client.place_order(code, "buy", st["shares"], -1, "market")
-            else:
-                # 低吸了没卖出 → 市价卖出
-                oid = client.place_order(code, "sell", st["shares"], -1, "market")
-            if oid and oid > 0:
-                st["phase"] = "force_settled"
-                st["settle_date"] = today
-                changed = True
+        if st.get("phase") not in ("waiting_buyback", "waiting_sellout"):
+            continue
+        t_shares = int(st.get("shares", 0))
+        base = int(st.get("base", 0))
+        if st["direction"] == "反T":
+            if cur_vol.get(code, 0) <= base:
+                logger.info(f"{code} 反T多余仓已不在(卖单已成交), 只销状态不重复卖")
+                st["phase"] = "force_settled"; st["settle_date"] = today; changed = True
+                continue
+            oid = client.place_order(code, "sell", t_shares, -1, "market")
+        else:  # 正T: 卖飞了没接回 → 买回
+            if cur_vol.get(code, 0) >= base:
+                logger.info(f"{code} 正T已接回, 只销状态")
+                st["phase"] = "force_settled"; st["settle_date"] = today; changed = True
+                continue
+            oid = client.place_order(code, "buy", t_shares, -1, "market")
+        logger.warning(f"隔夜未了结 {code} {st['direction']} → 市价平仓")
+        if oid and oid > 0:
+            st["phase"] = "force_settled"
+            st["settle_date"] = today
+            changed = True
     if changed:
         save_state(state)
     return state
@@ -133,15 +149,16 @@ def run_cycle(client, quiet=False):
     """一轮状态机检查。"""
     state = load_state()
     today = str(date.today())
-
-    # 1. 开盘时点检查隔夜单（9:30-9:35）
     now = datetime.now()
     t = now.time()
-    if dtime(9, 30) <= t <= dtime(9, 36):
-        state = settle_check(client, state)
 
     if not is_trading_time():
         return state
+
+    # 1. 隔夜未了结强制平仓(不限9:30-9:36, 任务晚启动也能了结)
+    if any(st.get("date") != today and st.get("phase") in ("waiting_buyback", "waiting_sellout")
+           for st in state.values()):
+        state = settle_check(client, state)
 
     # 2. 获取持仓和今日订单
     raw = client.get_positions()
@@ -150,15 +167,39 @@ def run_cycle(client, quiet=False):
         if v.get("volume", 0) > 0 and not x.startswith("888")  # 排除国债逆回购等
     }
     orders = client.get_today_orders()
+    # 护栏: QMT连接静默断开时positions为空, 循环会空转一天不报错 → 周期性告警
+    global _last_empty_warn
+    if not positions:
+        if time.time() - _last_empty_warn > 600:
+            logger.error("持仓为空! QMT连接可能断开, 做T执行器空转中")
+            _last_empty_warn = time.time()
+        return state
+
+    # 2.5 清理陈旧状态(昨日force_settled/首腿未成交的), 防止封锁今日触发
+    pruned = False
+    for code in list(state.keys()):
+        st = state.get(code, {})
+        if st.get("date") != today and st.get("phase") in ("force_settled", "waiting_buy", "waiting_sell"):
+            del state[code]
+            pruned = True
+    if pruned:
+        save_state(state)
 
     # 3. 检查已有挂单成交情况
     for code, st in list(state.items()):
         if st.get("date") != today:
             continue
         phase = st.get("phase")
+        oid = st.get("order_id")
+        # 订单终端状态: 53已撤 / 57废单 → 首腿(没成交任何股)可直接销状态重新触发
+        if phase in ("waiting_sell", "waiting_buy"):
+            terminal = any(o.get("order_id") == oid and o.get("status") in (53, 57) for o in orders)
+            if terminal:
+                logger.info(f"{code} 挂单废单/已撤, 销状态允许重触发")
+                del state[code]
+                save_state(state)
+                continue
         if phase == "waiting_sell":
-            # 检查卖单是否成交
-            oid = st.get("order_id")
             for o in orders:
                 if o.get("order_id") == oid and _is_filled(o.get("status")):
                     # 卖成交 → 挂接回买单
@@ -172,18 +213,18 @@ def run_cycle(client, quiet=False):
                     logger.info(f"{code} 卖单成交@{sell_p} → 挂接回@{buy_p}")
                     break
         elif phase == "waiting_buyback":
-            oid = st.get("order_id")
-            for o in orders:
-                if o.get("order_id") == oid and _is_filled(o.get("status")):
-                    sell_p = st["price"]
-                    buy_p = st["buy_price"]
-                    log_trade(code, st.get("name", ""), "正T", sell_p, buy_p, st["shares"])
-                    # 标记今日已完成, 防重复触发
-                    state[code] = {"date": today, "code": code, "phase": "done_today"}
-                    save_state(state)
-                    break
+            # 兜底: 订单状态查不到成交, 但实仓已回base → 视为已接回
+            base = int(st.get("base", 0))
+            filled = any(o.get("order_id") == oid and _is_filled(o.get("status")) for o in orders)
+            if not filled and positions.get(code, {}).get("volume", 0) >= base:
+                filled = True
+            if filled:
+                sell_p = st["price"]
+                buy_p = st["buy_price"]
+                log_trade(code, st.get("name", ""), "正T", sell_p, buy_p, st["shares"])
+                state[code] = {"date": today, "code": code, "phase": "done_today"}
+                save_state(state)
         elif phase == "waiting_buy":
-            oid = st.get("order_id")
             for o in orders:
                 if o.get("order_id") == oid and _is_filled(o.get("status")):
                     buy_p = st["price"]
@@ -196,15 +237,17 @@ def run_cycle(client, quiet=False):
                     logger.info(f"{code} 买单成交@{buy_p} → 挂卖出@{sell_p}")
                     break
         elif phase == "waiting_sellout":
-            oid = st.get("order_id")
-            for o in orders:
-                if o.get("order_id") == oid and _is_filled(o.get("status")):
-                    sell_p = st["sell_price"]
-                    buy_p = st["price"]
-                    log_trade(code, st.get("name", ""), "反T", sell_p, buy_p, st["shares"])
-                    state[code] = {"date": today, "code": code, "phase": "done_today"}
-                    save_state(state)
-                    break
+            # 兜底: 订单状态查不到成交, 但实仓已回base → 视为已卖出
+            base = int(st.get("base", 0))
+            filled = any(o.get("order_id") == oid and _is_filled(o.get("status")) for o in orders)
+            if not filled and positions.get(code, {}).get("volume", 0) <= base:
+                filled = True
+            if filled:
+                sell_p = st["sell_price"]
+                buy_p = st["price"]
+                log_trade(code, st.get("name", ""), "反T", sell_p, buy_p, st["shares"])
+                state[code] = {"date": today, "code": code, "phase": "done_today"}
+                save_state(state)
 
     # 4. 新信号扫描（只对空闲状态的票）
     # 铁律: 单日单票只做1次
@@ -232,7 +275,7 @@ def run_cycle(client, quiet=False):
                 state[code] = {
                     "date": today, "name": "", "direction": "正T",
                     "phase": "waiting_sell", "price": sell_p,
-                    "shares": t_shares, "order_id": oid,
+                    "shares": t_shares, "order_id": oid, "base": vol,
                 }
                 save_state(state)
                 logger.info(f"正T触发 {code} +{chg*100:.1f}% → 挂卖{t_shares}股@{sell_p}")
@@ -244,7 +287,7 @@ def run_cycle(client, quiet=False):
                 state[code] = {
                     "date": today, "name": "", "direction": "反T",
                     "phase": "waiting_buy", "price": buy_p,
-                    "shares": t_shares, "order_id": oid,
+                    "shares": t_shares, "order_id": oid, "base": vol,
                 }
                 save_state(state)
                 logger.info(f"反T触发 {code} {chg*100:.1f}% → 挂买{t_shares}股@{buy_p}")
