@@ -90,16 +90,34 @@ def _update_stock_meta_full():
             logger.warning(f"{name} 更新失败: {e}")
 
 
-def _update_index_daily(target_date: str):
-    """增量更新4个有代码冲突的指数日线（不影响个股数据）。"""
+# 这4个代码既是指数也是个股(000001=上证指数/平安银行)。用个股源拉会得到个股价格
+# 覆盖掉指数点位 —— 2026-08-25 手工补数时踩过一次，上证指数变成了11.59元。
+# 任何遍历全市场的循环都必须排除它们，指数走 _update_index_daily 的独立通道。
+INDEX_CODES = {"000001", "000688", "000905", "000906"}
+INDEX_SYMBOLS = [
+    ("000001", "sh000001"),   # 上证指数
+    ("000688", "sh000688"),   # 科创50
+    ("000905", "sh000905"),   # 中证500
+    ("000906", "sh000906"),   # 中证800
+]
+GAP_LOOKBACK = 30       # 自动补洞只看最近30个交易日，更早的用 backfill_daily_data.py
+GAP_MAX_REPAIR = 400    # 单次修复上限，源故障时不空转
+GAP_SKIP_PATH = Path("data_store/meta/gap_skip.json")
+GAP_SKIP_MAX = 3        # 同一(代码,日期)拉3次都没有 → 判定停牌/未上市，不再重试
+
+
+def _update_index_daily(target_date: str, calendar=None):
+    """增量更新4个有代码冲突的指数日线（不影响个股数据）。
+
+    calendar 传入时顺带补最近GAP_LOOKBACK个交易日的空洞 —— 指数缺bar会直接坏掉
+    MA200择时和regime判断，比个股缺bar更致命。
+    """
     import akshare as ak
-    indices = [
-        ("000001", "sh000001"),   # 上证指数
-        ("000688", "sh000688"),   # 科创50
-        ("000905", "sh000905"),   # 中证500
-        ("000906", "sh000906"),   # 中证800
-    ]
-    for code, ak_symbol in indices:
+    want = None
+    if calendar:
+        recent = [d for d in calendar if d <= target_date][-GAP_LOOKBACK:]
+        want = set(recent)
+    for code, ak_symbol in INDEX_SYMBOLS:
         try:
             raw = ak.stock_zh_index_daily(symbol=ak_symbol)
             if raw.empty:
@@ -116,13 +134,21 @@ def _update_index_daily(target_date: str):
                 raw["pct_chg"] = 0.0
             raw = raw.sort_values("date")
 
-            # 只写目标日期（当天增量）
-            day_rows = raw[raw["date"] == target_date]
+            yr = str(pd.Timestamp(target_date).year)
+            out_path = Path(f"data_store/daily/{yr}/{code}.parquet")
+
+            if want is None:
+                day_rows = raw[raw["date"] == target_date]
+            else:
+                have = set()
+                if out_path.exists():
+                    old = pd.read_parquet(out_path, columns=["date"])
+                    have = set(pd.to_datetime(old["date"]).astype(str).str[:10])
+                need = {d for d in want if d not in have}
+                day_rows = raw[raw["date"].astype(str).str[:10].isin(need)]
             if day_rows.empty:
                 continue
 
-            yr = str(pd.Timestamp(target_date).year)
-            out_path = Path(f"data_store/daily/{yr}/{code}.parquet")
             if out_path.exists():
                 existing = pd.read_parquet(out_path)
                 existing["date"] = pd.to_datetime(existing["date"])
@@ -131,7 +157,9 @@ def _update_index_daily(target_date: str):
                 merged.to_parquet(out_path, index=False)
             else:
                 day_rows.to_parquet(out_path, index=False)
-            logger.info(f"  指数{code}: {target_date} close={day_rows['close'].iloc[-1]:.2f}")
+            gap_note = f" (含补洞{len(day_rows)-1}天)" if len(day_rows) > 1 else ""
+            logger.info(f"  指数{code}: {str(day_rows['date'].max())[:10]} "
+                        f"close={day_rows['close'].iloc[-1]:.2f}{gap_note}")
         except Exception as e:
             logger.debug(f"  指数{code}更新跳过: {e}")
 
@@ -192,6 +220,75 @@ def _update_etf_daily(today: str):
     logger.info(f"ETF日线更新: {ok}/{len(codes)} 成功")
 
 
+def _fill_recent_gaps(calendar, today: str, src):
+    """补最近GAP_LOOKBACK个交易日的空洞。
+
+    update_today 只抓当天，任何一次源故障/宕机都在历史里留下永久空洞，而且没人会发现。
+    2026-08-25 实测：全市场缺8/11，洛钼还缺8/18~8/21五天 —— 补洞后洛钼"连破MA10"
+    从6天变成1天，整张MA10触发清单是错的。缺口不报错，只会让指标悄悄算错。
+    """
+    import json
+    recent = [d for d in calendar if d <= today][-GAP_LOOKBACK:]
+    if len(recent) < 2:
+        return
+    want, lo = set(recent), recent[0]
+
+    skip = {}
+    if GAP_SKIP_PATH.exists():
+        try:
+            skip = json.loads(GAP_SKIP_PATH.read_text())
+        except Exception:
+            skip = {}
+
+    info = load_meta("stock_info_full")
+    if info.empty:
+        info = load_meta("stock_info")
+    if info.empty:
+        return
+    codes = [c for c in info["code"].tolist() if c not in INDEX_CODES]
+
+    holes = []
+    for code in codes:
+        try:
+            d = load_daily(code, lo, today)
+        except Exception:
+            continue
+        have = set(pd.to_datetime(d["date"]).astype(str).str[:10]) if not d.empty else set()
+        miss = sorted(x for x in want - have if skip.get(f"{code}:{x}", 0) < GAP_SKIP_MAX)
+        if miss:
+            holes.append((code, miss))
+    if not holes:
+        logger.info(f"空洞检查: 最近{len(recent)}个交易日无缺口")
+        return
+
+    logger.warning(f"空洞检查: {len(holes)}只有缺口，修复前{min(len(holes), GAP_MAX_REPAIR)}只")
+    fixed = 0
+    for code, miss in holes[:GAP_MAX_REPAIR]:
+        try:
+            df = src.get_daily(code, miss[0], miss[-1])
+            if df is not None and not df.empty:
+                save_daily(code, df)
+                after = load_daily(code, lo, today)
+                have = set(pd.to_datetime(after["date"]).astype(str).str[:10])
+                still = [x for x in miss if x not in have]
+                fixed += len(miss) - len(still)
+            else:
+                still = miss
+        except Exception as e:
+            logger.debug(f"  {code} 补洞失败: {e}")
+            still = miss
+        # 拉不到的记次数：停牌/未上市会永远拉不到，重试GAP_SKIP_MAX次后放弃
+        for x in still:
+            skip[f"{code}:{x}"] = skip.get(f"{code}:{x}", 0) + 1
+
+    try:
+        GAP_SKIP_PATH.parent.mkdir(parents=True, exist_ok=True)
+        GAP_SKIP_PATH.write_text(json.dumps(skip))
+    except Exception as e:
+        logger.debug(f"  gap_skip写入失败: {e}")
+    logger.info(f"空洞修复: 补回{fixed}个bar，跳过表{len(skip)}条")
+
+
 def _sync_csi800_index_meta():
     """把 daily/000906(干净指数日线) 的新日期同步进 csi800_index meta。
     策略择时 get_position_ratio 读的是 meta, 而 meta 一直没人写 → MA200会冻结(曾停在7/7)。
@@ -248,8 +345,7 @@ def update_today():
         send_alert("数据更新失败：stock_info 为空，请检查", level="error")
         return
 
-    # 跳过与个股代码冲突的指数代码（由 rebuild_index_data.py 通过 stock_zh_index_daily 更新）
-    INDEX_CODES = {"000001", "000688", "000905", "000906"}
+    # 指数代码走独立通道，见模块级 INDEX_CODES 注释
     codes = [c for c in stock_info["code"].tolist() if c not in INDEX_CODES]
     failed = []
     dirty_rejected = 0
@@ -288,11 +384,14 @@ def update_today():
     if dirty_rejected:
         logger.warning(f"脏数据拒绝: {dirty_rejected}只")
 
-    # 3.5. 更新指数日线（用stock_zh_index_daily, 避开个股代码冲突）
-    _update_index_daily(today)
+    # 3.5. 更新指数日线（用stock_zh_index_daily, 避开个股代码冲突）+ 顺带补指数空洞
+    _update_index_daily(today, calendar)
 
     # 3.55. ETF日线（stock_info里没有ETF, 上面的全市场循环覆盖不到）
     _update_etf_daily(today)
+
+    # 3.6. 自动补洞: 只抓当天的更新会在历史里留永久空洞, 缺口不报错只让指标算错
+    _fill_recent_gaps(calendar, today, src)
 
     # 3.6. 同步 csi800_index meta(策略MA200择时用的基准, 否则会冻结)
     _sync_csi800_index_meta()
