@@ -1,0 +1,435 @@
+{% extends "base.html" %}
+{% block title %}策略回测 — Quant Circle{% endblock %}
+{% block content %}
+
+<div class="card" style="margin-bottom:16px;">
+    <div style="display:flex;gap:16px;align-items:center;">
+        <button onclick="switchMode('single')" id="btn-single" style="font-size:13px;">单次回测</button>
+        <button onclick="switchMode('grid')" id="btn-grid" class="secondary" style="font-size:13px;">网格扫描</button>
+        <button onclick="switchMode('llm')" id="btn-llm" class="secondary" style="font-size:13px;">🤖 AI策略</button>
+        <span style="margin-left:auto;font-size:12px;color:var(--muted);">运行中的任务切换页面后继续执行</span>
+    </div>
+</div>
+
+<!-- LLM Strategy Mode -->
+<div id="llm-mode" style="display:none;">
+    <div class="card">
+        <h3>AI 策略生成</h3>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">用自然语言描述你的策略想法，AI自动翻译成回测参数并运行</div>
+        <div style="display:flex;gap:8px;">
+            <input type="text" id="llm-desc" placeholder="例：选成交额最大的30只，排除20日涨超50%的，跌破MA10三天就卖，涨30%卖一半" style="flex:1;font-size:13px;">
+            <button onclick="generateStrategy()">生成并回测</button>
+        </div>
+        <div id="llm-status" style="margin-top:8px;font-size:12px;"></div>
+        <div id="llm-result" style="margin-top:8px;"></div>
+    </div>
+</div>
+
+<!-- Job History (always visible) -->
+<div class="card" style="margin-bottom:16px;" id="job-history-card">
+    <h3>回测记录</h3>
+    <div id="job-history"><div class="text-muted" style="text-align:center;padding:16px;">加载中...</div></div>
+</div>
+
+<!-- Results show right here, above everything else -->
+<div id="results-area" style="margin-bottom:16px;"></div>
+
+<div class="grid-2" id="single-mode">
+    <!-- Config Form -->
+    <div class="card">
+        <h3>策略参数</h3>
+        <form id="backtest-form" onsubmit="submitBacktest(event)" style="display:flex;flex-direction:column;gap:10px;">
+            <label style="font-size:12px;color:var(--muted);">回测名称</label>
+            <input type="text" id="job-name" value="Quick backtest" placeholder="给这次回测起个名字" style="font-size:13px;">
+            <div id="params-form-fields"><div class="text-muted" style="text-align:center;padding:16px;">加载参数...</div></div>
+            <button type="submit" style="margin-top:8px;">运行回测</button>
+        </form>
+        <div id="job-status" style="margin-top:12px;font-size:12px;"></div>
+    </div>
+</div>
+
+<!-- Grid Mode -->
+<div id="grid-mode" style="display:none;">
+    <div class="card">
+        <h3>网格参数扫描</h3>
+        <form onsubmit="submitGrid(event)" style="display:flex;flex-direction:column;gap:10px;">
+            <label style="font-size:12px;color:var(--muted);">参数名 (与上面表单对应)</label>
+            <select id="grid-param">
+                <option value="pool_size">pool_size (池子大小)</option>
+                <option value="ma_exit_days">ma_exit_days (MA10天数)</option>
+                <option value="max_position_pct">max_position_pct (单票上限%)</option>
+                <option value="abs_stop">abs_stop (绝对止损%)</option>
+                <option value="trailing_stop">trailing_stop (追踪止损%)</option>
+            </select>
+            <label style="font-size:12px;color:var(--muted);">参数值 (逗号分隔)</label>
+            <input type="text" id="grid-values" value="2,3,4,5,6" placeholder="例: 2,3,4,5,6">
+            <div style="font-size:11px;color:var(--muted);">使用上方表单的当前值作为基础配置</div>
+            <button type="submit">运行网格扫描</button>
+        </form>
+        <div id="grid-status" style="margin-top:12px;font-size:12px;"></div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+        <div id="grid-results"></div>
+    </div>
+</div>
+
+<script>
+var navChart = null;
+var activeJobId = null;
+var jobPollInterval = null;
+
+// ── Auto-generate form from strategy spec ──
+fetch('/api/backtest/config/spec').then(r => r.json()).then(spec => {
+    var h = '';
+    (spec.categories || []).forEach(function(cat) {
+        h += '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;margin-top:8px;margin-bottom:2px;">' + cat.label + '</div>';
+        (cat.params || []).forEach(function(p) {
+            h += '<label style="font-size:12px;color:var(--muted);" title="' + (p.description||'') + '">' + p.label + '</label>';
+            if (p.type === 'select') {
+                h += '<select name="' + p.key + '">';
+                var labels = p.labels || p.values || [];
+                (p.values || []).forEach(function(v, i) {
+                    var sel = v === p.default ? ' selected' : '';
+                    h += '<option value="' + v + '"' + sel + '>' + (labels[i] || v) + '</option>';
+                });
+                h += '</select>';
+            } else if (p.type === 'int' || p.type === 'float') {
+                var step = p.step || 1;
+                h += '<input type="number" name="' + p.key + '" value="' + p.default + '"';
+                if (p.min !== undefined) h += ' min="' + p.min + '"';
+                if (p.max !== undefined) h += ' max="' + p.max + '"';
+                h += ' step="' + step + '">';
+            } else {
+                h += '<input type="text" name="' + p.key + '" value="' + p.default + '">';
+            }
+        });
+    });
+    document.getElementById('params-form-fields').innerHTML = h;
+
+    // Also update grid param dropdown
+    var gridSelect = document.getElementById('grid-param');
+    if (gridSelect) {
+        gridSelect.innerHTML = '';
+        (spec.categories || []).forEach(function(cat) {
+            (cat.params || []).forEach(function(p) {
+                if (p.type === 'int' || p.type === 'float') {
+                    gridSelect.innerHTML += '<option value="' + p.key + '">' + p.label + '</option>';
+                }
+            });
+        });
+    }
+});
+
+// ── Job History ──
+// Event delegation for job buttons
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    var action = btn.getAttribute('data-action');
+    var jobId = btn.getAttribute('data-jobid');
+    if (action === 'view') loadJobResult(jobId);
+    else if (action === 'track') trackJob(jobId);
+    else if (action === 'delete') deleteJob(jobId);
+});
+
+function deleteJob(jobId) {
+    if (!confirm('确定删除这条回测记录？')) return;
+    fetch('/api/backtest/jobs/' + jobId, {method: 'DELETE'})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.status === 'deleted') loadJobHistory();
+        });
+}
+
+function loadJobHistory() {
+    fetch('/api/backtest/jobs').then(r => r.json()).then(jobs => {
+        var h = '';
+        if (!jobs.length) {
+            h = '<div class="text-muted" style="text-align:center;padding:16px;">暂无回测记录</div>';
+        } else {
+            h = '<div class="table-wrap"><table><tr><th>名称</th><th>状态</th><th>时间</th><th style="width:120px;">操作</th></tr>';
+            jobs.forEach(function(j) {
+                var statusCls = j.status === 'done' ? 'badge-green' : j.status === 'running' ? 'badge-warning' : j.status === 'error' ? 'badge-bear' : '';
+                h += '<tr>';
+                h += '<td>' + j.name + '</td>';
+                h += '<td><span class="badge ' + statusCls + '">' + j.status + '</span>' + (j.progress ? ' ' + j.progress + '%' : '') + '</td>';
+                h += '<td style="font-size:12px;">' + (j.created_at || '') + '</td>';
+                h += '<td style=\"font-size:11px;\">';
+                if (j.status === 'done') {
+                    h += '<button class=\"secondary\" style=\"font-size:11px;padding:2px 6px;margin:1px;\" data-action=\"view\" data-jobid=\"' + j.id + '\">查看</button>';
+                } else if (j.status === 'running' || j.status === 'queued') {
+                    h += '<button class=\"secondary\" style=\"font-size:11px;padding:2px 6px;margin:1px;\" data-action=\"track\" data-jobid=\"' + j.id + '\">跟踪</button>';
+                }
+                h += '<button class=\"secondary\" style=\"font-size:11px;padding:2px 6px;margin:1px;color:var(--red);\" data-action=\"delete\" data-jobid=\"' + j.id + '\">删除</button>';
+                h += '</td></tr>';
+            });
+            h += '</table></div>';
+        }
+        document.getElementById('job-history').innerHTML = h;
+    });
+}
+loadJobHistory();
+
+function loadJobResult(jobId) {
+    try {
+        fetch('/api/backtest/jobs/' + jobId).then(function(r) {
+            return r.json();
+        }).then(function(job) {
+            if (job && job.result) {
+                showResults(job.result);
+                // Scroll results into view
+                var el = document.getElementById('results-area');
+                if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+                // Highlight briefly
+                if (el) { el.style.transition = 'none'; el.style.outline = '2px solid var(--blue)'; setTimeout(function(){ el.style.outline = ''; }, 2000); }
+            }
+        });
+    } catch(e) {}
+}
+
+// Keep polling active job even when switching pages doesn't kill it
+function trackJob(jobId) {
+    activeJobId = jobId;
+    if (jobPollInterval) clearInterval(jobPollInterval);
+    jobPollInterval = setInterval(function() {
+        fetch('/api/backtest/jobs/' + jobId).then(r => r.json()).then(job => {
+            document.getElementById('progress-fill').style.width = (job.progress || 0) + '%';
+            if (job.status === 'done') {
+                clearInterval(jobPollInterval);
+                jobPollInterval = null;
+                document.getElementById('progress-bar').style.display = 'none';
+                document.getElementById('job-status').innerHTML = '<span class="badge badge-green">完成</span>';
+                showResults(job.result);
+                loadJobHistory();
+            } else if (job.status === 'error') {
+                clearInterval(jobPollInterval);
+                jobPollInterval = null;
+                document.getElementById('progress-bar').style.display = 'none';
+                document.getElementById('job-status').innerHTML = '<span class="badge badge-bear">错误: ' + (job.error || '') + '</span>';
+            }
+        });
+    }, 3000);
+}
+
+var navChart = null;
+
+function submitBacktest(e) {
+    e.preventDefault();
+    var form = document.getElementById('backtest-form');
+    var fd = new FormData(form);
+    var config = {};
+    fd.forEach(function(v, k) {
+        if (k === 'take_profit_tiers') {
+            config[k] = v.split(',').map(function(x) { return parseFloat(x.trim()); });
+        } else if (k === 'abs_stop' || k === 'trailing_stop') {
+            config[k] = parseFloat(v) / 100;
+        } else if (k === 'pool_size' || k === 'ma_exit_days' || k === 'max_position_pct') {
+            config[k] = parseInt(v);
+        } else if (k === 'trailing_stop' || k === 'abs_stop') {
+            config[k] = parseFloat(v);
+        } else {
+            config[k] = v;
+        }
+    });
+
+    var jobName = (document.getElementById('job-name') && document.getElementById('job-name').value) || 'Quick backtest';
+
+    document.getElementById('job-status').innerHTML = '<span class="badge badge-warning">提交中...</span>';
+    document.getElementById('progress-bar').style.display = 'block';
+    document.getElementById('progress-fill').style.width = '5%';
+
+    fetch('/api/backtest/jobs', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: jobName, config: config}),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        document.getElementById('job-status').innerHTML = '<span class="badge badge-green">运行中...</span>';
+        trackJob(data.job_id);
+        setTimeout(loadJobHistory, 1000);
+    })
+    .catch(function() {
+        document.getElementById('job-status').innerHTML = '<span class="badge badge-bear">提交失败</span>';
+    });
+}
+
+function showResults(result) {
+    if (!result) return;
+    // Handle grid results {param, results[]}
+    if (result.results && !result.metrics) {
+        showGridResults(result);
+        return;
+    }
+    if (!result.metrics) return;
+    var m = result.metrics;
+
+    // Metrics cards
+    var area = document.getElementById('results-area');
+    var html = '<div class=\"card\" id=\"metrics-card\"><h3>绩效指标</h3><div class=\"grid-4\">';
+    html += '<div class="stat"><div class="value">' + (m['年化收益率'] || '—') + '</div><div class="label">年化收益</div></div>';
+    html += '<div class="stat"><div class="value">' + (m['夏普比率'] || '—') + '</div><div class="label">夏普比率</div></div>';
+    html += '<div class="stat"><div class="value">' + (m['索提诺比率'] || '—') + '</div><div class="label">索提诺比率</div></div>';
+    html += '<div class="stat"><div class="value" style="color:var(--red)">' + (m['最大回撤'] || '—') + '</div><div class="label">最大回撤</div></div>';
+    html += '<div class="stat"><div class="value">' + (m['最大回撤持续'] || '—') + '</div><div class="label">回撤持续</div></div>';
+    html += '<div class="stat"><div class="value">' + (m['月胜率'] || m['胜率'] || '—') + '</div><div class="label">月胜率</div></div>';
+    html += '<div class="stat"><div class="value">' + (m['年化波动率'] || '—') + '</div><div class="label">年化波动</div></div>';
+    html += '<div class="stat"><div class="value">' + (m['Calmar'] || '—') + '</div><div class="label">Calmar</div></div>';
+    html += '</div></div>';  // close grid-4 and metrics-card
+    area.innerHTML = html;
+
+    // Chart
+    if (result.nav && result.nav.length > 0) {
+        html += '<div class=\"card\" id=\"chart-card\" style=\"margin-top:16px;\"><h3>净值曲线</h3><canvas id=\"nav-chart\" height=\"120\"></canvas></div>';
+        area.innerHTML = html;
+        var dates = result.nav.map(function(p) { return p[0]; });
+        var values = result.nav.map(function(p) { return p[1]; });
+        var hasBenchmark = result.nav[0] && result.nav[0].length >= 3;
+        var benchmark = hasBenchmark ? result.nav.map(function(p) { return p[2]; }) : null;
+
+        if (navChart) navChart.destroy();
+        var ctx = document.getElementById('nav-chart').getContext('2d');
+        var datasets = [{
+            label: '策略净值',
+            data: values,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59,130,246,0.08)',
+            fill: true, tension: 0.1, pointRadius: 0, borderWidth: 2,
+        }];
+        if (benchmark) {
+            datasets.push({
+                label: '等权基准',
+                data: benchmark,
+                borderColor: '#6b7280',
+                borderDash: [4, 4],
+                fill: false, tension: 0.1, pointRadius: 0, borderWidth: 1,
+            });
+        }
+        navChart = new Chart(ctx, {
+            type: 'line', data: { labels: dates, datasets: datasets },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: true, labels: { color: '#6b7280', usePointStyle: true, boxWidth: 8 } },
+                    tooltip: {
+                        backgroundColor: 'rgba(26,29,39,0.95)', titleColor: '#e1e4ea',
+                        bodyColor: '#e1e4ea', borderColor: '#2a2d37', borderWidth: 1,
+                        padding: 10, displayColors: true,
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#6b7280', maxTicksLimit: 12 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+    }
+}
+
+// Grid mode
+function switchMode(mode) {
+    document.getElementById('single-mode').style.display = mode === 'single' ? '' : 'none';
+    document.getElementById('grid-mode').style.display = mode === 'grid' ? '' : 'none';
+    document.getElementById('llm-mode').style.display = mode === 'llm' ? '' : 'none';
+    document.getElementById('btn-single').className = mode === 'single' ? '' : 'secondary';
+    document.getElementById('btn-grid').className = mode === 'grid' ? '' : 'secondary';
+    document.getElementById('btn-llm').className = mode === 'llm' ? '' : 'secondary';
+}
+
+function generateStrategy() {
+    var desc = document.getElementById('llm-desc').value.trim();
+    if (!desc) return;
+    var status = document.getElementById('llm-status');
+    status.innerHTML = '<span class=\"badge badge-warning\">AI思考中...</span>';
+    fetch('/api/backtest/generate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({description: desc}),
+    }).then(r => r.json()).then(data => {
+        if (data.error) {
+            status.innerHTML = '<span class=\"text-red\">❌ ' + data.error + '</span>';
+            return;
+        }
+        var h = '<div style=\"font-size:12px;margin-top:8px;\">';
+        h += '<div><b>策略:</b> ' + data.name + '</div>';
+        if (data.reasoning) h += '<div><b>理由:</b> ' + data.reasoning + '</div>';
+        h += '<div><b>参数:</b> ' + JSON.stringify(data.config) + '</div>';
+        h += '</div>';
+        document.getElementById('llm-result').innerHTML = h;
+        status.innerHTML = '<span class=\"badge badge-green\">回测已提交</span>';
+        trackJob(data.job_id);
+        setTimeout(loadJobHistory, 1000);
+    }).catch(function() {
+        status.innerHTML = '<span class=\"text-red\">生成失败</span>';
+    });
+}
+
+function submitGrid(e) {
+    e.preventDefault();
+    var param = document.getElementById('grid-param').value;
+    var valuesStr = document.getElementById('grid-values').value;
+    var values = valuesStr.split(',').map(function(v) {
+        var n = parseFloat(v.trim());
+        return isNaN(n) ? v.trim() : n;
+    });
+    var baseConfig = {};
+    var form = document.getElementById('backtest-form');
+    var fd = new FormData(form);
+    fd.forEach(function(v, k) {
+        if (k === 'take_profit_tiers') baseConfig[k] = v.split(',').map(Number);
+        else if (k === 'abs_stop' || k === 'trailing_stop') baseConfig[k] = parseFloat(v)/100;
+        else if (k === 'pool_size' || k === 'ma_exit_days' || k === 'max_position_pct') baseConfig[k] = parseInt(v);
+        else baseConfig[k] = v;
+    });
+
+    document.getElementById('grid-status').innerHTML = '<span class="badge badge-warning">提交中...</span>';
+    fetch('/api/backtest/grid', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({param: param, values: values, base_config: baseConfig}),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        document.getElementById('grid-status').innerHTML = '<span class="badge badge-green">运行中...</span>';
+        pollGridJob(data.job_id);
+    });
+}
+
+function pollGridJob(jobId) {
+    var attempts = 0;
+    var interval = setInterval(function() {
+        attempts++;
+        fetch('/api/backtest/jobs/' + jobId)
+        .then(function(r) { return r.json(); })
+        .then(function(job) {
+            if (job.status === 'done') {
+                clearInterval(interval);
+                document.getElementById('grid-status').innerHTML = '<span class="badge badge-green">完成</span>';
+                showGridResults(job.result);
+            } else if (job.status === 'error') {
+                clearInterval(interval);
+                document.getElementById('grid-status').innerHTML = '<span class="badge badge-bear">' + (job.error || '错误') + '</span>';
+            } else {
+                document.getElementById('grid-status').innerHTML = '<span class="badge badge-warning">' + (job.progress || 0) + '%</span>';
+            }
+        });
+        if (attempts > 300) { clearInterval(interval); }
+    }, 2000);
+}
+
+function showGridResults(result) {
+    if (!result || !result.results) return;
+    var html = '<table><tr><th>' + result.param + '</th><th>年化</th><th>夏普</th><th>回撤</th><th>月胜率</th></tr>';
+    result.results.forEach(function(r) {
+        if (r.error) {
+            html += '<tr><td>' + r.value + '</td><td colspan="4" class="text-red">' + r.error + '</td></tr>';
+        } else {
+            html += '<tr><td><b>' + r.value + '</b></td><td>' + r.annual + '</td><td>' + r.sharpe + '</td><td>' + r.mdd + '</td><td>' + r.win_rate + '</td></tr>';
+        }
+    });
+    html += '</table>';
+    document.getElementById('grid-results').innerHTML = html;
+}
+</script>
+{% endblock %}

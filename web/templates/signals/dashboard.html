@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+{% block title %}选股信号 — Quant Circle{% endblock %}
+{% block content %}
+
+<div class="card" style="padding:14px 20px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-weight:700;">选股信号</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--muted);" id="signal-header-date">—</span>
+        <span style="font-size:11px;color:var(--muted);" id="signal-header-regime">—</span>
+    </div>
+    <div style="margin-top:6px;font-size:12px;color:var(--muted);line-height:1.6;">
+        筛选范围：全市场流动性前列股票 → 排除短期过热（连续暴涨）→ 优选回调至关键均线附近 → 综合技术面与资金面打分排序。
+        绿色 ✅ 表示通过全部筛选条件。回调缩量属正常调整特征，不代表弱势。
+    </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <h3 style="margin:0;">今日选股结果</h3>
+        <span style="font-size:12px;color:var(--muted);">选出 </span>
+        <span style="font-size:13px;font-weight:700;" id="total-count">—</span>
+        <span style="font-size:12px;color:var(--muted);"> 只，显示 </span>
+        <input type="number" id="pick-count" value="10" min="1" max="30" style="width:65px;font-size:13px;padding:4px 8px;" title="显示数量">
+        <span style="font-size:12px;color:var(--muted);">只</span>
+        <input type="number" id="capital-input" value="200000" min="10000" step="10000" style="width:110px;font-size:13px;padding:4px 8px;margin-left:8px;" title="投入资金">
+        <span style="font-size:12px;color:var(--muted);">元</span>
+        <button class="secondary" style="font-size:11px;padding:4px 8px;" id="toggle-btn" onclick="toggleResults()">默认结果</button>
+        <button style="font-size:12px;padding:4px 10px;" id="refresh-btn" onclick="refreshCandidates()">刷新信号</button>
+    </div>
+    <div id="refresh-msg" style="font-size:11px;margin-top:4px;"></div>
+    <div id="candidates-list"><div class="text-muted" style="text-align:center;padding:24px;">加载中...</div></div>
+    <div id="allocation-summary" style="margin-top:12px;"></div>
+</div>
+
+<div id="stock-detail" style="display:none;margin-top:16px;"></div>
+
+<script>
+// ── Helpers ──
+function fmt(v, d) { d = d || 1; var n = parseFloat(v); return isNaN(n) ? String(v||'—') : n.toFixed(d); }
+function pctCls(v) { return v >= 0 ? 'text-red' : 'text-green'; }  // A股: 红涨绿跌
+
+// ── Header ──
+fetch('/api/signals/latest').then(r => { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); }).then(data => {
+    var p = data.payload || data;
+    var el1 = document.getElementById('signal-header-date');
+    var el2 = document.getElementById('signal-header-regime');
+    if (el1) el1.textContent = '数据: ' + (p.signal_date || p.date || '—');
+    if (el2) el2.textContent = (p.regime || '').toUpperCase();
+}).catch(function() {});
+
+// ── Quota ──
+function updateQuota(q) {
+    document.getElementById('refresh-msg').textContent =
+        '今日剩余刷新: ' + q.remaining + '/' + q.limit + ' 次';
+}
+fetch('/api/signals/quota').then(r => r.json()).then(updateQuota);
+
+// ── Candidates ──
+function renderCandidates(data) {
+    var el = document.getElementById('candidates-list');
+    var summaryEl = document.getElementById('allocation-summary');
+    if (!data || !data.length) {
+        el.innerHTML = '<div class="text-muted" style="text-align:center;padding:24px;">暂无候选（需盘后资金流数据）</div>';
+        summaryEl.innerHTML = '';
+        return;
+    }
+
+    // Show ALL candidates that passed — no cap
+    var capital = parseFloat(document.getElementById('capital-input').value) || 200000;
+    var pickN = Math.min(data.length, parseInt(document.getElementById('pick-count')?.value) || 10);
+    var selected = data.slice(0, pickN);
+    _totalCount = data.length;
+    var tc = document.getElementById('total-count');
+    if (tc) tc.textContent = _totalCount;
+    var amountPer = capital / pickN;
+
+    var h = '<div class="table-wrap"><table>';
+    h += '<tr><th>#</th><th>代码</th><th>名称</th><th>现价</th><th>权重</th><th>股数</th><th>金额</th><th>十维</th><th>MA10</th><th>状态</th><th></th></tr>';
+    var totalActual = 0;
+    var rows = [];
+    selected.forEach(function(r, i) {
+        if (!r.code || !r.price || isNaN(r.price) || r.price <= 0) return;
+        var shares = Math.floor(amountPer / r.price / 100) * 100;
+        if (shares < 100) shares = 100;
+        var actualAmt = shares * r.price;
+        totalActual += actualAmt;
+        rows.push({r:r, i:i, shares:shares, actualAmt:actualAmt});
+    });
+
+    rows.forEach(function(row) {
+        var r = row.r, i = row.i;
+        var weight = (row.actualAmt / totalActual * 100);
+        var statusTag = '<span class="badge badge-green">✅ 通过</span>';
+        if (r.has_grab) statusTag += ' 🔥';
+        h += '<tr>';
+        h += '<td class="text-muted">'+(i+1)+'</td>';
+        h += '<td><b>'+r.code+'</b></td><td>'+(r.name||'')+'</td>';
+        h += '<td>'+fmt(r.price,2)+'</td>';
+        h += '<td>'+weight.toFixed(1)+'%</td>';
+        h += '<td>'+(row.shares/100)+'手 ('+row.shares+'股)</td>';
+        h += '<td>¥'+row.actualAmt.toLocaleString()+'</td>';
+        h += '<td class="'+(r.score>=8?'text-green':r.score>=5?'':'text-red')+'"><b>'+r.score+'</b></td>';
+        h += '<td class="'+(r.near_ma10?'text-green':'text-muted')+'">'+(r.near_ma10?'附近':(r.ma10_above?'上':'下'))+'</td>';
+        h += '<td>'+statusTag+'</td>';
+        h += '<td><button class="secondary" style="font-size:11px;padding:2px 6px;" onclick="showDetail(\''+r.code+'\')">分析</button></td></tr>';
+    });
+    h += '</table></div>';
+    el.innerHTML = h;
+
+    // Summary
+    var left = capital - totalActual;
+    summaryEl.innerHTML = '<div class="grid-4" style="margin-top:8px;">' +
+        '<div class="stat"><div class="value" style="font-size:16px;">'+data.length+'</div><div class="label">选股数</div></div>' +
+        '<div class="stat"><div class="value" style="font-size:16px;">¥'+totalActual.toLocaleString()+'</div><div class="label">投入市值</div></div>' +
+        '<div class="stat"><div class="value" style="font-size:16px;'+(left>=0?'color:var(--green)':'color:var(--red)')+'">¥'+left.toLocaleString()+'</div><div class="label">剩余现金</div></div>' +
+        '<div class="stat"><div class="value" style="font-size:16px;">'+(capital>0?(totalActual/capital*100).toFixed(0):'—')+'%</div><div class="label">仓位</div></div>' +
+        '</div>';
+}
+
+function refreshCandidates() {
+    var btn = document.getElementById('refresh-btn'), msg = document.getElementById('refresh-msg');
+    btn.disabled = true; btn.textContent = '刷新中...';
+    var limit = document.getElementById('pick-count').value || 30;
+    fetch('/api/signals/candidates?limit='+limit+'&refresh=true').then(function(r) {
+        if (r.status === 429) return r.json().then(function(d) { throw new Error(d.detail); });
+        return r.json();
+    }).then(function(data) {
+        btn.disabled = false; btn.textContent = '刷新信号';
+        _lastCandidates = data.candidates || data;
+        _showingDefault = false;
+        try { sessionStorage.setItem(storageKey + '_last', JSON.stringify(_lastCandidates)); } catch(e) {}
+        renderCandidates(_lastCandidates);
+        updateButtons();
+        if (data.quota) updateQuota(data.quota);
+    }).catch(function(err) {
+        btn.disabled = false; btn.textContent = '刷新信号';
+        msg.innerHTML = '<span class="text-red">'+err.message+'</span>';
+    });
+}
+
+// Re-render on input change (no API call)
+var _lastCandidates = [];
+var _defaultCandidates = [];
+var _showingDefault = true;
+var _totalCount = 0;
+
+// Persist last refresh across page navigation (keyed by page, not user)
+try {
+    var storageKey = 'signal_cache_' + window.location.pathname;
+    var saved = sessionStorage.getItem(storageKey + '_last');
+    if (saved) { _lastCandidates = JSON.parse(saved); _showingDefault = false; }
+    var savedDef = sessionStorage.getItem(storageKey + '_default');
+    if (savedDef) _defaultCandidates = JSON.parse(savedDef);
+} catch(e) {}
+
+function updateButtons() {
+    var btn = document.getElementById('toggle-btn');
+    var sameContent = JSON.stringify(_lastCandidates) === JSON.stringify(_defaultCandidates);
+    if (_showingDefault) {
+        btn.textContent = (_lastCandidates.length && !sameContent) ? '上次刷新' : '默认结果';
+        btn.className = 'secondary';
+    } else {
+        btn.textContent = '默认结果';
+        btn.className = 'secondary';
+    }
+}
+
+function toggleResults() {
+    if (_showingDefault && _lastCandidates.length && _lastCandidates !== _defaultCandidates) {
+        // Switch to last refresh
+        _showingDefault = false;
+        renderCandidates(_lastCandidates);
+    } else {
+        // Switch to default
+        _showingDefault = true;
+        loadDefaultCandidates();
+    }
+    updateButtons();
+}
+
+// Re-render on input change (no API call)
+document.getElementById('capital-input').addEventListener('input', function() {
+    var data = _showingDefault ? _defaultCandidates : _lastCandidates;
+    if (data.length) renderCandidates(data);
+});
+document.getElementById('pick-count').addEventListener('input', function() {
+    var data = _showingDefault ? _defaultCandidates : _lastCandidates;
+    if (data.length) renderCandidates(data);
+});
+
+function loadDefaultCandidates() {
+    var el = document.getElementById('candidates-list');
+    el.innerHTML = '<div class="text-muted" style="text-align:center;padding:24px;">加载默认结果...</div>';
+    fetch('/api/signals/candidates?limit=50').then(function(r) {
+        if (!r.ok) throw new Error('HTTP '+r.status);
+        return r.json();
+    }).then(function(data) {
+        _defaultCandidates = data.candidates || data;
+        try { sessionStorage.setItem(storageKey + '_default', JSON.stringify(_defaultCandidates)); } catch(e) {}
+        if (_showingDefault) {
+            _lastCandidates = _defaultCandidates;
+            renderCandidates(_defaultCandidates);
+        }
+        if (data.quota) updateQuota(data.quota);
+    }).catch(function(err) {
+        el.innerHTML = '<div class="text-muted" style="text-align:center;padding:24px;">加载失败 — ' + err.message + '</div>';
+    });
+}
+
+// Initial load — show cached results or prompt to refresh manually
+function initialLoad() {
+    var el = document.getElementById('candidates-list');
+    if (!el) return;
+    el.innerHTML = '<div class=\"text-muted\" style=\"text-align:center;padding:24px;\">正在加载选股结果...</div>';
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/api/signals/candidates?limit=50');
+    xhr.onload = function() {
+        if (xhr.status !== 200) { el.innerHTML = '<div class=\"text-muted\">加载失败: HTTP '+xhr.status+'</div>'; return; }
+        try {
+            var data = JSON.parse(xhr.responseText);
+            var cands = data.candidates || data;
+            if (!cands || !cands.length || !cands[0].code) {
+                el.innerHTML = '<div class=\"text-muted\" style=\"text-align:center;padding:32px;\">暂无选股结果<br><small>点击刷新信号获取</small></div>';
+                return;
+            }
+            _defaultCandidates = cands;
+            _lastCandidates = cands;
+            _showingDefault = true;
+            renderCandidates(cands);
+            updateButtons();
+            if (data.quota) updateQuota(data.quota);
+        } catch(e) { el.innerHTML = '<div class=\"text-muted\">解析错误: '+e.message+'</div>'; }
+    };
+    xhr.onerror = function() { el.innerHTML = '<div class=\"text-muted\">网络错误</div>'; };
+    xhr.send();
+
+    fetch('/api/signals/quota').then(function(r) { return r.json(); }).then(updateQuota);
+}
+
+function loadAIComment(code) {
+    var el = document.getElementById('ai-comment');
+    el.innerHTML = '<span class="text-muted">生成中...</span>';
+    fetch('/api/signals/candidates/'+code+'/ai')
+        .then(r => r.json())
+        .then(data => {
+            el.innerHTML = data.comment || '暂不可用';
+        })
+        .catch(function() { el.innerHTML = '<span class="text-red">生成失败</span>'; });
+}
+
+// ── Stock Detail Popup ──
+function showDetail(code) {
+    var el = document.getElementById('stock-detail');
+    el.style.display = 'block';
+    el.innerHTML = '<div class="card"><div class="text-muted">加载中...</div></div>';
+    el.scrollIntoView({behavior:'smooth'});
+    fetch('/api/signals/candidates/'+code).then(r => r.json()).then(data => {
+        var p = data.price || {}, t = data.technicals || {}, f = data.financials || {};
+        var s = data.sector || {}, l = data.lite || {}, v = data.verdict || {};
+        var cur = p.cur || 0, prev = p.prev || cur;
+        var chg = prev > 0 ? ((cur/prev-1)*100) : 0;
+
+        var h = '<div class="card" style="position:relative;max-width:800px;">';
+        h += '<button class="secondary" style="position:absolute;top:12px;right:12px;" onclick="document.getElementById(\'stock-detail\').style.display=\'none\'">✕</button>';
+
+        // Header
+        var trendIcon = v.trend==='多头'?'🟢':v.trend==='震荡'?'🟡':v.trend==='弱势'?'🟠':'🔴';
+        h += '<h3>'+code+' '+(p.name||'')+' <span style="font-size:18px;">¥'+cur.toFixed(2)+'</span>';
+        h += ' <span class="'+(chg>=0?'text-green':'text-red')+'" style="font-size:14px;">'+(chg>=0?'+':'')+chg.toFixed(1)+'%</span></h3>';
+        h += '<div style="font-size:12px;color:var(--muted);margin-top:4px;">'+trendIcon+' '+v.trend+' | MACD:'+(v.macd_signal||'—')+' | 量比:'+(p.vol||'—')+'</div>';
+
+        // Stop alert
+        if (data.stop_alert) {
+            h += '<div class="flash flash-error" style="margin-top:8px;">⚠️ '+data.stop_alert+'</div>';
+        }
+
+        // Technical indicators
+        h += '<div style="margin-top:16px;"><b style="font-size:13px;color:var(--muted);">技术指标</b></div>';
+        h += '<div class="grid-4" style="margin-top:8px;">';
+        h += '<div class="stat"><div class="value" style="font-size:14px;">'+(t.ma20?t.ma20.toFixed(2):'—')+'</div><div class="label">MA20</div></div>';
+        h += '<div class="stat"><div class="value" style="font-size:14px;">'+(t.ma60?t.ma60.toFixed(2):'—')+'</div><div class="label">MA60</div></div>';
+        h += '<div class="stat"><div class="value" style="font-size:14px;">'+(t.ma120?t.ma120.toFixed(2):'—')+'</div><div class="label">MA120</div></div>';
+        h += '<div class="stat"><div class="value" style="font-size:14px;">'+(t.boll_low?t.boll_low.toFixed(2):'—')+'</div><div class="label">布林下轨</div></div>';
+        h += '<div class="stat"><div class="value" style="font-size:14px;">'+(t.rsi14?t.rsi14.toFixed(0):'—')+'</div><div class="label">RSI(14)</div></div>';
+        h += '<div class="stat"><div class="value" style="font-size:14px;">'+(t.atr_pct?t.atr_pct.toFixed(1)+'%':'—')+'</div><div class="label">ATR</div></div>';
+        h += '<div class="stat"><div class="value" style="font-size:14px;">'+(t.ret20?t.ret20.toFixed(1)+'%':'—')+'</div><div class="label">20日涨跌</div></div>';
+        h += '<div class="stat"><div class="value" style="font-size:14px;">'+(t.ret60?t.ret60.toFixed(1)+'%':'—')+'</div><div class="label">60日涨跌</div></div>';
+        h += '</div>';
+
+        // MA10 + short-term
+        if (l) {
+            h += '<div class="grid-4" style="margin-top:4px;">';
+            h += '<div class="stat"><div class="value" style="font-size:13px;">'+(l.ma10?l.ma10.toFixed(2):'—')+'</div><div class="label">MA10</div></div>';
+            h += '<div class="stat"><div class="value" style="font-size:13px;'+(l.dh<-5?'color:var(--green)':'')+'">'+(l.dh?l.dh.toFixed(0)+'%':'—')+'</div><div class="label">距20日高</div></div>';
+            h += '<div class="stat"><div class="value" style="font-size:13px;'+(l.ret20>30?'color:var(--red)':'')+'">'+(l.ret20?l.ret20.toFixed(1)+'%':'—')+'</div><div class="label">20日涨幅</div></div>';
+            h += '<div class="stat"><div class="value" style="font-size:13px;">'+(l.cons_up||0)+'连涨 / '+(l.cons_down||0)+'连跌</div><div class="label">连涨/连跌</div></div>';
+            h += '</div>';
+        }
+
+        // Volume-price context (not a warning — pullback entry is expected)
+        if (t.divergence) {
+            var divText = t.divergence;
+            // Translate common patterns
+            if (divText.indexOf('价跌量缩') !== -1) divText = '回调缩量（正常调整）';
+            else if (divText.indexOf('价升量缩') !== -1) divText = '上涨缩量（需关注）';
+            else if (divText.indexOf('价升量增') !== -1) divText = '放量上涨（强势）';
+            else if (divText.indexOf('价跌量增') !== -1) divText = '放量下跌（需警惕）';
+            var divColor = divText.indexOf('正常')!==-1?'var(--muted)':divText.indexOf('强势')!==-1?'var(--green)':'var(--yellow)';
+            h += '<div style="margin-top:8px;font-size:12px;color:'+divColor+';">📊 量价: '+divText+'</div>';
+        }
+
+        // Financials
+        if (f && f.eps) {
+            h += '<div style="margin-top:16px;"><b style="font-size:13px;color:var(--muted);">基本面</b> <span class="badge">'+(f.tag||'')+'</span></div>';
+            h += '<div class="grid-4" style="margin-top:8px;">';
+            h += '<div class="stat"><div class="value" style="font-size:13px;">'+(f.pe?f.pe.toFixed(1):'—')+'</div><div class="label">PE</div></div>';
+            h += '<div class="stat"><div class="value" style="font-size:13px;">'+(f.pb?f.pb.toFixed(1):'—')+'</div><div class="label">PB</div></div>';
+            h += '<div class="stat"><div class="value" style="font-size:13px;">'+(f.roe?f.roe.toFixed(1)+'%':'—')+'</div><div class="label">ROE</div></div>';
+            h += '<div class="stat"><div class="value" style="font-size:13px;">'+(f.eps?f.eps.toFixed(2):'—')+'</div><div class="label">EPS</div></div>';
+            h += '<div class="stat"><div class="value" style="font-size:13px;'+(f.revenue_yoy>0?'color:var(--green)':'color:var(--red)')+'">'+(f.revenue_yoy?f.revenue_yoy.toFixed(1)+'%':'—')+'</div><div class="label">营收YoY</div></div>';
+            h += '<div class="stat"><div class="value" style="font-size:13px;'+(f.profit_yoy>0?'color:var(--green)':'color:var(--red)')+'">'+(f.profit_yoy?f.profit_yoy.toFixed(1)+'%':'—')+'</div><div class="label">利润YoY</div></div>';
+            h += '<div class="stat"><div class="value" style="font-size:13px;">'+(f.gross_margin?f.gross_margin.toFixed(1)+'%':'—')+'</div><div class="label">毛利率</div></div>';
+            h += '<div class="stat"><div class="value" style="font-size:13px;">'+(f.debt_ratio?f.debt_ratio.toFixed(1)+'%':'—')+'</div><div class="label">负债率</div></div>';
+            h += '</div>';
+        }
+
+        // Sector
+        if (s && s.sector) {
+            h += '<div style="margin-top:16px;"><b style="font-size:13px;color:var(--muted);">行业对比</b></div>';
+            h += '<div style="font-size:13px;margin-top:4px;">行业: <b>'+s.sector+'</b> | 排名: <b>'+(s.rank||'—')+'/'+(s.total||'—')+'</b>';
+            if (s.vs_sector != null) {
+                h += ' | 相对行业: <span class="'+(s.vs_sector>=0?'text-green':'text-red')+'">'+(s.vs_sector>=0?'+':'')+s.vs_sector.toFixed(1)+'%</span>';
+            }
+            h += '</div>';
+        }
+
+        // Price range
+        h += '<div style="margin-top:12px;font-size:12px;color:var(--muted);">';
+        h += '今开:'+(p.open||'—')+' 高:'+(p.high||'—')+' 低:'+(p.low||'—');
+        h += ' | 60日低:'+(t.low60?t.low60.toFixed(2):'—')+' 60日高:'+(t.high60?t.high60.toFixed(2):'—');
+        h += '</div>';
+
+        // AI comment section
+        h += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">';
+        h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
+        h += '<b style="font-size:13px;color:var(--muted);">AI 解读</b>';
+        h += '<button class="secondary" style="font-size:11px;padding:2px 8px;" onclick="loadAIComment(\''+code+'\')">生成</button>';
+        h += '</div>';
+        h += '<div id="ai-comment" style="font-size:13px;line-height:1.7;color:var(--text);"></div>';
+        h += '</div>';
+
+        h += '</div>';
+        el.innerHTML = h;
+    }).catch(function() {
+        document.getElementById('stock-detail').innerHTML = '<div class="card"><div class="text-red">加载失败</div></div>';
+    });
+}
+initialLoad();
+</script>
+{% endblock %}

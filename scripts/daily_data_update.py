@@ -136,6 +136,62 @@ def _update_index_daily(target_date: str):
             logger.debug(f"  指数{code}更新跳过: {e}")
 
 
+# 本地日线库原先只有个股 + 4个指数，ETF 全缺 —— 588000科创50ETF 是最大持仓却没日线，
+# MA10/止损监控对它一直是瞎的。东财已封本机IP，走新浪 fund_etf_hist_sina。
+ETF_BASE = ["588000", "510300", "510500", "159915"]
+
+
+def _etf_sina_symbol(code: str):
+    """ETF代码 → 新浪symbol。转债(11/12)、发债(7x)、老三板(4x)都不会命中。"""
+    if code.startswith(("50", "51", "52", "56", "58")):
+        return "sh" + code
+    if code.startswith("15"):
+        return "sz" + code
+    return None
+
+
+def _etf_codes():
+    """基础ETF + 持仓里出现的ETF —— 买了新ETF不用改代码。"""
+    codes = set(ETF_BASE)
+    try:
+        import csv
+        with open("config/my_holdings.csv") as f:
+            for row in csv.DictReader(f):
+                c = str(row.get("code", "")).strip().zfill(6)
+                if _etf_sina_symbol(c):
+                    codes.add(c)
+    except Exception as e:
+        logger.debug(f"  读持仓ETF失败: {e}")
+    return sorted(codes)
+
+
+def _update_etf_daily(today: str):
+    """新浪一次返回全history，直接交给 save_daily 按date去重 —— 天然自愈，缺多少补多少。"""
+    import akshare as ak
+    codes = _etf_codes()
+    ok = 0
+    for code in codes:
+        try:
+            raw = ak.fund_etf_hist_sina(symbol=_etf_sina_symbol(code))
+            if raw is None or raw.empty:
+                logger.warning(f"  ETF{code}: 返回空")
+                continue
+            raw = raw.copy()
+            raw["date"] = pd.to_datetime(raw["date"])
+            raw["code"] = code
+            for col in ("amount", "pct_chg"):
+                if col not in raw.columns:
+                    raw[col] = 0.0
+            before = len(load_daily(code, "2005-01-01", today))
+            save_daily(code, raw)
+            after = len(load_daily(code, "2005-01-01", today))
+            logger.info(f"  ETF{code}: 新增{after-before}天 → 共{after}根, 最新{raw['date'].max().date()}")
+            ok += 1
+        except Exception as e:
+            logger.warning(f"  ETF{code} 更新失败: {e}")
+    logger.info(f"ETF日线更新: {ok}/{len(codes)} 成功")
+
+
 def _sync_csi800_index_meta():
     """把 daily/000906(干净指数日线) 的新日期同步进 csi800_index meta。
     策略择时 get_position_ratio 读的是 meta, 而 meta 一直没人写 → MA200会冻结(曾停在7/7)。
@@ -208,7 +264,9 @@ def update_today():
                     new_close = pd.to_numeric(df["close"], errors="coerce").iloc[-1]
                     if not pd.isna(new_close) and new_close > 0:
                         try:
-                            old = load_daily(code, None, today)  # 全部历史
+                            # 不能传 None：pd.Timestamp(None)=NaT → range(nan) 抛TypeError，
+                            # 被下面的 except 吞掉 → 这道脏数据防线一直是死的（2026-08-25 修）
+                            old = load_daily(code, "2005-01-01", today)  # 全部历史
                             if not old.empty and "close" in old.columns:
                                 old_close = pd.to_numeric(old["close"], errors="coerce").dropna()
                                 if len(old_close) > 0:
@@ -232,6 +290,9 @@ def update_today():
 
     # 3.5. 更新指数日线（用stock_zh_index_daily, 避开个股代码冲突）
     _update_index_daily(today)
+
+    # 3.55. ETF日线（stock_info里没有ETF, 上面的全市场循环覆盖不到）
+    _update_etf_daily(today)
 
     # 3.6. 同步 csi800_index meta(策略MA200择时用的基准, 否则会冻结)
     _sync_csi800_index_meta()

@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}管理 — Quant Circle{% endblock %}
+{% block content %}
+
+<div class="grid-2">
+    <div class="card"><h3>快照状态</h3><div id="snapshot-status">加载中...</div></div>
+    <div class="card">
+        <h3>邀请码</h3>
+        <button onclick="genInvite()" style="margin-bottom:8px;">生成新邀请码</button>
+        <div id="invite-msg"></div>
+        <div id="invite-list">加载中...</div>
+    </div>
+</div>
+
+<!-- Add User -->
+<div class="card" style="margin-top:16px;">
+    <h3 style="cursor:pointer;" onclick="var e=document.getElementById('add-user-form');e.style.display=e.style.display==='none'?'':'none';">+ 新增用户</h3>
+    <div id="add-user-form" style="display:none;margin-top:12px;">
+        <form onsubmit="createUser(event)" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+            <div><label style="font-size:11px;color:var(--muted);">用户名</label><input type="text" id="new-username" required style="width:110px;"></div>
+            <div><label style="font-size:11px;color:var(--muted);">密码</label><input type="password" id="new-password" required minlength="4" style="width:110px;"></div>
+            <div><label style="font-size:11px;color:var(--muted);">角色</label><select id="new-role" style="width:90px;"><option value="member">成员</option><option value="admin">管理员</option></select></div>
+            <div>
+                <label style="font-size:12px;color:var(--text);display:block;margin-bottom:2px;">📅 有效期</label>
+                <input type="date" id="new-expiry" style="width:145px;cursor:pointer;border:1px solid var(--blue);background:rgba(59,130,246,0.08);font-size:13px;padding:7px 10px;" title="点击日历图标选择到期日期，留空=永久有效">
+                <div style="font-size:10px;color:var(--muted);margin-top:2px;">留空=永久有效</div>
+            </div>
+            <button type="submit" style="font-size:12px;padding:6px 12px;">创建</button>
+        </form>
+        <div id="create-msg" style="margin-top:8px;font-size:12px;"></div>
+    </div>
+</div>
+
+<!-- User List -->
+<div class="card" style="margin-top:16px;">
+    <h3>用户列表</h3>
+    <div id="user-list">加载中...</div>
+</div>
+
+<!-- Expiry Date Modal -->
+<div id="expiry-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;">
+    <div class="card" style="width:300px;">
+        <h3>📅 设置有效期</h3>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">点击下方日历图标选择到期日期</div>
+        <form onsubmit="saveExpiry(event)" style="display:flex;flex-direction:column;gap:8px;">
+            <input type="date" id="expiry-date" style="font-size:16px;padding:12px;cursor:pointer;border:2px solid var(--blue);background:rgba(59,130,246,0.06);border-radius:8px;text-align:center;" required>
+            <div style="display:flex;gap:8px;">
+                <button type="submit">确认</button>
+                <button type="button" class="secondary" onclick="clearExpiry()">设为永久</button>
+                <button type="button" class="secondary" onclick="document.getElementById('expiry-modal').style.display='none'">取消</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="reset-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;">
+    <div class="card" style="width:300px;">
+        <h3>重置密码</h3>
+        <form onsubmit="doResetPw(event)" style="display:flex;flex-direction:column;gap:8px;">
+            <input type="password" id="reset-new-pw" placeholder="新密码 (至少4字符)" required minlength="4">
+            <div style="display:flex;gap:8px;">
+                <button type="submit">确认重置</button>
+                <button type="button" class="secondary" onclick="document.getElementById('reset-modal').style.display='none'">取消</button>
+            </div>
+        </form>
+        <div id="reset-msg" style="margin-top:8px;font-size:12px;"></div>
+    </div>
+</div>
+
+<script>
+// ── Load all data on page load ──
+function genInvite() {
+    fetch('/api/auth/invites', {method:'POST'}).then(r=>r.json()).then(d=>{
+        document.getElementById('invite-msg').innerHTML = d.code
+            ? '<div class="flash badge-green" style="font-size:13px;">邀请码: <code style="font-size:14px;font-weight:700;">'+d.code+'</code></div>'
+            : '';
+        loadAll();
+    });
+}
+
+function loadAll() {
+    fetch('/api/admin/snapshots').then(r=>r.json()).then(renderSnapshots);
+    fetch('/api/admin/users').then(r=>r.json()).then(renderUsers);
+    fetch('/api/admin/invites').then(r=>r.json()).then(renderInvites);
+}
+loadAll();
+
+// ── Snapshots ──
+function renderSnapshots(data) {
+    var nameMap = {regime:'市场状态', signal:'选股信号', ma10_triggers:'MA10触发', candidates:'选股候选'};
+    var snaps = data.snapshots || {}, h = '<table><tr><th>快照</th><th>时间</th><th>操作</th></tr>';
+    Object.keys(snaps).sort().forEach(function(n) {
+        var label = nameMap[n] || n;
+        h += '<tr><td><b>'+label+'</b></td><td style="font-size:12px;">'+(snaps[n].computed_at||'—')+'</td>';
+        h += '<td><button class="secondary" style="font-size:11px;padding:2px 8px;" onclick="refreshSnap(\''+n+'\')">刷新</button></td></tr>';
+    });
+    document.getElementById('snapshot-status').innerHTML = h + '</table>';
+}
+function refreshSnap(name) {
+    fetch('/api/admin/refresh/'+name, {method:'POST'}).then(function() { setTimeout(loadAll, 2000); });
+}
+
+// ── Invites ──
+function renderInvites(data) {
+    var h = '<table><tr><th>邀请码</th><th>状态</th><th>创建</th><th>过期</th><th></th></tr>';
+    if (!data.length) h += '<tr><td colspan="5" class="text-muted">暂无</td></tr>';
+    data.forEach(function(i) {
+        h += '<tr><td><code style="background:var(--bg);padding:2px 6px;border-radius:3px;">'+i.code+'</code></td>';
+        h += '<td>'+(i.used?'<span class="badge badge-bear">已用</span>':'<span class="badge badge-green">可用</span>')+'</td>';
+        h += '<td style="font-size:11px;">'+(i.created_at||'')+'</td>';
+        h += '<td style="font-size:11px;">'+(i.expires_at||'').substring(0,10)+'</td>';
+        h += '<td><button class="secondary" style="font-size:10px;padding:2px 6px;color:var(--red);" onclick="deleteInvite(\''+i.code+'\')">删除</button></td></tr>';
+    });
+    document.getElementById('invite-list').innerHTML = h + '</table>';
+}
+
+// ── Users ──
+function renderUsers(users) {
+    var h = '<div class="table-wrap"><table>';
+    h += '<tr><th>用户名</th><th>角色</th><th>状态</th><th>有效期</th><th>注册码</th><th>最后登录</th><th style="min-width:260px;">操作</th></tr>';
+    users.forEach(function(u) {
+        var today = new Date().toISOString().substring(0,10);
+        var expired = u.expires_at && u.expires_at < today;
+        var activeBadge = u.is_active ? '<span class="badge badge-green">启用</span>' : '<span class="badge badge-bear">禁用</span>';
+        var expBadge = !u.expires_at ? '<span class="text-muted">永久</span>'
+            : (expired ? '<span class="badge badge-bear">'+u.expires_at+'</span>' : '<span>'+u.expires_at+'</span>');
+
+        h += '<tr id="row-'+u.username+'">';
+        h += '<td><b>'+u.username+'</b>'+(u.role==='admin'?' ⚡':'')+'</td>';
+        h += '<td>'+u.role+'</td>';
+        h += '<td id="active-'+u.username+'">'+activeBadge+'</td>';
+        h += '<td id="expiry-'+u.username+'" style="font-size:12px;">'+expBadge+'</td>';
+        h += '<td style="font-size:11px;">'+u.invite_code+'</td>';
+        h += '<td style="font-size:11px;">'+(u.last_login||'—')+'</td>';
+        h += '<td style="font-size:11px;">';
+        h += '<button class="secondary" style="padding:2px 6px;margin:2px;" onclick="toggleActive(\''+u.username+'\','+u.is_active+')">'+(u.is_active?'禁用':'启用')+'</button> ';
+        h += '<button class="secondary" style="padding:2px 6px;margin:2px;" onclick="toggleRole(\''+u.username+'\',\''+u.role+'\')">'+(u.role==='admin'?'降为成员':'升管理员')+'</button> ';
+        h += '<button class="secondary" style="padding:2px 6px;margin:2px;" onclick="setExpiry(\''+u.username+'\',\''+(u.expires_at||'')+'\')">有效期</button> ';
+        h += '<button class="secondary" style="padding:2px 6px;margin:2px;" onclick="resetPw(\''+u.username+'\')">密码</button> ';
+        h += '<button class="secondary" style="padding:2px 6px;margin:2px;color:var(--red);" onclick="delUser(\''+u.username+'\')">删除</button>';
+        h += '</td></tr>';
+    });
+    document.getElementById('user-list').innerHTML = h + '</table></div>';
+}
+
+// ── User actions ──
+function createUser(e) {
+    e.preventDefault();
+    var fd = new FormData();
+    fd.append('username', document.getElementById('new-username').value);
+    fd.append('password', document.getElementById('new-password').value);
+    fd.append('role', document.getElementById('new-role').value);
+    fd.append('expires_at', document.getElementById('new-expiry').value);
+    fetch('/api/admin/users', {method:'POST', body:fd}).then(r=>r.json()).then(d=>{
+        var m = document.getElementById('create-msg');
+        if (d.status==='created') { m.innerHTML='<span class="text-green">✅ 已创建: '+d.username+'</span>'; loadAll(); }
+        else m.innerHTML = '<span class="text-red">❌ '+(d.detail||'失败')+'</span>';
+    });
+}
+
+function toggleActive(username, current) {
+    var fd = new FormData();
+    fd.append('is_active', current ? 'false' : 'true');
+    fetch('/api/admin/users/'+username, {method:'PUT', body:fd}).then(r=>r.json()).then(function(d) {
+        if (d.status==='updated') loadAll();
+    });
+}
+
+function toggleRole(username, currentRole) {
+    var newRole = currentRole === 'admin' ? 'member' : 'admin';
+    if (newRole === 'member' && !confirm('确定降级 '+username+' 为普通成员？')) return;
+    var fd = new FormData();
+    fd.append('role', newRole);
+    fetch('/api/admin/users/'+username, {method:'PUT', body:fd}).then(r=>r.json()).then(function(d) {
+        if (d.status==='updated') loadAll();
+        else alert(d.detail || 'Failed');
+    });
+}
+
+var expiryTarget = '';
+function setExpiry(username, current) {
+    expiryTarget = username;
+    document.getElementById('expiry-date').value = current || '';
+    document.getElementById('expiry-modal').style.display = 'flex';
+    document.querySelector('#expiry-modal h3').textContent = '有效期 — ' + username;
+}
+function saveExpiry(e) {
+    e.preventDefault();
+    var fd = new FormData();
+    fd.append('expires_at', document.getElementById('expiry-date').value);
+    fetch('/api/admin/users/'+expiryTarget, {method:'PUT', body:fd}).then(r=>r.json()).then(function(d) {
+        if (d.status==='updated') { loadAll(); document.getElementById('expiry-modal').style.display = 'none'; }
+        else alert(d.detail||'Failed');
+    });
+}
+function clearExpiry() {
+    var fd = new FormData();
+    fd.append('expires_at', '');
+    fetch('/api/admin/users/'+expiryTarget, {method:'PUT', body:fd}).then(r=>r.json()).then(function(d) {
+        if (d.status==='updated') { loadAll(); document.getElementById('expiry-modal').style.display = 'none'; }
+    });
+}
+
+var resetPwTarget = '';
+function resetPw(username) {
+    resetPwTarget = username;
+    document.getElementById('reset-new-pw').value = '';
+    document.getElementById('reset-msg').innerHTML = '';
+    document.getElementById('reset-modal').style.display = 'flex';
+}
+function doResetPw(e) {
+    e.preventDefault();
+    var pw = document.getElementById('reset-new-pw').value;
+    if (!pw || pw.length < 4) return;
+    var fd = new FormData();
+    fd.append('new_password', pw);
+    fetch('/api/admin/users/'+resetPwTarget, {method:'PUT', body:fd}).then(r=>r.json()).then(function(d) {
+        if (d.status==='updated') {
+            document.getElementById('reset-msg').innerHTML = '<span class="text-green">✅ 已重置</span>';
+            setTimeout(function() { document.getElementById('reset-modal').style.display = 'none'; }, 1200);
+        } else {
+            document.getElementById('reset-msg').innerHTML = '<span class="text-red">❌ '+(d.detail||'失败')+'</span>';
+        }
+    });
+}
+
+function deleteInvite(code) {
+    if (!confirm('删除邀请码 ' + code + '？')) return;
+    fetch('/api/admin/invites/' + code, {method: 'DELETE'}).then(r => r.json()).then(function(d) {
+        if (d.status === 'deleted') loadAll();
+    });
+}
+
+function delUser(username) {
+    if (!confirm('确定永久删除 '+username+'？不可撤销。')) return;
+    fetch('/api/admin/users/'+username, {method:'DELETE'}).then(r=>r.json()).then(function(d) {
+        if (d.status==='deleted') loadAll();
+        else alert(d.detail||'Failed');
+    });
+}
+</script>
+{% endblock %}

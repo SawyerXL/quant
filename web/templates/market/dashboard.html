@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+{% block title %}市场状态 — Quant Circle{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <div style="font-weight:700;font-size:15px;">市场监控</div>
+    <button class="secondary" style="font-size:11px;padding:3px 8px;" onclick="location.reload()">刷新</button>
+</div>
+
+<!-- Briefing -->
+<div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,rgba(59,130,246,0.06),rgba(139,92,246,0.04));">
+    <h3 id="briefing-title">市场分析</h3>
+    <div id="briefing"><div class="text-muted" style="text-align:center;padding:12px;">加载中...</div></div>
+</div>
+
+<!-- Opening 30min analysis (visible 9:30-11:00) -->
+<div id="opening30-card" style="display:none;margin-bottom:16px;">
+    <div class="card" style="background:linear-gradient(135deg,rgba(245,158,11,0.06),rgba(59,130,246,0.04));">
+        <h3>📈 开盘半小时分析</h3>
+        <div id="opening30"><div class="text-muted" style="text-align:center;padding:12px;">加载中...</div></div>
+    </div>
+</div>
+
+<!-- Regime -->
+<div id="regime-banner"><div class="card" style="text-align:center;padding:24px;"><div class="text-muted">加载中...</div></div></div>
+
+<!-- Chart -->
+<div class="card" style="margin-top:16px;">
+    <h3>MA200偏离 <span class="text-muted" style="font-size:12px;">(上证指数)</span></h3>
+    <div style="position:relative;height:180px;"><canvas id="history-chart"></canvas></div>
+</div>
+
+<!-- Analysis -->
+<div class="card" style="margin-top:16px;">
+    <div id="analysis"><div class="text-muted" style="text-align:center;padding:20px;">加载中...</div></div>
+</div>
+
+<!-- Intraday -->
+<div class="card" style="margin-top:16px;">
+    <h3>盘中行情</h3>
+    <div id="intraday"><div class="text-muted" style="text-align:center;padding:16px;">加载中...</div></div>
+</div>
+
+<script>
+function fmt(v, d) { d = d||1; var n = parseFloat(v); return isNaN(n) ? '—' : n.toFixed(d); }
+function pctCls(v) { return v >= 0 ? 'text-red' : 'text-green'; }
+
+// ── Briefing title by time ──
+var hh = new Date().getHours();
+var dow = new Date().getDay();
+var bt = document.getElementById('briefing-title');
+if (dow === 0 || dow === 6) bt.innerHTML = '周末复盘';
+else if (hh < 12) bt.innerHTML = '早盘简报';
+else if (hh < 15) bt.innerHTML = '盘中分析';
+else bt.innerHTML = '盘后复盘';
+
+fetch('/api/market/analysis').then(r => r.json()).then(data => {
+    var h = '', out = data.outlook || {}, news = data.news || [], ov = data.overseas || {}, tech = data.technical || {}, recap = data.today_recap || {};
+
+    if (data.summary) h += '<div style="font-size:14px;margin-bottom:12px;padding:10px;background:rgba(59,130,246,0.06);border-radius:6px;">' + data.summary + '</div>';
+
+    var dir = out.direction || '';
+    if (dir) h += '<div style="font-size:15px;font-weight:700;margin-bottom:8px;">' + dir + '</div>';
+
+    var factors = out.factors || [];
+    if (factors.length) {
+        h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin-bottom:10px;font-size:12px;">';
+        factors.forEach(function(f) { h += '<div>' + f + '</div>'; });
+        h += '</div>';
+    }
+
+    if (data.is_afternoon && out.today) h += '<div style="font-size:13px;margin-bottom:8px;">' + out.today + '</div>';
+    if (out.weekend_note) h += '<div style="font-size:12px;color:var(--yellow);margin-bottom:8px;">📅 ' + out.weekend_note + '</div>';
+    if (out.suggestion) h += '<div style="font-size:12px;padding:6px 10px;background:rgba(59,130,246,0.06);border-radius:6px;margin-bottom:8px;">' + out.suggestion + '</div>';
+    if (out.levels) h += '<div style="font-size:12px;margin-bottom:8px;">' + out.levels + '</div>';
+
+    if (!data.is_afternoon && ov.sp500_chg != null) {
+        h += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">隔夜 S&P500 <span class="' + pctCls(ov.sp500_chg) + '">' + (ov.sp500_chg>=0?'+':'') + fmt(ov.sp500_chg,2) + '%</span>';
+        if (ov.nasdaq_chg != null) h += ' · 纳斯达克 <span class="' + pctCls(ov.nasdaq_chg) + '">' + (ov.nasdaq_chg>=0?'+':'') + fmt(ov.nasdaq_chg,2) + '%</span>';
+        h += '</div>';
+    }
+
+    if (news.length) h += '<div style="font-size:11px;color:var(--muted);padding-top:6px;border-top:1px solid var(--border);">' + news.slice(0,4).map(function(n){return n.title;}).join(' ｜ ') + '</div>';
+
+    document.getElementById('briefing').innerHTML = h || '<div class="text-muted">数据暂不可用</div>';
+}).catch(function() { document.getElementById('briefing').innerHTML = '<div class="text-muted">数据暂不可用</div>'; });
+
+// ── Opening 30min ──
+fetch('/api/market/opening30').then(r => r.json()).then(data => {
+    if (!data.visible) return;  // Hide outside 9:30-11:00
+    var card = document.getElementById('opening30-card');
+    card.style.display = 'block';
+    var h = '';
+    var stocks = data.stocks || [];
+    if (stocks.length) {
+        h += '<div class="table-wrap"><table style="font-size:12px;">';
+        h += '<tr><th>信号</th><th>代码</th><th>现价</th><th>涨跌</th><th>开盘</th><th>量比</th><th>MA10距</th><th>提示</th></tr>';
+        stocks.forEach(function(s) {
+            var chgCls = s.chg_pct >= 0 ? 'text-red' : 'text-green';
+            h += '<tr>';
+            h += '<td>' + (s.signal||'') + '</td>';
+            h += '<td><b>' + s.code + '</b> ' + (s.name||'') + '</td>';
+            h += '<td>' + s.price.toFixed(2) + '</td>';
+            h += '<td class="' + chgCls + '">' + (s.chg_pct>=0?'+':'') + s.chg_pct.toFixed(1) + '%</td>';
+            h += '<td>' + (s.gap_pct>=0?'+':'') + s.gap_pct.toFixed(1) + '%</td>';
+            h += '<td>' + s.vol_ratio.toFixed(1) + 'x</td>';
+            h += '<td>' + (s.dist_ma10 != null ? (s.dist_ma10>=0?'+':'')+s.dist_ma10.toFixed(1)+'%' : '—') + '</td>';
+            h += '<td>' + (s.advice||'') + '</td></tr>';
+        });
+        h += '</table></div>';
+    }
+    if (data.framework_note) h += '<div style="font-size:11px;color:var(--muted);margin-top:8px;">' + data.framework_note + '</div>';
+    document.getElementById('opening30').innerHTML = h || '<div class="text-muted">暂无数据</div>';
+}).catch(function() {});
+
+fetch('/api/market/regime').then(r => r.json()).then(data => {
+    var p = data.payload || data, verdict = p.verdict || 'normal';
+    var lm = {bear:'BEAR', danger:'DANGER', warning:'WARNING', normal:'NORMAL'};
+    var bm = {bear:'badge-bear', danger:'badge-danger', warning:'badge-warning'};
+    var trans = p.transition || {};
+
+    var h = '<div class="card"><div style="display:flex;align-items:center;gap:24px;">';
+    if (trans.state && trans.state.indexOf('过渡') !== -1) {
+        h += '<span class="badge badge-warning" style="font-size:16px;padding:6px 14px;">' + trans.state + '</span>';
+    } else {
+        h += '<span class="badge ' + (bm[verdict]||'badge-green') + '" style="font-size:16px;padding:6px 14px;">' + (lm[verdict]||verdict) + '</span>';
+    }
+    var live = p.intraday_price;
+    h += '<div class="grid-4" style="flex:1;">';
+    h += '<div class="stat"><div class="value" style="font-size:16px;">' + (live ? live.toFixed(0) : (p.sh_close||'—')) + '</div><div class="label">上证' + (live?' 📡':'') + '</div></div>';
+    h += '<div class="stat"><div class="value" style="font-size:16px;">' + (p.sh_days_below_ma200||0) + 'd</div><div class="label">MA200下</div></div>';
+    var mc = p.margin_cons_days||0, mch = p.margin_chg_5d||0;
+    h += '<div class="stat"><div class="value" style="font-size:16px;">' + (mc > 0 ? mc+'d' : (mch>=0?'+':'')+mch.toFixed(1)+'%') + '</div><div class="label">' + (mc>0?'融资连降':'融资变化') + '</div></div>';
+    h += '<div class="stat"><div class="value" style="font-size:16px;">' + fmt(p.sh_dd_52w) + '%</div><div class="label">52周回撤</div></div>';
+    h += '</div></div>';
+
+    if (trans.hint) h += '<div style="margin-top:8px;font-size:12px;">' + trans.hint + '</div>';
+    if (p.transition_reasons && p.transition_reasons.length) h += '<div style="margin-top:8px;font-size:12px;">📈 ' + p.transition_reasons.join(' | ') + '</div>';
+
+    var alerts = p.alerts || [];
+    if (alerts.length) h += '<div style="margin-top:8px;font-size:11px;color:var(--muted);">' + alerts.map(function(a){ return (a.level==='bear'?'⚫':a.level==='danger'?'🔴':'🟠') + ' ' + a.msg; }).join(' · ') + '</div>';
+
+    h += '</div>';
+    document.getElementById('regime-banner').innerHTML = h;
+}).catch(function() { document.getElementById('regime-banner').innerHTML = '<div class="card" style="text-align:center;padding:24px;"><div class="text-muted">市场状态暂不可用</div></div>'; });
+
+// ── Chart ──
+(function() {
+    var cv = document.getElementById('history-chart'); if (!cv) return;
+    var ctx = cv.getContext('2d');
+    fetch('/api/market/regime/history?limit=60').then(r => r.json()).then(data => {
+        var valid = data.filter(function(d) { return d.ma200_dist_pct != null; });
+        if (valid.length < 2) { ctx.fillStyle = '#6b7280'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('数据不足', 200, 90); return; }
+        new Chart(ctx, {
+            type: 'line', data: {
+                labels: valid.map(function(d) { return d.date; }),
+                datasets: [{ data: valid.map(function(d) { return d.ma200_dist_pct; }), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.06)', fill: true, tension: 0.2, pointRadius: 0, pointHitRadius: 20, pointHoverRadius: 5, pointHoverBackgroundColor: '#fff', borderWidth: 1.5 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(26,29,39,0.95)', titleColor: '#e1e4ea', bodyColor: '#e1e4ea', borderColor: '#2a2d37', borderWidth: 1, padding: 10, displayColors: false,
+                    callbacks: { label: function(ctx) { var v = ctx.raw; return (v>=0?'MA200上方 ':'MA200下方 ') + Math.abs(v).toFixed(1) + '%'; } } } },
+                scales: { x: { ticks: { color: '#6b7280', maxTicksLimit: 10 }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#6b7280', callback: function(v) { return v.toFixed(0)+'%'; } }, grid: { color: 'rgba(255,255,255,0.05)' } } }
+            }
+        });
+    }).catch(function() { ctx.fillStyle = '#6b7280'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('加载失败', 200, 90); });
+})();
+
+// ── Analysis ──
+fetch('/api/market/analysis').then(r => r.json()).then(data => {
+    var ov = data.overseas || {}, tech = data.technical || {}, lv = data.key_levels || {}, news = data.news || [];
+    var h = '<div class="grid-2">';
+
+    h += '<div>';
+    h += '<b style="font-size:12px;color:var(--muted);">消息</b>';
+    if (news.length) {
+        h += '<div style="margin-top:4px;max-height:180px;overflow-y:auto;font-size:12px;">';
+        news.slice(0,5).forEach(function(n) { h += '<div style="padding:3px 0;border-bottom:1px solid var(--border);">' + n.title + '</div>'; });
+        h += '</div>';
+    } else h += '<div class="text-muted" style="font-size:11px;">暂无</div>';
+
+    if (!data.is_afternoon) {
+        h += '<div style="margin-top:12px;"><b style="font-size:12px;color:var(--muted);">外围</b>';
+        if (ov.sp500_chg != null) {
+            h += '<table style="margin-top:4px;font-size:12px;"><tr><th>指数</th><th>涨跌</th></tr>';
+            h += '<tr><td>S&P 500</td><td class="'+pctCls(ov.sp500_chg)+'">'+(ov.sp500_chg>=0?'+':'')+fmt(ov.sp500_chg,2)+'%</td></tr>';
+            if (ov.nasdaq_chg != null) h += '<tr><td>纳斯达克</td><td class="'+pctCls(ov.nasdaq_chg)+'">'+(ov.nasdaq_chg>=0?'+':'')+fmt(ov.nasdaq_chg,2)+'%</td></tr>';
+            h += '</table>';
+        }
+        h += '</div>';
+    }
+    h += '</div>';
+
+    h += '<div>';
+    h += '<b style="font-size:12px;color:var(--muted);">技术</b>';
+    h += '<table style="margin-top:4px;font-size:12px;">';
+    h += '<tr><td>上证</td><td><b>'+(tech.sh_close||'—')+'</b></td></tr>';
+    h += '<tr><td>MA200下</td><td>'+(tech.days_below_ma200||0)+'天</td></tr>';
+    h += '<tr><td>回撤</td><td class="'+(tech.dd_52w<-10?'text-red':'')+'">'+fmt(tech.dd_52w)+'%</td></tr>';
+    h += '<tr><td>融资5d</td><td>'+fmt(tech.margin_chg_5d)+'%</td></tr>';
+    h += '</table>';
+
+    h += '<div style="margin-top:12px;"><b style="font-size:12px;color:var(--muted);">关键位</b>';
+    if (lv.current) {
+        h += '<table style="margin-top:4px;font-size:12px;">';
+        (lv.support||[]).forEach(function(s) { h += '<tr><td><span class="badge badge-green">支撑</span></td><td><b>'+s.level.toFixed(0)+'</b></td><td>'+s.label+'</td></tr>'; });
+        (lv.resistance||[]).forEach(function(r) { h += '<tr><td><span class="badge badge-bear">阻力</span></td><td><b>'+r.level.toFixed(0)+'</b></td><td>'+r.label+'</td></tr>'; });
+        h += '</table>';
+    }
+    h += '</div></div>';
+
+    h += '</div>';
+    document.getElementById('analysis').innerHTML = h;
+}).catch(function() { document.getElementById('analysis').innerHTML = '<div class="text-muted" style="text-align:center;padding:16px;">分析暂不可用</div>'; });
+
+// ── Intraday ──
+fetch('/api/market/intraday').then(r => r.json()).then(data => {
+    var h = '';
+    if (!data.is_trading) {
+        h = '<div class="text-muted" style="text-align:center;padding:12px;">' + (data.message||'非交易时间') + '</div>';
+    } else {
+        var indices = data.indices || [];
+        if (indices.length) {
+            h += '<div class="grid-3" style="font-size:13px;">';
+            indices.slice(0,6).forEach(function(idx) {
+                h += '<div class="stat"><div class="value" style="font-size:14px;">'+idx.price+' <span style="font-size:11px;" class="'+pctCls(idx.chg_pct)+'">'+(idx.chg_pct>=0?'+':'')+idx.chg_pct.toFixed(2)+'%</span></div><div class="label">'+idx.name+'</div></div>';
+            });
+            h += '</div>';
+        }
+        var breadth = data.breadth;
+        if (breadth) {
+            h += '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;">';
+            h += '上涨 ' + breadth.up + ' · 下跌 ' + breadth.down + ' · 涨停 ' + (breadth.limit_up||0) + ' · 跌停 ' + (breadth.limit_down||0);
+            h += ' ｜ 涨跌比 ' + (breadth.up_ratio||'—') + '%';
+            h += '</div>';
+        }
+        if (data.observations && data.observations.length) h += '<div style="font-size:12px;margin-top:6px;">' + data.observations.join(' · ') + '</div>';
+    }
+    document.getElementById('intraday').innerHTML = h || '<div class="text-muted">暂无数据</div>';
+}).catch(function() { document.getElementById('intraday').innerHTML = '<div class="text-muted">盘中数据暂不可用</div>'; });
+
+// ── Opening 30min volume ──
+function renderOpening30(data) {
+    var el = document.getElementById('opening30-card');
+    var box = document.getElementById('opening30');
+    if (!el || !box) return;
+    if (!data.visible) {
+        box.innerHTML = '<div class="text-muted" style="text-align:center;padding:12px;">' + (data.message||'—') + '</div>';
+        return;
+    }
+    var h = '';
+    // Market
+    if (data.market) {
+        var m = data.market;
+        h += '<div style="font-size:12px;margin-bottom:8px;">上证: <b>' + m.signal + '</b> ' + (m.chg_pct>=0?'+':'') + m.chg_pct.toFixed(2) + '% (缺口' + (m.gap_pct>=0?'+':'') + m.gap_pct.toFixed(2) + '%)</div>';
+    }
+    var stocks = data.stocks || [];
+    if (stocks.length) {
+        h += '<table style="font-size:12px;">';
+        h += '<tr><th>持仓</th><th>现价</th><th>开盘量能</th><th>操作提示</th></tr>';
+        stocks.forEach(function(s) {
+            var cls = s.tone==='up' ? 'text-red' : s.tone==='dn' ? 'text-green' : 'text-muted';
+            h += '<tr><td><b>'+s.name+'</b></td><td>'+s.price.toFixed(2)+'</td>';
+            h += '<td class="'+cls+'">'+s.signal+' (量比'+s.vol_ratio.toFixed(1)+'x)</td>';
+            h += '<td class="'+cls+'">'+s.advice+'</td></tr>';
+        });
+        h += '</table>';
+    }
+    h += '<div style="font-size:10px;color:var(--muted);margin-top:6px;">'+(data.framework_note||'')+'</div>';
+    box.innerHTML = h;
+}
+fetch('/api/market/opening30').then(r => r.json()).then(renderOpening30).catch(function() {
+    var box = document.getElementById('opening30');
+    if (box) box.innerHTML = '<div class="text-muted">开盘半小时数据暂不可用</div>';
+});
+
+// Auto-refresh during trading hours
+setInterval(function() { var h = new Date().getHours(); if (h >= 9 && h <= 15) location.reload(); }, 300000);
+</script>
+{% endblock %}

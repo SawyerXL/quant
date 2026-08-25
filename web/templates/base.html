@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Quant Circle{% endblock %}</title>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f1117; --card: #1a1d27; --border: #2a2d37;
+            --text: #e1e4ea; --muted: #6b7280;
+            --green: #22c55e; --red: #ef4444; --yellow: #f59e0b;
+            --blue: #3b82f6; --purple: #8b5cf6;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        nav { background: var(--card); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; height: 52px; gap: 24px; }
+        nav a { color: var(--muted); text-decoration: none; font-size: 14px; padding: 8px 12px; border-radius: 6px; transition: .15s; }
+        nav a:hover, nav a.active { color: var(--text); background: rgba(255,255,255,.06); }
+        nav .brand { font-weight: 700; color: var(--text); font-size: 16px; margin-right: auto; }
+        nav .user { font-size: 13px; color: var(--muted); }
+        .container { max-width: 1280px; margin: 0 auto; padding: 24px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+        .card h3 { font-size: 14px; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: .5px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .stat { text-align: center; }
+        .stat .value { font-size: 28px; font-weight: 700; }
+        .stat .label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .badge-bear { background: rgba(239,68,68,.15); color: var(--red); }
+        .badge-danger { background: rgba(239,68,68,.12); color: #f87171; }
+        .badge-warning { background: rgba(245,158,11,.12); color: var(--yellow); }
+        .badge-green { background: rgba(34,197,94,.12); color: var(--green); }
+        .flash { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+        .flash-error { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--muted); font-weight: 600; font-size: 12px; }
+        tr:hover { background: rgba(255,255,255,.02); }
+        input, button, select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+        button { cursor: pointer; background: var(--blue); border-color: var(--blue); font-weight: 600; }
+        button:hover { opacity: .9; }
+        button.secondary { background: transparent; border-color: var(--border); }
+        .text-green { color: var(--green); } .text-red { color: var(--red); } .text-muted { color: var(--muted); }
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+            .container { padding: 12px; }
+            .card { padding: 14px; margin-bottom: 12px; }
+            .card h3 { font-size: 12px; }
+            .stat .value { font-size: 20px; }
+            .stat .label { font-size: 11px; }
+            nav { padding: 0 12px; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            nav a { font-size: 12px; padding: 6px 8px; white-space: nowrap; }
+            nav .brand { font-size: 14px; }
+            nav .user { display: none; }
+            table { font-size: 11px; }
+            th, td { padding: 6px 8px; }
+            input, button, select { font-size: 12px; padding: 6px 10px; }
+        }
+        @media (max-width: 480px) {
+            .stat .value { font-size: 16px; }
+            table { font-size: 10px; }
+            th, td { padding: 4px 6px; }
+        }
+    </style>
+</head>
+<body>
+    {% if user is defined and user %}
+    <nav>
+        <a href="/" class="brand">Quant Circle</a>
+        <a href="/" {% if request.url.path == '/' %}class="active"{% endif %}>市场</a>
+        <a href="/signals" {% if request.url.path == '/signals' %}class="active"{% endif %}>信号</a>
+        <a href="/portfolio" {% if request.url.path == '/portfolio' %}class="active"{% endif %}>持仓</a>
+        <a href="/backtest" {% if request.url.path == '/backtest' %}class="active"{% endif %}>回测</a>
+        {% if user.role == 'admin' %}
+        <a href="/admin" {% if request.url.path == '/admin' %}class="active"{% endif %}>管理</a>
+        {% endif %}
+        <span class="user" style="cursor:pointer;" onclick="var el=document.getElementById('pw-form');el.style.display=el.style.display==='none'?'':'none';" title="点击修改密码">{{ user.username }}{% if user.role == 'admin' %} ⚡{% endif %}</span>
+        <a href="/api/auth/logout" onclick="sessionStorage.clear()">退出</a>
+    </nav>
+    {% endif %}
+    <div id="pw-form" style="display:none;position:fixed;top:56px;right:24px;z-index:200;width:280px;" class="card">
+        <h3>修改密码</h3>
+        <form onsubmit="changePassword(event)" style="display:flex;flex-direction:column;gap:8px;">
+            <input type="password" id="cur-pw" placeholder="当前密码" required autocomplete="current-password">
+            <input type="password" id="new-pw" placeholder="新密码 (至少4字符)" required minlength="4" autocomplete="new-password">
+            <div style="display:flex;gap:8px;">
+                <button type="submit" style="font-size:12px;">确认修改</button>
+                <button type="button" class="secondary" style="font-size:12px;" onclick="document.getElementById('pw-form').style.display='none'">取消</button>
+            </div>
+        </form>
+        <div id="pw-msg" style="margin-top:8px;font-size:12px;"></div>
+    </div>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- 做T信号全局提醒 -->
+    <div id="t-alert-box" style="display:none;position:fixed;top:64px;right:16px;z-index:999;max-width:360px;"></div>
+
+    <script>
+    // 全局做T信号检测：交易日9:30-15:00每60秒检查，有信号弹窗提醒
+    (function() {
+        var shownKey = '';
+        function pollT() {
+            var d = new Date();
+            var day = d.getDay();
+            var mins = d.getHours() * 60 + d.getMinutes();
+            if (day === 0 || day === 6 || mins < 570 || mins > 900) return;
+            fetch('/api/portfolio/t-signals').then(function(r) {
+                if (!r.ok) throw new Error();
+                return r.json();
+            }).then(function(data) {
+                var box = document.getElementById('t-alert-box');
+                var sigs = (data && data.signals) || [];
+                if (!sigs.length) { box.style.display = 'none'; shownKey = ''; return; }
+                var key = sigs.map(function(s) { return s.code + s.direction; }).join('|');
+                if (key === shownKey) return;
+                shownKey = key;
+                var h = '';
+                sigs.forEach(function(s) {
+                    var c = s.direction === '正T' ? '#ef4444' : '#22c55e';
+                    h += '<div style="background:#1a1d27;border:2px solid ' + c + ';border-radius:10px;padding:12px;margin-bottom:8px;box-shadow:0 4px 20px rgba(0,0,0,.5);position:relative;">';
+                    h += '<div style="font-weight:700;font-size:14px;color:' + c + ';">' + s.direction + '信号 ' + (s.name || '') + '(' + s.code + ') ' + (s.chg_pct >= 0 ? '+' : '') + s.chg_pct.toFixed(1) + '%</div>';
+                    h += '<div style="font-size:12px;margin-top:6px;">' + s.action + '</div>';
+                    h += '<div style="font-size:11px;color:#6b7280;margin-top:4px;">' + s.shares_frac + ' · 次日开盘必了结</div>';
+                    h += '</div>';
+                });
+                h += '<div style="text-align:right;">';
+                h += '<a href="/portfolio" style="font-size:11px;color:#3b82f6;margin-right:12px;">去持仓页记录</a>';
+                h += '<button onclick="document.getElementById(\'t-alert-box\').style.display=\'none\'" style="font-size:11px;padding:2px 8px;" class="secondary">关闭</button>';
+                h += '</div>';
+                box.innerHTML = h;
+                box.style.display = 'block';
+            }).catch(function() {});
+        }
+        setInterval(pollT, 60000);
+        pollT();
+    })();
+    </script>
+    <script>
+    // Stale-while-revalidate: show cached content instantly, refresh in background
+    (function() {
+        var path = window.location.pathname;
+        var cacheKey = 'page_cache_' + path;
+        // Store rendered content on page unload
+        window.addEventListener('beforeunload', function() {
+            var container = document.querySelector('.container');
+            if (container) {
+                try { sessionStorage.setItem(cacheKey, container.innerHTML); } catch(e) {}
+            }
+        });
+        // If URL has a refresh marker, clear cache
+        if (window.location.search.indexOf('_refresh') !== -1) {
+            try { sessionStorage.removeItem(cacheKey); } catch(e) {}
+        }
+    })();
+    </script>
+    <script>
+        // Global: redirect to login on 401
+        var _origFetch = window.fetch;
+        window.fetch = function(url, opts) {
+            return _origFetch(url, opts).then(function(r) {
+                if (r.status === 401 && !url.toString().includes('/api/auth/')) {
+                    window.location.href = '/login';
+                }
+                return r;
+            });
+        };
+
+        function changePassword(e) {
+            e.preventDefault();
+            var cur = document.getElementById('cur-pw').value;
+            var pw = document.getElementById('new-pw').value;
+            var fd = new FormData();
+            fd.append('current_password', cur);
+            fd.append('new_password', pw);
+            fetch('/api/auth/change-password', {method: 'POST', body: fd})
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    var msg = document.getElementById('pw-msg');
+                    if (d.status === 'changed') {
+                        msg.innerHTML = '<span class="text-green">✅ 密码已修改</span>';
+                        setTimeout(function() { document.getElementById('pw-form').style.display = 'none'; }, 1500);
+                    } else {
+                        msg.innerHTML = '<span class="text-red">❌ ' + (d.detail || '失败') + '</span>';
+                    }
+                });
+        }
+
+        // Close pw-form on outside click
+        document.addEventListener('click', function(e) {
+            var form = document.getElementById('pw-form');
+            var user = document.querySelector('.user');
+            if (form && form.style.display !== 'none' && !form.contains(e.target) && e.target !== user) {
+                form.style.display = 'none';
+            }
+        });
+
+        // HTMX CSRF setup
+        document.body.addEventListener('htmx:configRequest', function(evt) {
+            var csrf = '{% if csrf_token %}{{ csrf_token }}{% endif %}';
+            if (csrf) evt.detail.headers['X-CSRF-Token'] = csrf;
+        });
+    </script>
+</body>
+</html>
