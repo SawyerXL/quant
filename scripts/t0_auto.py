@@ -200,7 +200,7 @@ def run_cycle(client, quiet=False):
             logger.warning(f"{code} 昨正T卖单已成交未接回, 转隔夜买回")
             pruned = True
             continue
-        if st.get("phase") in ("force_settled", "waiting_buy", "waiting_sell"):
+        if st.get("phase") in ("force_settled", "done_today", "waiting_buy", "waiting_sell"):
             del state[code]
             pruned = True
     if pruned:
@@ -346,6 +346,11 @@ def main():
                 run_cycle(client)
             except Exception as e:
                 logger.error(f"循环异常: {e}")
+            # 15:05自行退出: /ET /K杀的是cmd壳, python子进程会变孤儿占住任务槽,
+            # 导致次日9:30新实例不启动(8/27事故)。自退后任务干净结束。
+            if datetime.now().time() >= dtime(15, 5):
+                logger.info("收盘, 执行器自行退出")
+                break
             time.sleep(args.interval)
         return
 
