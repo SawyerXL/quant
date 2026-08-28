@@ -143,8 +143,11 @@ def settle_check(client, state):
             oid = client.place_order(code, "buy", t_shares, -1, "market")
         logger.warning(f"隔夜未了结 {code} {st['direction']} → 市价平仓")
         if oid and oid > 0:
-            st["phase"] = "force_settled"
+            # 不直接标force_settled: 等成交后用实际成交价记账(亏损也必须入CSV)
+            st["phase"] = "force_settle_pending"
+            st["order_id"] = oid
             st["settle_date"] = today
+            st["date"] = today  # 必须更新date, 否则第3步成交检测(date==today)会跳过它
             changed = True
     if changed:
         save_state(state)
@@ -269,6 +272,24 @@ def run_cycle(client, quiet=False):
                 log_trade(code, st.get("name", ""), "反T", sell_p, buy_p, st["shares"])
                 state[code] = {"date": today, "code": code, "phase": "done_today"}
                 save_state(state)
+        elif phase == "force_settle_pending":
+            # 隔夜强平成交后按实际成交价记账(亏损也入CSV, 防止胜率虚高)
+            for o in orders:
+                if o.get("order_id") == oid and _is_filled(o.get("status")):
+                    fill_p = float(o.get("price", 0) or 0)
+                    if fill_p <= 0:
+                        fill_p = float(o.get("filled_price", 0) or 0)
+                    if st.get("direction") == "反T":
+                        # 强平卖出: 卖价=实际成交, 买价=原反T买入价
+                        if fill_p > 0:
+                            log_trade(code, st.get("name", ""), "反T", fill_p, st["price"], st["shares"])
+                    else:
+                        # 强平买回: 买价=实际成交, 卖价=原正T卖出价
+                        if fill_p > 0:
+                            log_trade(code, st.get("name", ""), "正T", st["price"], fill_p, st["shares"])
+                    st["phase"] = "force_settled"
+                    save_state(state)
+                    break
 
     # 4. 新信号扫描（只对空闲状态的票）
     # 铁律: 单日单票只做1次
