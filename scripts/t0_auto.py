@@ -168,7 +168,7 @@ def run_cycle(client, quiet=False):
     t = now.time()
 
     if not is_trading_time():
-        return state
+        return state, 0
 
     # 1. 隔夜未了结强制平仓(不限9:30-9:36, 任务晚启动也能了结)
     if any(st.get("date") != today and st.get("phase") in ("waiting_buyback", "waiting_sellout")
@@ -188,7 +188,7 @@ def run_cycle(client, quiet=False):
         if time.time() - _last_empty_warn > 600:
             logger.error("持仓为空! QMT连接可能断开, 做T执行器空转中")
             _last_empty_warn = time.time()
-        return state
+        return state, 0
 
     # 2.5 清理陈旧状态(昨日force_settled/首腿未成交的), 防止封锁今日触发
     # 但首腿若其实已成交(实仓有变化), 不能删——转隔夜了结, 否则多余股数漂在账上
@@ -357,7 +357,7 @@ def run_cycle(client, quiet=False):
                     client.cancel_order(oid)
                     logger.info(f"14:50撤单 {code} {st['phase']}")
 
-    return state
+    return state, len(positions)
 
 
 def main():
@@ -376,9 +376,27 @@ def main():
         return
 
     if args.loop:
+        empty_streak = 0
         while True:
             try:
-                run_cycle(client)
+                n_pos = run_cycle(client)
+                # 心跳: 每轮写时间戳, 看门狗靠它发现假死(卡在QMT调用里心跳会停)
+                try:
+                    Path(STATE_FILE).parent.joinpath("t0_heartbeat.json").write_text(
+                        json.dumps({"ts": int(time.time() * 1000)}))
+                except Exception:
+                    pass
+                # 空持仓自愈: 连续3轮(约90秒)空持仓 → 重建QMT连接
+                if n_pos == 0:
+                    empty_streak += 1
+                    if empty_streak >= 3:
+                        logger.error("连续3轮空持仓, 重建QMT连接")
+                        try: client.disconnect()
+                        except Exception: pass
+                        client = get_client()
+                        empty_streak = 0
+                else:
+                    empty_streak = 0
             except Exception as e:
                 logger.error(f"循环异常: {e}")
             # 15:05自行退出: /ET /K杀的是cmd壳, python子进程会变孤儿占住任务槽,
