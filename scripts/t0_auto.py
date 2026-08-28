@@ -25,6 +25,9 @@ RECORD_FILE = ROOT / "config" / "t_trade_log.csv"
 TRIGGER = 0.02   # ±2%触发
 SETTLE = 0.01    # ±1%了结
 FRAC = 1/3       # 1/3仓位
+# 趋势过滤(回测最优): 跳空日跳过, 避免隔夜强平吃跳空亏损
+GAP_SKIP_POS = 0.005  # 高开>0.5%不做正T
+GAP_SKIP_NEG = 0.01   # 低开>1%不做反T
 _last_empty_warn = 0.0  # 空持仓告警节流(秒时间戳)
 
 # QMT订单状态码: 48未报 49待报 50已报 51已报待撤 52撤单中 53已撤 54部撤 55部成 56已成 57废单
@@ -34,7 +37,8 @@ def _is_filled(status):
 
 
 def rt_price(code):
-    """实时价格+昨收。优先xtdata本地QMT行情(不走外网), sina兜底(绕系统代理)。"""
+    """实时价+昨收+今开。优先xtdata本地QMT行情, sina兜底(绕系统代理)。
+    返回 (cur, prev, opn); 开盘价拿不到时 opn=prev(按平开处理, 不过滤)。"""
     # 1. xtdata 本地行情(Windows有坏代理127.0.0.1:7892会卡死requests, 用这个最稳)
     try:
         from xtquant import xtdata
@@ -44,8 +48,9 @@ def rt_price(code):
         t = xtdata.get_full_tick([xt]).get(xt, {})
         cur = float(t.get('lastPrice') or 0)
         prev = float(t.get('lastClose') or 0)
+        opn = float(t.get('open') or 0)
         if cur > 0 and prev > 0:
-            return cur, prev
+            return cur, prev, opn if opn > 0 else prev
     except Exception:
         pass
     # 2. sina 兜底(trust_env=False 绕过系统代理设置)
@@ -58,11 +63,12 @@ def rt_price(code):
         d = r.text.split('"')[1].split(',')
         cur = float(d[3]) if d[3] else 0
         prev = float(d[2]) if d[2] else 0
+        opn = float(d[1]) if d[1] else 0
         if cur <= 0:
             cur = prev  # 未开盘用昨收
-        return cur, prev
+        return cur, prev, opn if opn > 0 else prev
     except Exception:
-        return None, None
+        return None, None, None
 
 
 def load_state():
@@ -300,13 +306,21 @@ def run_cycle(client, quiet=False):
     for code, pos in positions.items():
         if code in state or code in done_today:
             continue  # 已在做T流程中 或 今日已完成
-        cur, prev = rt_price(code)
+        cur, prev, opn = rt_price(code)
         if not cur or not prev or prev <= 0:
             continue
         chg = (cur / prev - 1)
+        gap = (opn / prev - 1) if opn and prev else 0.0
         vol = int(pos.get("volume", 0))
         t_shares = int(vol * FRAC / 100) * 100  # 1/3仓位取整百
         if t_shares < 100:
+            continue
+
+        # 趋势过滤(回测backtest_t0_variants.py最优): 高开>0.5%跳过正T, 低开<-1%跳过反T。
+        # 跳空日趋势性强, 了结腿大概率等不到→隔夜强平吃跳空亏损, 不做最划算。
+        if chg >= TRIGGER and gap > GAP_SKIP_POS:
+            continue
+        if chg <= -TRIGGER and gap < -GAP_SKIP_NEG:
             continue
 
         if chg >= TRIGGER:
