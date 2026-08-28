@@ -104,11 +104,12 @@ def main():
     OUT_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info(f"已保存: {OUT_FILE}")
 
-    # 每日本地归档: 隧道断了也不丢, 等Linux侧补拉
+    # 每日本地归档: 隧道断了也不丢, 等Linux侧补拉。
+    # 每次导出都覆盖(不用if not exists): 当天最后一次导出才是完整状态
+    # (14:30导出会漏掉14:30-15:00的做T单, 15:10收盘导出补齐)
     today_archive = ROOT / "logs" / f"qmt_positions_{datetime.now().strftime('%Y%m%d')}.json"
-    if not today_archive.exists():
-        shutil.copy(OUT_FILE, today_archive)
-        logger.info(f"本地归档: {today_archive}")
+    shutil.copy(OUT_FILE, today_archive)
+    logger.info(f"本地归档: {today_archive}")
 
     if not args.no_push:
         push_to_linux(OUT_FILE)
