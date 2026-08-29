@@ -43,6 +43,9 @@ SNAP_RE    = re.compile(r"qmt_positions_(\d{8})(?:_\d{4})?\.json$")
 STALE_DAYS = 5  # 兜底收盘价超过5天未更新视为过期 → 告警
 
 
+CUTOFF = "15:00"   # 快照自带价只有在15:00后导出才算收盘价口径
+
+
 def load_snapshots() -> dict[str, dict[str, dict]]:
     """读所有 logs/qmt_positions_YYYYMMDD[_HHMM].json → {date: {code: {vol, mv}}}。
     同一天多份取导出时间最晚的一份。"""
@@ -68,6 +71,28 @@ def load_snapshots() -> dict[str, dict[str, dict]]:
             for c, v in pos.items() if v.get("volume", 0) > 0
         }
     return dict(sorted(out.items()))
+
+
+def load_snapshot_times() -> dict[str, str]:
+    """date → 导出时点(HH:MM)。用于判断快照价是否为收盘口径。"""
+    times = {}
+    for f in SNAP_DIR.glob("qmt_positions_*.json"):
+        m = SNAP_RE.search(f.name)
+        if not m:
+            continue
+        d8 = m.group(1)
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        exported = data.get("exported_at", "")
+        if len(exported) < 16:
+            continue
+        date_str = f"{d8[:4]}-{d8[4:6]}-{d8[6:]}"
+        hhmm = exported[11:16]
+        if date_str not in times or exported[11:19] > times[date_str]:
+            times[date_str] = exported[11:19]
+    return times
 
 
 def _close_panel(codes: set[str], start: str, end: str) -> pd.DataFrame:
@@ -109,13 +134,20 @@ def build_nav() -> pd.DataFrame:
             return np.nan, None
         return float(s.iloc[-1]), str(s.index[-1].date())
 
+    snap_times = load_snapshot_times()
+    repriced = 0
+
     def price_on(code, dstr):
-        """价格: 快照自带价优先, 本地日线兜底(过期告警)。"""
-        p = snap_price.get((dstr, code))
-        if p is not None:
-            return p
+        """价格: 快照自带价只在15:00后导出时才算收盘口径; 盘中快照改用本地日线收盘价重估。"""
+        nonlocal repriced
+        t = snap_times.get(dstr, "")
+        if t and t[:5] >= CUTOFF:
+            p = snap_price.get((dstr, code))
+            if p is not None:
+                return p
         p, last_d = local_close(code, dstr)
         if p is not None and not np.isnan(p):
+            repriced += 1
             if last_d and (pd.Timestamp(dstr) - pd.Timestamp(last_d)).days > STALE_DAYS:
                 warnings.append(f"{code}@{dstr}: 本地日线过期(最新{last_d}), 用旧价标值")
             return p
@@ -175,6 +207,8 @@ def build_nav() -> pd.DataFrame:
     if warnings:
         uniq = sorted(set(warnings))
         logger.warning(f"NAV护栏: {len(uniq)}处本地日线兜底价过期: {uniq[:5]}{'...' if len(uniq)>5 else ''}")
+    if repriced:
+        logger.info(f"NAV口径: {repriced}处盘中快照价已改用本地日线收盘价重估(快照15:00前导出)")
     return pd.DataFrame(rows)
 
 
