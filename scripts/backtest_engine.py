@@ -104,6 +104,12 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
     days_below_ma10 = {}; trail_hwm = {}
     overheat_tags = {}  # code -> bool, updated on rebalance and persists across days
     cumul_nav = 1.0
+    # 回撤熔断状态机 (halt_mode != "none" 时生效)
+    halted = False
+    halt_peak = 1.0
+    halt_low = None
+    halt_day_count = 0
+    halt_triggers = []   # (date, nav, mode)
 
     trade_count = 0; total_sells = 0; total_buys = 0
     total_commission_paid = 0.0  # track cumulative commission
@@ -111,6 +117,25 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
 
     for i, date in enumerate(all_dates):
         date_str = str(date.date())
+
+        # ── Step 0: 回撤熔断检查 ──
+        if getattr(config, "halt_mode", "none") != "none" and not halted:
+            if cumul_nav / halt_peak - 1 <= -config.halt_dd_limit:
+                halted = True
+                halt_low = cumul_nav
+                halt_day_count = 0
+                halt_triggers.append((str(date.date()), round(cumul_nav, 4), config.halt_mode))
+                if config.halt_mode == "A" and cur_weights:
+                    wsum = sum(cur_weights.values())
+                    port_rets.iloc[i] -= wsum * config.commission
+                    cur_weights = {}; entry_prices = {}; days_below_ma10 = {}
+                    trail_hwm = {}; overheat_tags = {}
+                elif config.halt_mode == "C" and cur_weights:
+                    wsum = sum(cur_weights.values())
+                    if wsum > 0.30:
+                        scale = 0.30 / wsum
+                        port_rets.iloc[i] -= wsum * (1 - scale) * config.commission
+                        cur_weights = {c: w * scale for c, w in cur_weights.items()}
 
         # ── Step 1: Mark-to-market ──
         if cur_weights and i > 0:
@@ -197,7 +222,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
                 trade_count += 1; total_sells += 1
 
         # ── Step 4: Rebalance ──
-        if date_str in rebal_set and i >= config.min_bars:
+        if date_str in rebal_set and i >= config.min_bars and not halted:
             pos_ratio = 1.0
             if index_close is not None:
                 try:
@@ -281,6 +306,17 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
 
         cumul_nav *= (1 + port_rets.iloc[i])
 
+        # 熔断恢复判定
+        if halted:
+            halt_day_count += 1
+            halt_low = min(halt_low, cumul_nav)
+            if halt_day_count >= config.halt_recover_min_days and \
+               cumul_nav >= halt_low * (1 + config.halt_recover_rebound):
+                halted = False
+                halt_peak = cumul_nav
+        else:
+            halt_peak = max(halt_peak, cumul_nav)
+
     nav = (1 + port_rets).cumprod()
     # ── Diagnostics ──
     max_single_seen = max(max_single_track) if max_single_track else 0.0
@@ -297,6 +333,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
         "annual_cost_drag": annual_cost_drag,
         "max_single_weight": max_single_seen,
         "top3_concentration": top3_avg,
+        "halt_triggers": halt_triggers,
     }
 
 
