@@ -44,6 +44,8 @@ class BacktestConfig:
     max_position_pct: float = 0.10    # 新票仓位上限
     max_single: float = 0.15           # 单票绝对上限(旧持仓超标时削减)
     timing_scale: float = 1.0          # MA200择时仓位系数(1=现网; <1=熊市降仓更狠)
+    ma200_thresh_shift: float = 0.0    # 择时阈值整体平移(敏感性测试用, 实盘不设)
+    ma200_bear_pos: float = None       # 熊市档仓位覆盖(敏感性测试用, None=默认0.30)
 
     # ── 账户回撤熔断(回测模拟, 实盘红线25%) ──
     halt_mode: str = "none"            # "none" | "A"全清仓 | "B"暂停开仓(持仓按MA10自然退出) | "C"触发日降至30%底仓

@@ -225,10 +225,22 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
         if date_str in rebal_set and i >= config.min_bars and not halted:
             pos_ratio = 1.0
             if index_close is not None:
+                # 局部五档阶梯副本(参数化用于敏感性测试), 默认行为与共享 get_position_ratio 一致
                 try:
-                    from run_backtest_a2 import get_position_ratio as gpr
-                    pos_ratio = gpr(index_close, date)
-                except: pass
+                    hist = index_close[index_close.index <= date].dropna()
+                    if len(hist) >= 200:
+                        ratio = float(hist.iloc[-1] / hist.rolling(200).mean().iloc[-1]) \
+                                + getattr(config, "ma200_thresh_shift", 0.0)
+                        bear = getattr(config, "ma200_bear_pos", None)
+                        if ratio >= 1.05:   pos_ratio = 1.00
+                        elif ratio >= 1.02: pos_ratio = 0.85
+                        elif ratio >= 0.98: pos_ratio = 0.70
+                        elif ratio >= 0.95: pos_ratio = 0.50
+                        else:               pos_ratio = (0.30 if bear is None else bear)
+                    else:
+                        pos_ratio = 0.85
+                except Exception:
+                    pass
             # timing_scale: MA200择时强度系数(<1=熊市降仓更狠), clamp到1
             if pos_ratio < 1.0:
                 pos_ratio = min(1.0, pos_ratio * getattr(config, "timing_scale", 1.0))
