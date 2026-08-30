@@ -1,5 +1,5 @@
 """
-生成 QMT 主策略说明 Word 文档（v2.2）。
+生成 QMT 主策略说明 Word 文档（v2.3）。
 内容来源: docs/qmt_strategy_spec.md（唯一权威口径）。
 用法: python scripts/generate_qmt_spec_docx.py
 """
@@ -12,7 +12,7 @@ from docx.shared import Pt, RGBColor
 from docx.oxml.ns import qn
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-OUT = Path("docs/QMT主策略说明_v2.2.docx")
+OUT = Path("docs/QMT主策略说明_v2.3.docx")
 
 
 def set_cn_font(run, size=10.5, bold=False):
@@ -66,7 +66,7 @@ def main():
     title = doc.add_heading("", level=0)
     tr = title.add_run("QMT 主策略完整说明")
     set_cn_font(tr, size=22, bold=True)
-    st = para(doc, "版本 v2.2 · 2026-08-30 · 唯一权威口径（与 docs/qmt_strategy_spec.md 同步）")
+    st = para(doc, "版本 v2.3 · 2026-08-30 · 唯一权威口径（与 docs/qmt_strategy_spec.md 同步）")
     st.alignment = WD_ALIGN_PARAGRAPH.CENTER
     para(doc, "所有参数改动必须回测 A/B 对比 + 用户确认（CLAUDE.md 工程纪律）。")
 
@@ -132,7 +132,8 @@ def main():
 
     h(doc, "5. 风控红线（CLAUDE.md 强制）")
     bullet(doc, "单票仓位上限（Track A 口径）、单笔订单 5 万、涨停禁买/跌停禁卖")
-    bullet(doc, "账户回撤熔断 25%；所有订单过 execution/risk.py 的 risk_check()")
+    bullet(doc, "账户回撤熔断 25% → B方案（2026-08-30回测定案）：停止所有新开仓+告警人工确认；持仓按MA10纪律自然退出；恢复需人工确认。回测依据：A/C方案排序跨窗口反转，自动减仓=方向赌注，B自动部分最小化")
+    bullet(doc, "所有订单过 execution/risk.py 的 risk_check()")
 
     h(doc, "6. 历史验证")
     para(doc, "回测（TOP60 口径，2019-2026.8）：全期年化 +5.1%（+过滤 +6.9%），夏普 0.31（+过滤 0.49），回撤 -27.1%。"
@@ -156,7 +157,10 @@ def main():
            ["2026-07-20", "TP v3 固定分批 30/60", "A/B（8/29 复验未复现）"],
            ["2026-08-29", "净值口径：快照价仅采信 ≥15:00，否则收盘价重估", "用户质疑 +6.71% 虚高"],
            ["2026-08-30", "拥挤度过滤 max_vol20=5%", "四窗口 A/B + 网格 + 严格口径复验"],
-           ["2026-08-30", "池子规模定案 TOP60（v2.2，收益优先）", "池子 A/B：60 收益/夏普最高"]])
+           ["2026-08-30", "池子规模定案 TOP60（v2.2，收益优先）", "池子 A/B：60 收益/夏普最高"],
+           ["2026-08-30", "拥挤度过滤 OOS 验证（2015-2018）", "样本外 +1.6pp/回撤 -4.6pp"],
+           ["2026-08-30", "熔断流程定案 B 方案（v2.3）", "阈值网格：排序跨窗口反转，自动减仓=方向赌注"],
+           ["2026-08-30", "外部评审修订", "评审7条建议采纳6.5条，TP钉死/止损定位/口径声明"]])
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     doc.save(OUT)
