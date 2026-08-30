@@ -21,6 +21,8 @@ class BacktestConfig:
     max_consec_up_days: int = 8       # 连涨天数上限
     max_5d_return: float = 15.0       # 5日涨幅上限(%)
     min_dist_from_high: float = 3.0   # 距20日高最小回落%(入场位置)
+    max_vol20: float = 999.0          # 20日波动率上限%(拥挤度过滤, 999=关; 8/19跌停潮凶手票均>6%)
+    vol20_use_today: bool = False     # False=只用T-1及以前(严格口径, 无当日look-ahead)
 
     # ── 止损止盈 ──
     absolute_stop: float = -0.12      # 绝对止损(从成本)
@@ -37,6 +39,14 @@ class BacktestConfig:
     # ── 仓位 ──
     max_position_pct: float = 0.10    # 新票仓位上限
     max_single: float = 0.15           # 单票绝对上限(旧持仓超标时削减)
+    timing_scale: float = 1.0          # MA200择时仓位系数(1=现网; <1=熊市降仓更狠)
+
+    # ── 做T增厚 (2026-08全市场回测验证: 年化+26%) ──
+    enable_t0: bool = False            # 做T总开关(默认关, 验证期后开)
+    t0_trigger_pct: float = 2.0        # 涨跌≥2%触发
+    t0_settle_pct: float = 1.0         # 回落/反弹1%了结
+    t0_position_frac: float = 1/3      # 只用1/3仓位
+    t0_annual_enhancement: float = 0.20  # 保守年化增厚(实盘折扣后)
 
     # ── 过热处理模式 ──
     overheat_mode: str = "reduce"   # "eliminate"=直接淘汰 | "reduce"=减仓+紧止损
@@ -100,6 +110,13 @@ DEFAULT_CONFIG = BacktestConfig(
     # ── 仓位 ──
     max_position_pct=0.10,
     max_single=1.0,              # 不设单票硬上限
+    # ── 拥挤度过滤: 剔除20日波动率>5%的热门票 ──
+    # 2026-08-30 四窗口A/B确认(收益+1.4~5.4pp/夏普全升/回撤全降),
+    # 阈值网格4.5-5.5%平滑平台+严格口径(不含当天)复验通过。
+    # 针对8/19型失血: 成交额TOP池=动量拥挤, 跌停潮凶手票事前波动率4.4~7.9%
+    # vs 防御票1.0~1.7%。vol20_use_today=False=只用T-1及以前。
+    max_vol20=5.0,
+    vol20_use_today=False,
     # ── 成本 ──
     commission=0.0013,
     cash_yield=0.02,

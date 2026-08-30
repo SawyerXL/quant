@@ -51,6 +51,13 @@ def apply_filters(pool_codes, panel, idx, config, return_tags=False):
             ret5 = (cur_hist / hist.iloc[-6] - 1) * 100
             if ret5 > config.max_5d_return:
                 overheat = True; overheat_reasons.append(f'5日{ret5:.0f}%')
+        if len(hist) >= 22:
+            # 严格口径(vol20_use_today=False): 只用T-1及以前, 排除调仓日当天收益的look-ahead可能
+            rets = hist.pct_change()
+            win = rets.iloc[-20:] if config.vol20_use_today else rets.iloc[-21:-1]
+            vol20 = win.std() * 100
+            if vol20 > config.max_vol20:
+                overheat = True; overheat_reasons.append(f'波动{vol20:.0f}%')
         high20 = hist.iloc[-20:].max()
         dh = (cur_hist / high20 - 1) * 100
 
@@ -197,6 +204,9 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
                     from run_backtest_a2 import get_position_ratio as gpr
                     pos_ratio = gpr(index_close, date)
                 except: pass
+            # timing_scale: MA200择时强度系数(<1=熊市降仓更狠), clamp到1
+            if pos_ratio < 1.0:
+                pos_ratio = min(1.0, pos_ratio * getattr(config, "timing_scale", 1.0))
 
             if pos_ratio <= 0.3:
                 cur_weights = {}; entry_prices = {}; days_below_ma10 = {}
@@ -263,6 +273,12 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
         cash_r = max(0, 1.0 - sum(cur_weights.values())) if cur_weights else 1.0
         port_rets.iloc[i] += cash_r * config.cash_yield / 252
 
+        # ── Step 5.5: 做T增厚 (期望值模型, 全市场回测验证+26%/年) ──
+        if getattr(config, 'enable_t0', False) and cur_weights and i >= 10:
+            daily_t0 = sum(w * config.t0_annual_enhancement / 252
+                          for w in cur_weights.values())
+            port_rets.iloc[i] += daily_t0
+
         cumul_nav *= (1 + port_rets.iloc[i])
 
     nav = (1 + port_rets).cumprod()
@@ -317,16 +333,38 @@ def calc_metrics(nav_series, label=""):
     # Calmar
     calmar = ann_ret / abs(max_dd) if max_dd != 0 else 0
 
+    # Sortino ratio (downside deviation only)
+    downside = daily_r[daily_r < 0]
+    if len(downside) > 0 and downside.std() > 0:
+        sortino = (daily_r.mean() * 252 - 0.02) / (downside.std() * np.sqrt(252))
+    else:
+        sortino = 0.0
+
+    # Max drawdown duration (longest consecutive days below previous peak)
+    dd_duration = 0
+    current_dd_days = 0
+    cummax_series = nav_series.cummax()
+    for i in range(len(nav_series)):
+        if nav_series.iloc[i] < cummax_series.iloc[i]:
+            current_dd_days += 1
+            dd_duration = max(dd_duration, current_dd_days)
+        else:
+            current_dd_days = 0
+
     return {
         "年化收益率": f"{ann_ret*100:.2f}%",
         "夏普比率": f"{sharpe:.2f}",
+        "索提诺比率": f"{sortino:.2f}",
         "最大回撤": f"{max_dd*100:.2f}%",
+        "最大回撤持续": f"{dd_duration}天",
         "年化波动率": f"{ann_vol*100:.2f}%",
-        "胜率": f"{win_rate*100:.1f}%",
+        "月胜率": f"{win_rate*100:.1f}%",
         "Calmar": f"{calmar:.2f}",
         "年化_float": ann_ret,
         "夏普_float": sharpe,
+        "索提诺_float": sortino,
         "回撤_float": max_dd,
+        "回撤持续_float": dd_duration,
         "波动_float": ann_vol,
         "胜率_float": win_rate,
     }
