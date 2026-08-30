@@ -237,7 +237,17 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
                 cur_weights = {}; entry_prices = {}; days_below_ma10 = {}
                 trail_hwm = {}; overheat_tags = {}
             else:
-                pool = amount_panel.iloc[max(0,i-20):i].mean().dropna().nlargest(config.pool_size * 2).index.tolist()
+                amt_avg = amount_panel.iloc[max(0,i-20):i].mean().dropna()
+                if getattr(config, "pool_style", "amount") == "momentum":
+                    # 评审P1-4: 成交额排名=拥挤度因子。流动性池内按动量排序,
+                    # 保留流动性前提的同时选"真正在涨"的票而非"最热"的票
+                    liq = amt_avg.nlargest(config.liquidity_pool).index.tolist()
+                    px_now = panel.ffill().iloc[i]
+                    px_prev = panel.ffill().iloc[max(0, i - config.mom_window)]
+                    mom = ((px_now / px_prev) - 1).reindex(liq).dropna()
+                    pool = mom.nlargest(config.pool_size * 2).index.tolist()
+                else:
+                    pool = amt_avg.nlargest(config.pool_size * 2).index.tolist()
                 selected, sel_tags = apply_filters(pool, panel, i, config, return_tags=True)
                 n = min(len(selected), config.pool_size)
                 if n == 0: continue
