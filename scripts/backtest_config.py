@@ -17,6 +17,7 @@ class BacktestConfig:
     pool_style: str = "amount"   # "amount"=成交额排名 | "momentum"=流动性池内按动量排名(评审P1-4)
     liquidity_pool: int = 300    # momentum风格: 先取成交额前N作流动性池
     mom_window: int = 60         # momentum风格: 动量回看窗口(交易日)
+    mom_skip_days: int = 0       # momentum风格: 跳过最近N日(12-1逻辑, 0=不跳过)
     rebalance_freq: str = "biweekly"  # "biweekly" | "weekly" | "monthly"
 
     # ── 过热过滤（可参数化） ──

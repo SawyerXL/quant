@@ -240,11 +240,13 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
                 amt_avg = amount_panel.iloc[max(0,i-20):i].mean().dropna()
                 if getattr(config, "pool_style", "amount") == "momentum":
                     # 评审P1-4: 成交额排名=拥挤度因子。流动性池内按动量排序,
-                    # 保留流动性前提的同时选"真正在涨"的票而非"最热"的票
+                    # 保留流动性前提的同时选"真正在涨"的票而非"最热"的票。
+                    # mom_skip_days>0: 12-1逻辑, 跳过最近N日规避短期反转污染
                     liq = amt_avg.nlargest(config.liquidity_pool).index.tolist()
-                    px_now = panel.ffill().iloc[i]
-                    px_prev = panel.ffill().iloc[max(0, i - config.mom_window)]
-                    mom = ((px_now / px_prev) - 1).reindex(liq).dropna()
+                    skip = getattr(config, "mom_skip_days", 0)
+                    px_end = panel.ffill().iloc[max(0, i - skip)]
+                    px_start = panel.ffill().iloc[max(0, i - skip - config.mom_window)]
+                    mom = ((px_end / px_start) - 1).reindex(liq).dropna()
                     pool = mom.nlargest(config.pool_size * 2).index.tolist()
                 else:
                     pool = amt_avg.nlargest(config.pool_size * 2).index.tolist()
