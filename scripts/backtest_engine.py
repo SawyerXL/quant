@@ -119,8 +119,12 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
     pending_days = 0
     tier_switch_count = 0
     pending_exits = {}   # ma10_exit_delay: code -> 触发日索引
+    cooldown_until = {}  # ma10_reentry_cool: code -> 解冻日索引
 
     trade_count = 0; total_sells = 0; total_buys = 0
+    exit_ma10_sells = 0.0    # MA10/止损退出的权重和(换手分解诊断用)
+    rebal_sells = 0.0        # 调仓轮换卖出的权重和
+    tier_sells = 0.0         # 切档减仓的权重和(pos_ratio下降)
     total_commission_paid = 0.0  # track cumulative commission
     max_single_track = []; top3_track = []
 
@@ -271,6 +275,8 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
 
             for code in set(exits):
                 w = cur_weights.pop(code, 0)
+                if getattr(config, "ma10_reentry_cool", 0) > 0:
+                    cooldown_until[code] = i + config.ma10_reentry_cool
                 if getattr(config, "ma10_exit_delay", False):
                     # 延迟次日开盘卖: 当日不卖出, 次日开盘价成交(开盘/昨收近似次日gap)
                     pending_exits[code] = i
@@ -282,6 +288,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 port_rets.iloc[i] -= w * config.commission
                 entry_prices.pop(code, None); days_below_ma10.pop(code, None)
                 trail_hwm.pop(code, None)
+                exit_ma10_sells += w
                 trade_count += 1; total_sells += 1
 
         # ── Step 3: Take profit (partial sells) ──
@@ -338,6 +345,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 if getattr(config, "ma10_reentry_cool", 0) > 0 and i >= config.min_bars:
                     pool = [c for c in pool if cooldown_until.get(c, -1) <= i]
                 selected, sel_tags = apply_filters(pool, panel, i, config, return_tags=True)
+                old_set = set(cur_weights.keys())
                 n = min(len(selected), config.pool_size)
                 # rank buffer: 旧持仓排名在池子规模×mult 以内者保留(进N出N×mult)
                 rbm = getattr(config, "rank_buffer_mult", 1.0)
@@ -354,7 +362,6 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 # Update overheat tags for the new portfolio
                 overheat_tags = {c: sel_tags.get(c, False) for c in selected[:n]}
 
-                old_set = set(cur_weights.keys())
                 new_set = set(selected[:n])
 
                 # Keep existing weights for stocks that stay, cap at max_single
@@ -380,6 +387,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 # Calculate turnover & commission
                 enter_w = sum(new_w.get(c, 0) for c in set(new_w) - old_set)
                 exit_w = sum(cur_weights.get(c, 0) for c in old_set - set(new_w))
+                rebal_sells += exit_w
                 rebal_cost = (enter_w + exit_w) / 2 * config.commission * 2
                 total_commission_paid += rebal_cost
                 port_rets.iloc[i] -= rebal_cost
@@ -444,6 +452,9 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
         "top3_concentration": top3_avg,
         "halt_triggers": halt_triggers,
         "tier_switch_count": tier_switch_count,
+        "exit_ma10_sells": round(exit_ma10_sells, 4),
+        "rebal_sells": round(rebal_sells, 4),
+        "tier_sells": round(tier_sells, 4),
     }
 
 
