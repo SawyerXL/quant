@@ -91,9 +91,9 @@ def apply_filters(pool_codes, panel, idx, config, return_tags=False):
     return selected
 
 
-def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
+def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, open_panel=None):
     """
-    主回测引擎。
+    主回测引擎。open_panel 可选(ma10_exit_delay=True 时用于次日开盘卖价)。
     返回: (nav_series, metrics_dict)
     """
     all_dates = panel.index
@@ -118,6 +118,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
     pending_tier = None
     pending_days = 0
     tier_switch_count = 0
+    pending_exits = {}   # ma10_exit_delay: code -> 触发日索引
 
     trade_count = 0; total_sells = 0; total_buys = 0
     total_commission_paid = 0.0  # track cumulative commission
@@ -197,6 +198,27 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
                         port_rets.iloc[i] -= wsum * (1 - scale) * config.commission
                         cur_weights = {c: w * scale for c, w in cur_weights.items()}
 
+        # ── Step 0b: 延迟次日开盘卖的处理 ──
+        if pending_exits and i > 0:
+            for code in list(pending_exits.keys()):
+                w = cur_weights.get(code, 0)
+                if w <= 0:
+                    del pending_exits[code]
+                    continue
+                # 当日MTM已按昨收→今收计, 开盘卖需扣回今开→今收段
+                if open_panel is not None:
+                    o_t = open_panel.iloc[i].get(code)
+                    c_t = panel.iloc[i].get(code)
+                    if o_t and c_t and not pd.isna(o_t) and not pd.isna(c_t) and o_t > 0:
+                        port_rets.iloc[i] -= w * (c_t / o_t - 1)
+                total_commission_paid += w * config.commission
+                port_rets.iloc[i] -= w * config.commission
+                cur_weights.pop(code, None)
+                entry_prices.pop(code, None); days_below_ma10.pop(code, None)
+                trail_hwm.pop(code, None)
+                trade_count += 1; total_sells += 1
+                del pending_exits[code]
+
         # ── Step 1: Mark-to-market ──
         if cur_weights and i > 0:
             ret = 0.0
@@ -249,6 +271,13 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
 
             for code in set(exits):
                 w = cur_weights.pop(code, 0)
+                if getattr(config, "ma10_exit_delay", False):
+                    # 延迟次日开盘卖: 当日不卖出, 次日开盘价成交(开盘/昨收近似次日gap)
+                    pending_exits[code] = i
+                    # 权重暂缓移除, 次日处理
+                    cur_weights[code] = w
+                    days_below_ma10[code] = days_below_ma10.get(code, 0)
+                    continue
                 total_commission_paid += w * config.commission
                 port_rets.iloc[i] -= w * config.commission
                 entry_prices.pop(code, None); days_below_ma10.pop(code, None)
@@ -305,8 +334,21 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
                     pool = mom.nlargest(config.pool_size * 2).index.tolist()
                 else:
                     pool = amt_avg.nlargest(config.pool_size * 2).index.tolist()
+                # 重入冷却: MA10退出的票N日内不买回
+                if getattr(config, "ma10_reentry_cool", 0) > 0 and i >= config.min_bars:
+                    pool = [c for c in pool if cooldown_until.get(c, -1) <= i]
                 selected, sel_tags = apply_filters(pool, panel, i, config, return_tags=True)
                 n = min(len(selected), config.pool_size)
+                # rank buffer: 旧持仓排名在池子规模×mult 以内者保留(进N出N×mult)
+                rbm = getattr(config, "rank_buffer_mult", 1.0)
+                if rbm > 1.0 and i >= config.min_bars:
+                    exit_rank = int(config.pool_size * rbm)
+                    keep_old = [c for c in pool[:exit_rank] if c in old_set and c not in selected]
+                    for c in keep_old:
+                        if c in panel.columns:
+                            selected.append(c)
+                            sel_tags[c] = False
+                    n = len(selected)
                 if n == 0: continue
 
                 # Update overheat tags for the new portfolio

@@ -34,6 +34,9 @@ class BacktestConfig:
     take_profit_1: float = 0.25       # 第一档止盈(卖1/3)
     take_profit_2: float = 0.50       # 第二档止盈(再卖1/3)
     ma_exit_days: int = 3             # MA10连续跌破天数
+    ma10_exit_delay: bool = False     # True=触发后次日开盘卖(零参数降换手变体, 评审P3建议)
+    rank_buffer_mult: float = 1.0     # 出场排名缓冲: 1.0=进60出60(无缓冲), 1.5=进60出90
+    ma10_reentry_cool: int = 0        # MA10退出后N日禁重买(0=关)
 
     # ── 交易成本 ──
     commission: float = 0.0013        # 双边(佣金+印花+滑点)
