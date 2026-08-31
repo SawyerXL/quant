@@ -44,8 +44,6 @@ STALE_DAYS = 5  # 兜底收盘价超过5天未更新视为过期 → 告警
 
 
 CUTOFF = "15:00"   # 快照自带价只有在15:00后导出才算收盘价口径
-
-
 def load_snapshots() -> dict[str, dict[str, dict]]:
     """读所有 logs/qmt_positions_YYYYMMDD[_HHMM].json → {date: {code: {vol, mv}}}。
     同一天多份取导出时间最晚的一份。"""
