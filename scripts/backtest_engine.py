@@ -118,6 +118,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
     pending_tier = None
     pending_days = 0
     tier_switch_count = 0
+    prev_pos_ratio = 1.0
     pending_exits = {}   # ma10_exit_delay: code -> 触发日索引
     cooldown_until = {}  # ma10_reentry_cool: code -> 解冻日索引
 
@@ -325,8 +326,15 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 pos_ratio = min(1.0, pos_ratio * getattr(config, "timing_scale", 1.0))
 
             if pos_ratio <= 0.3:
+                # 清仓同样计显性卖出成本(切档显性化)
+                if cur_weights:
+                    wsum = sum(cur_weights.values())
+                    total_commission_paid += wsum * config.commission
+                    port_rets.iloc[i] -= wsum * config.commission
+                    tier_sells += wsum
                 cur_weights = {}; entry_prices = {}; days_below_ma10 = {}
                 trail_hwm = {}; overheat_tags = {}
+                prev_pos_ratio = pos_ratio
             else:
                 amt_avg = amount_panel.iloc[max(0,i-20):i].mean().dropna()
                 if getattr(config, "pool_style", "amount") == "momentum":
@@ -366,10 +374,18 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
 
                 # Keep existing weights for stocks that stay, cap at max_single
                 new_w = {}
+                # 切档显性化(2026-08-31): 换档降仓必须真卖并付佣金——
+                # 回测乘系数零成本与实盘分叉, 此前成本被系统性低估
+                tier_reduce = max(0.0, prev_pos_ratio - pos_ratio)
                 for c in old_set & new_set:
                     w = cur_weights[c] * pos_ratio
                     if w > config.max_single:
                         w = config.max_single
+                    if tier_reduce > 0:
+                        sell_w = cur_weights[c] * (tier_reduce / prev_pos_ratio) if prev_pos_ratio > 0 else 0.0
+                        total_commission_paid += sell_w * config.commission
+                        port_rets.iloc[i] -= sell_w * config.commission
+                        tier_sells += sell_w
                     new_w[c] = w
 
                 # Remaining cash = pos_ratio - old_weights + excess from capping
@@ -405,6 +421,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                     total_sells += 1; trade_count += 1
 
                 cur_weights = new_w
+                prev_pos_ratio = pos_ratio
                 # Track concentration
                 if cur_weights:
                     wvals = sorted(cur_weights.values(), reverse=True)
