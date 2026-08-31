@@ -21,13 +21,14 @@ from loguru import logger
 
 from run_backtest_a2 import get_position_ratio
 from run_backtest_a import load_panels
-from data.storage import load_meta
+from data.storage import load_meta, load_daily
 from monitoring.alerts import send_alert
 
 logger.add("logs/signal_a_v2_{time:YYYY-MM-DD}.log", rotation="1 day", retention="60 days")
 
 TRACK_A_CAPITAL = 1_000_000
-N_HOLDINGS      = 30
+N_HOLDINGS      = 60
+MAX_VOL20       = 5.0   # v2.1 拥挤度过滤: 剔除20日波动率>5%的票(严格口径, 不含最近一日)
 MA10_EXIT_DAYS  = 3
 SIGNAL_FILE     = Path("data_store/meta/signal_a_latest.json")
 
@@ -84,23 +85,37 @@ def _check_ma10_exits(holdings, today, prev_days_below):
         if new_days[code] >= MA10_EXIT_DAYS: exits.append(code)
     return exits, new_days
 
-def _select_top_turnover(amt_panel, prices, capital, n=30):
+def _select_top_turnover(amt_panel, prices, capital, n=60):
     """
-    选成交额最大的 N 只，跳过买不起一手的科创板高价股。
-    capital: 总资金 → 单只预算 = capital/n
+    选成交额最大的 N 只（v2.2: TOP60），v2.1 拥挤度过滤（vol20>5% 剔除），
+    再跳过买不起一手的科创板高价股。capital: 总资金 → 单只预算 = capital/n
     """
     avg = amt_panel.tail(20).mean().dropna()
     budget = capital / n
-    # 过滤：单价不能超过"一手的价格"
+    today = str(date.today())
+    vol_start = (date.today() - timedelta(days=150)).strftime("%Y-%m-%d")
+    # 先取 2N 候补, 拥挤度过滤后逐个检查买得起, 直到凑满 N
     affordable = []
-    for code in avg.nlargest(len(avg)).index:
+    for code in avg.nlargest(n * 2).index:
+        if len(affordable) >= n:
+            break
+        # v2.1 拥挤度过滤: 只用 T-1 及以前(严格口径, 与回测 backtest_engine 一致)
+        try:
+            d = load_daily(code, vol_start, today)
+            if not d.empty and len(d) >= 22:
+                d = d.sort_values("date")
+                cl = pd.to_numeric(d["close"], errors="coerce").dropna()
+                if len(cl) >= 22:
+                    vol20 = float(cl.pct_change().iloc[-21:-1].std() * 100)
+                    if vol20 > MAX_VOL20:
+                        continue
+        except Exception:
+            pass
         p = prices.get(code)
         if p and not pd.isna(p) and p > 0:
             min_lot = 200 if str(code).startswith("688") else 100
             if p * min_lot <= budget:
                 affordable.append(code)
-        if len(affordable) >= n:
-            break
     return affordable[:n]
 
 def _calc_shares(holdings, prices, total_capital):
@@ -170,7 +185,7 @@ def run():
         current_holdings = [c for c in current_holdings if c not in set(ma10_exits)]
         days_below_ma10  = {k: v for k, v in days_below_ma10.items() if k not in set(ma10_exits)}
 
-        # ── 自动补买: 从成交额TOP40候补中选 ──
+        # ── 自动补买: 从成交额TOP80候补中选 ──
         replacements = []
         try:
             start = (date.today() - timedelta(days=350)).strftime("%Y-%m-%d")

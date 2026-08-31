@@ -128,46 +128,77 @@ class Trader:
         return results
 
     def _execute_bull(self, strategy_id: str, sig: dict) -> dict:
-        """牛市：按信号差量买卖。先卖后买。"""
+        """目标仓位 diff 式下单（2026-08-31 幂等化改造）。
+
+        只下"目标持仓 − 实际持仓"的差量：重复执行/重试会收敛到同一状态，
+        杜绝增量式指令重发导致的重复下单与仓位漂移。先卖后买。
+        """
         gw, account = self._build_gateway(strategy_id)
         positions   = self.client.get_positions()
         target_shares = sig.get("shares", {})
+        holdings      = set(sig.get("holdings", []))
+        sell_set      = set(sig.get("sell", []))
         ref_prices    = sig.get("prices", {})
         results = {"sells": [], "buys": [], "blocked": []}
 
-        # 卖出（减仓）
-        for code in sig.get("sell", []):
-            pos    = positions.get(code, {})
-            shares = pos.get("volume", 0)
-            if shares <= 0:
+        # ── 卖出差量：清仓票全卖 / 目标<实际 补卖差量 ──
+        for code in sorted(set(positions) | set(target_shares)):
+            cur = positions.get(code, {}).get("volume", 0)
+            if code in sell_set or (cur > 0 and code not in holdings):
+                sell_qty = cur                      # 清仓
+            elif cur > target_shares.get(code, 0):
+                sell_qty = cur - target_shares.get(code, 0)   # 减仓差量
+            else:
+                sell_qty = 0
+            if sell_qty <= 0:
                 continue
-            price = ref_prices.get(code) or pos.get("cost_price", 1.0)
-            ok, reason = gw.check(strategy_id, code, "sell", shares, price)
+            price = ref_prices.get(code) or positions.get(code, {}).get("cost_price", 1.0)
+            ok, reason = gw.check(strategy_id, code, "sell", sell_qty, price)
             if ok:
-                oid = self.client.place_order(code, "sell", shares, price * 0.998)
-                results["sells"].append({"code": code, "shares": shares,
+                oid = self.client.place_order(code, "sell", sell_qty, price * 0.998)
+                results["sells"].append({"code": code, "shares": sell_qty,
                                          "price": price, "order_id": oid})
-                logger.info(f"卖出 {code} {shares}股 @{price:.2f}")
+                logger.info(f"卖出 {code} {sell_qty}股 @{price:.2f}")
             else:
                 results["blocked"].append({"code": code, "direction": "sell", "reason": reason})
 
-        # 买入（加仓）
-        for code in sig.get("buy", []):
-            shares = target_shares.get(code, 0)
-            price  = ref_prices.get(code, 0)
-            if shares <= 0 or price <= 0:
-                logger.warning(f"跳过买入 {code}: shares={shares} price={price}")
+        # ── 买入差量：目标 − 实际，只买缺的部分 ──
+        for code, tgt in target_shares.items():
+            if code in sell_set:
                 continue
-            ok, reason = gw.check(strategy_id, code, "buy", shares, price)
+            cur = positions.get(code, {}).get("volume", 0)
+            buy_qty = tgt - cur
+            price  = ref_prices.get(code, 0)
+            if buy_qty <= 0 or price <= 0:
+                continue
+            ok, reason = gw.check(strategy_id, code, "buy", buy_qty, price)
             if ok:
-                # 买入用 1.10 倍报价（A股限价单，超过市价时以市价成交）
+                # 买入用 1.05 倍报价（A股限价单，超过市价时以市价成交）
                 # 避免信号价格过期导致挂单不成交
-                oid = self.client.place_order(code, "buy", shares, price * 1.05)
-                results["buys"].append({"code": code, "shares": shares,
+                oid = self.client.place_order(code, "buy", buy_qty, price * 1.05)
+                results["buys"].append({"code": code, "shares": buy_qty,
                                         "price": price, "order_id": oid})
-                logger.info(f"买入 {code} {shares}股 @{price:.2f}")
+                logger.info(f"买入 {code} {buy_qty}股 @{price:.2f}")
             else:
                 results["blocked"].append({"code": code, "direction": "buy", "reason": reason})
+
+        # ── 幂等对账：执行后复查，未收敛只告警不自动重试（防重复下单） ──
+        try:
+            actual = self.client.get_positions()
+            drift = {}
+            for c, t in target_shares.items():
+                av = actual.get(c, {}).get("volume", 0)
+                if abs(av - t) >= 100:
+                    drift[c] = (av, t)
+            for c in sell_set:
+                if actual.get(c, {}).get("volume", 0) >= 100:
+                    drift[c] = (actual[c]["volume"], 0)
+            if drift:
+                dmsg = "; ".join(f"{c}:实盘{v}≠目标{t}" for c, (v, t) in list(drift.items())[:5])
+                logger.warning(f"[对账未收敛] {dmsg}（等待下次对账修正，不自动重试）")
+                send_alert(f"[{strategy_id}] 对账未收敛 {len(drift)}只: {dmsg}", level="warning")
+        except Exception as e:
+            logger.warning(f"对账复查失败: {e}")
 
         msg = (f"[{strategy_id}] 调仓完成 ({sig.get('signal_date')})\n"
                f"卖出 {len(results['sells'])} 笔 / "
