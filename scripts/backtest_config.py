@@ -47,6 +47,11 @@ class BacktestConfig:
     ma200_thresh_shift: float = 0.0    # 择时阈值整体平移(敏感性测试用, 实盘不设)
     ma200_bear_pos: float = None       # 熊市档仓位覆盖(敏感性测试用, None=默认0.30)
 
+    # ── MA200择时抗噪机制(2026-08-30, 互斥测试不叠加; 降档始终即时, 升档才确认) ──
+    ma200_confirm_days: int = 0        # A: 升档需连续N日维持目标档(0=关)
+    ma200_hysteresis: float = 0.0      # B: 升档附加带(ratio需超上界+band)
+    ma200_smooth_days: int = 0         # C: 比值EMA窗口(0=关)
+
     # ── 账户回撤熔断(回测模拟, 实盘红线25%) ──
     halt_mode: str = "none"            # "none" | "A"全清仓 | "B"暂停开仓(持仓按MA10自然退出) | "C"触发日降至30%底仓
     halt_dd_limit: float = 0.25        # 触发线

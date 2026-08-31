@@ -110,6 +110,14 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
     halt_low = None
     halt_day_count = 0
     halt_triggers = []   # (date, nav, mode)
+    # MA200 档位状态机 (抗噪机制: 降档即时/升档确认)
+    TIER_POS = [0.30, 0.50, 0.70, 0.85, 1.00]
+    TIER_LOW = [None, 0.95, 0.98, 1.02, 1.05]
+    TIER_UP = [0.95, 0.98, 1.02, 1.05, None]
+    tier_state = 4
+    pending_tier = None
+    pending_days = 0
+    tier_switch_count = 0
 
     trade_count = 0; total_sells = 0; total_buys = 0
     total_commission_paid = 0.0  # track cumulative commission
@@ -117,6 +125,58 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
 
     for i, date in enumerate(all_dates):
         date_str = str(date.date())
+
+        # ── Step 0a: MA200 档位状态机（每日更新；抗噪机制只作用于升档） ──
+        if index_close is not None and i >= 200:
+            try:
+                hist = index_close[index_close.index <= date].dropna()
+                if len(hist) >= 200:
+                    ratio = float(hist.iloc[-1] / hist.rolling(200).mean().iloc[-1]) \
+                            + getattr(config, "ma200_thresh_shift", 0.0)
+                    sm = getattr(config, "ma200_smooth_days", 0)
+                    if sm > 1:
+                        rs = (hist / hist.rolling(200).mean()).dropna()
+                        if len(rs) >= sm:
+                            ratio = float(rs.rolling(sm).mean().iloc[-1]) + getattr(config, "ma200_thresh_shift", 0.0)
+                    hyst = getattr(config, "ma200_hysteresis", 0.0)
+                    conf = getattr(config, "ma200_confirm_days", 0)
+                    def tier_of(r):
+                        if r >= 1.05: return 4
+                        if r >= 1.02: return 3
+                        if r >= 0.98: return 2
+                        if r >= 0.95: return 1
+                        return 0
+                    # 降档: 即时生效（避损快）
+                    if TIER_LOW[tier_state] is not None and ratio < TIER_LOW[tier_state]:
+                        new_t = tier_of(ratio)
+                        if new_t < tier_state:
+                            tier_switch_count += 1
+                            tier_state = new_t
+                            pending_tier, pending_days = None, 0
+                    # 升档: 需确认（追涨慢）
+                    if TIER_UP[tier_state] is not None and ratio >= TIER_UP[tier_state] + hyst:
+                        new_t = tier_of(ratio)
+                        if new_t > tier_state:
+                            if conf <= 1:
+                                tier_switch_count += 1
+                                tier_state = new_t
+                                pending_tier, pending_days = None, 0
+                            else:
+                                if pending_tier == new_t:
+                                    pending_days += 1
+                                    if pending_days >= conf:
+                                        tier_switch_count += 1
+                                        tier_state = new_t
+                                        pending_tier, pending_days = None, 0
+                                else:
+                                    pending_tier, pending_days = new_t, 1
+            except Exception:
+                pass
+
+        pos_ratio_now = TIER_POS[tier_state]
+        bear = getattr(config, "ma200_bear_pos", None)
+        if bear is not None and tier_state == 0:
+            pos_ratio_now = bear
 
         # ── Step 0: 回撤熔断检查 ──
         if getattr(config, "halt_mode", "none") != "none" and not halted:
@@ -223,24 +283,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
 
         # ── Step 4: Rebalance ──
         if date_str in rebal_set and i >= config.min_bars and not halted:
-            pos_ratio = 1.0
-            if index_close is not None:
-                # 局部五档阶梯副本(参数化用于敏感性测试), 默认行为与共享 get_position_ratio 一致
-                try:
-                    hist = index_close[index_close.index <= date].dropna()
-                    if len(hist) >= 200:
-                        ratio = float(hist.iloc[-1] / hist.rolling(200).mean().iloc[-1]) \
-                                + getattr(config, "ma200_thresh_shift", 0.0)
-                        bear = getattr(config, "ma200_bear_pos", None)
-                        if ratio >= 1.05:   pos_ratio = 1.00
-                        elif ratio >= 1.02: pos_ratio = 0.85
-                        elif ratio >= 0.98: pos_ratio = 0.70
-                        elif ratio >= 0.95: pos_ratio = 0.50
-                        else:               pos_ratio = (0.30 if bear is None else bear)
-                    else:
-                        pos_ratio = 0.85
-                except Exception:
-                    pass
+            pos_ratio = pos_ratio_now if index_close is not None else 1.0
             # timing_scale: MA200择时强度系数(<1=熊市降仓更狠), clamp到1
             if pos_ratio < 1.0:
                 pos_ratio = min(1.0, pos_ratio * getattr(config, "timing_scale", 1.0))
@@ -358,6 +401,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None):
         "max_single_weight": max_single_seen,
         "top3_concentration": top3_avg,
         "halt_triggers": halt_triggers,
+        "tier_switch_count": tier_switch_count,
     }
 
 
