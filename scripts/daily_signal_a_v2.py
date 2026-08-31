@@ -194,8 +194,8 @@ def run():
             if not ramt.empty:
                 rprices = rpanel.ffill().iloc[-1]
                 rbudget = TRACK_A_CAPITAL * _get_position_ratio(today) / N_HOLDINGS
-                # Get top 40 candidates, skip already held
-                candidates = _select_top_turnover(ramt, rprices, rbudget * N_HOLDINGS, 40)
+                # 候选 = 持仓规模的1.5倍(60→90), 跳过已持有
+                candidates = _select_top_turnover(ramt, rprices, rbudget * N_HOLDINGS, int(N_HOLDINGS * 1.5))
                 for c in candidates:
                     if c not in current_holdings and c not in replacements:
                         replacements.append(c)
