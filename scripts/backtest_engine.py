@@ -132,8 +132,20 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
     for i, date in enumerate(all_dates):
         date_str = str(date.date())
 
-        # ── Step 0a: MA200 档位状态机（每日更新；抗噪机制只作用于升档） ──
-        if index_close is not None and i >= 200:
+        # ── Step 0a: 仓位计算。vol_target>0 → 目标波动率控仓(单参数范式);
+        #             否则 MA200 五档状态机（每日更新；抗噪机制只作用于升档） ──
+        if index_close is not None and i >= 200 and getattr(config, "vol_target", 0) > 0:
+            try:
+                hist = index_close[index_close.index <= date].dropna()
+                if len(hist) >= 200:
+                    rets = hist.pct_change().dropna()
+                    if len(rets) >= config.vol_window:
+                        ann_vol = float(rets.iloc[-config.vol_window:].std() * np.sqrt(252))
+                        pr = config.vol_target / ann_vol if ann_vol > 0 else 1.0
+                        pos_ratio_now = float(np.clip(pr, config.vol_floor_pos, 1.0))
+            except Exception:
+                pass
+        elif index_close is not None and i >= 200:
             try:
                 hist = index_close[index_close.index <= date].dropna()
                 if len(hist) >= 200:

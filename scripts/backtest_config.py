@@ -50,6 +50,11 @@ class BacktestConfig:
     ma200_thresh_shift: float = 0.0    # 择时阈值整体平移(敏感性测试用, 实盘不设)
     ma200_bear_pos: float = None       # 熊市档仓位覆盖(敏感性测试用, None=默认0.30)
 
+    # ── 目标波动率控仓(0=关, 走五档; >0=仓位=min(1,target/realized_vol)) ──
+    vol_target: float = 0.0            # 年化目标波动率(如0.12)
+    vol_window: int = 20               # 波动率估计窗口(交易日)
+    vol_floor_pos: float = 0.30        # 仓位下限(桩②: 防急跌顺周期踏空V反)
+
     # ── MA200择时抗噪机制(2026-08-30, 互斥测试不叠加; 降档始终即时, 升档才确认) ──
     ma200_confirm_days: int = 0        # A: 升档需连续N日维持目标档(0=关)
     ma200_hysteresis: float = 0.0      # B: 升档附加带(ratio需超上界+band)
