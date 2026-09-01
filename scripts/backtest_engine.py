@@ -124,6 +124,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
 
     trade_count = 0; total_sells = 0; total_buys = 0
     total_commission_paid = 0.0  # track cumulative commission
+    lot_skip_total = 0           # lot约束: 买不起一手被跳过的票次数
     max_single_track = []; top3_track = []
 
     for i, date in enumerate(all_dates):
@@ -380,6 +381,25 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                             w *= config.overheat_position_ratio
                         new_w[c] = w
 
+                # lot约束: 按实盘floor-to-lot语义落地(2026-09-01)
+                # 买不起一手(688板200股)的票跳过, 释放资金不重归一=现金拖累,
+                # 与execution/trader.py的target_shares计算一致
+                if config.lot_size > 0 and new_w:
+                    cap_value = cumul_nav * config.initial_capital
+                    cp_lot = panel.ffill().iloc[i]
+                    for c in list(new_w.keys()):
+                        px = cp_lot.get(c)
+                        if not px or pd.isna(px) or px <= 0:
+                            del new_w[c]
+                            continue
+                        lotsize = 200 if str(c).startswith("688") else config.lot_size
+                        shares = int((cap_value * new_w[c] / px) // lotsize) * lotsize
+                        if shares <= 0:
+                            lot_skip_total += 1
+                            del new_w[c]
+                        else:
+                            new_w[c] = shares * px / cap_value
+
                 # Calculate turnover & commission
                 enter_w = sum(new_w.get(c, 0) for c in set(new_w) - old_set)
                 exit_w = sum(cur_weights.get(c, 0) for c in old_set - set(new_w))
@@ -446,6 +466,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
         "trades": trade_count, "buys": total_buys, "sells": total_sells,
         "total_commission": total_commission_paid,
         "annual_cost_drag": annual_cost_drag,
+        "lot_skips": lot_skip_total,
         "max_single_weight": max_single_seen,
         "top3_concentration": top3_avg,
         "halt_triggers": halt_triggers,
