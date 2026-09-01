@@ -81,11 +81,25 @@ def run():
         logger.error("选股为空")
         return
 
-    # 价格快照
+    # 价格: 在线拉最新(快照价是月初值, 盘中限价单用月前价基本不成交)
+    import time as _t
+    import akshare as _ak
     snap_price = {}
     for c in codes:
-        row = snap[snap["code"] == c].iloc[0]
-        snap_price[c] = float(row["price"]) if pd.notna(row["price"]) else None
+        p = None
+        try:
+            sym = ("sh" if str(c).startswith(("11",)) else "sz") + str(c)
+            d = _ak.bond_zh_hs_cov_daily(symbol=sym)
+            if d is not None and len(d) > 0:
+                p = float(d.sort_values("date").iloc[-1]["close"])
+            _t.sleep(0.8)
+        except Exception:
+            pass
+        if not p or p <= 0:
+            row = snap[snap["code"] == c].iloc[0]
+            p = float(row["price"]) if pd.notna(row["price"]) else None
+        if p and p > 0:
+            snap_price[c] = p
 
     # 等权股数(转债一手=10张)
     budget = CB_CAPITAL / len(codes)
