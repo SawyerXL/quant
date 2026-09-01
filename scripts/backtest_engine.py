@@ -91,9 +91,11 @@ def apply_filters(pool_codes, panel, idx, config, return_tags=False):
     return selected
 
 
-def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, open_panel=None):
+def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, open_panel=None, cash_asset_ret=None):
     """
     主回测引擎。open_panel 可选(ma10_exit_delay=True 时用于次日开盘卖价)。
+    cash_asset_ret: 现金资产的日收益序列(如国债ETF), 传入则现金部分按该资产计收益
+    (2026-09-01 方向一: 熊市档现金升级为国债久期), 否则按 config.cash_yield。
     返回: (nav_series, metrics_dict)
     """
     all_dates = panel.index
@@ -174,10 +176,11 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
             except Exception:
                 pass
 
-        pos_ratio_now = TIER_POS[tier_state]
-        bear = getattr(config, "ma200_bear_pos", None)
-        if bear is not None and tier_state == 0:
-            pos_ratio_now = bear
+        if getattr(config, "vol_target", 0) <= 0:
+            pos_ratio_now = TIER_POS[tier_state]
+            bear = getattr(config, "ma200_bear_pos", None)
+            if bear is not None and tier_state == 0:
+                pos_ratio_now = bear
 
         # ── Step 0: 回撤熔断检查 ──
         if getattr(config, "halt_mode", "none") != "none" and not halted:
@@ -405,7 +408,10 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
 
         # ── Step 5: Cash yield ──
         cash_r = max(0, 1.0 - sum(cur_weights.values())) if cur_weights else 1.0
-        port_rets.iloc[i] += cash_r * config.cash_yield / 252
+        if cash_asset_ret is not None:
+            port_rets.iloc[i] += cash_r * float(cash_asset_ret.iloc[i])
+        else:
+            port_rets.iloc[i] += cash_r * config.cash_yield / 252
 
         # ── Step 5.5: 做T增厚 (期望值模型, 全市场回测验证+26%/年) ──
         if getattr(config, 'enable_t0', False) and cur_weights and i >= 10:
