@@ -19,6 +19,7 @@ git pull origin main >nul 2>&1
 
 REM Execute signal (freshness check: auto-skip on non-rebalancing days)
 python scripts\fetch_and_execute.py --track a
+python scripts\fetch_and_execute.py --track cb
 
 REM Reconcile after execution
 python scripts\reconcile.py --track a
