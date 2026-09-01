@@ -26,7 +26,7 @@ from monitoring.alerts import send_alert
 
 logger.add("logs/signal_a_v2_{time:YYYY-MM-DD}.log", rotation="1 day", retention="60 days")
 
-TRACK_A_CAPITAL = 1_000_000
+TRACK_A_CAPITAL = 400_000   # 2026-09-01 配比定案: 股票40万+CB60万
 N_HOLDINGS      = 60
 MAX_VOL20       = 5.0   # v2.1 拥挤度过滤: 剔除20日波动率>5%的票(严格口径, 不含最近一日)
 MA10_EXIT_DAYS  = 3
