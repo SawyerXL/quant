@@ -47,6 +47,22 @@ def _load_prev():
         return {}
 
 
+def _load_actual_cb():
+    """读QMT快照的转债持仓(11/12/127前缀), 判断CB建仓是否已实盘成交。"""
+    import json as _j
+    snap = Path("logs/qmt_positions_latest.json")
+    if not snap.exists():
+        return None
+    try:
+        d = _j.loads(snap.read_text(encoding="utf-8"))
+        pos = d.get("positions", {})
+        cb = {str(c).split(".")[0] for c, v in pos.items()
+              if isinstance(v, dict) and v.get("volume", 0) > 0 and str(c)[:3] in ("110", "111", "113", "118", "123", "127", "128")}
+        return cb if cb else None
+    except Exception:
+        return None
+
+
 def run():
     from datetime import date
     today = str(date.today())
@@ -85,16 +101,21 @@ def run():
     prev = _load_prev()
     prev_hold = set(prev.get("holdings", []))
     new_hold = set(shares.keys())
+    actual_cb = _load_actual_cb()
     # 月度调仓日才全量轮换；非调仓日保持持仓(仅输出状态)
     from daily_signal_a_v2 import _get_trade_calendar, is_rebalance_day
     cal = _get_trade_calendar()
     if is_rebalance_day(today, cal):
         buy = sorted(new_hold - prev_hold)
         sell = sorted(prev_hold - new_hold)
-    elif not prev:
-        # 首次运行: 全量建仓
+    elif not prev or not actual_cb:
+        # 首次运行 或 实盘CB尚未建仓: 保持全量买入信号直到成交(自愈, 防错过建仓窗口)
         buy = sorted(new_hold)
         sell = []
+        if not prev:
+            logger.warning("[CB] 首次信号: 全量建仓信号保持到实盘确认")
+        else:
+            logger.warning(f"[CB] 实盘CB持仓缺失(快照无转债), 建仓信号保持: {len(buy)}只")
     else:
         # 非调仓日: 沿用上一信号持仓, 仅刷新价格/日期
         buy, sell = [], []
