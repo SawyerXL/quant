@@ -318,7 +318,7 @@ def backfill_fills():
 
 def main():
     parser = argparse.ArgumentParser(description="从 Linux 拉取信号并通过 QMT 执行")
-    parser.add_argument("--track",   default="a", choices=["a", "b"], help="执行哪个策略")
+    parser.add_argument("--track",   default="a", choices=["a", "b", "cb"], help="执行哪个策略")
     parser.add_argument("--dry-run", action="store_true", help="仅打印，不真正下单")
     parser.add_argument("--setup",   action="store_true",
                         help="建仓初始化：跳过日期检查，全量买入holdings（首次使用）")
