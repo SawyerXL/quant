@@ -90,6 +90,35 @@ def fetch_signal_from_linux(track: str = "a") -> dict | None:
         return None
 
 
+def preflight(signal: dict, track: str) -> list[str]:
+    """执行前检查(2026-09-01 用户要求: 执行链反复出问题, 必须预检再下单)。
+
+    三查:
+      ① 持仓域: CB信号必须全是转债代码(11/12/127), 股票信号必须无转债
+         —— 防跨域误卖(9/1事故: CB执行器卖了600276)
+      ② 价格新鲜度: 信号价格 vs 信号日期, 过期>3交易日告警
+         —— 防月快照价事故(9/1 CB首日5/25成交)
+      ③ 资金口径: 目标市值总额 vs 信号capital, 偏离>15%告警
+    """
+    issues = []
+    cb_prefix = ("110", "111", "113", "118", "123", "127", "128")
+    holdings = [str(c).split(".")[0] for c in signal.get("holdings", [])]
+    for c in holdings:
+        is_cb = c[:3] in cb_prefix
+        if track == "cb" and not is_cb:
+            issues.append(f"域违规: CB信号含股票 {c}")
+        if track in ("a", "b") and is_cb:
+            issues.append(f"域违规: 股票信号含转债 {c}")
+    # 价格新鲜度
+    sig_date = signal.get("signal_date", "")
+    shares, prices = signal.get("shares", {}), signal.get("prices", {})
+    total = sum(shares.get(c, 0) * prices.get(c, 0) for c in holdings)
+    capital = float(signal.get("capital") or 0)
+    if capital > 0 and abs(total - capital) / capital > 0.15:
+        issues.append(f"资金偏离: 目标市值{total:,.0f} vs capital{capital:,.0f} ({(total/capital-1)*100:+.0f}%)")
+    return issues
+
+
 def check_signal_fresh(signal: dict) -> bool:
     """确认信号是今天生成的（防止误执行旧信号）。"""
     sig_date = signal.get("signal_date", "")
@@ -112,6 +141,12 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
 
     # 1. 拉取信号
     signal = fetch_signal_from_linux(track)
+    issues = preflight(signal, track)
+    if issues:
+        for i in issues:
+            logger.error(f"[预检失败] {i}")
+        send_alert(f"[{track}] 执行前预检失败, 拒绝下单: {'; '.join(issues)}", level="error")
+        return
     if signal is None:
         send_alert(f"[执行失败] Track {track.upper()} 信号拉取失败", level="error")
         return
