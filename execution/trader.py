@@ -144,13 +144,16 @@ class Trader:
         杜绝增量式指令重发导致的重复下单与仓位漂移。先卖后买。
         """
         gw, account = self._build_gateway(strategy_id)
-        positions = {c: v for c, v in self.client.get_positions().items()
-                     if self._in_scope(c, strategy_id)}
-        # 成交回报延迟修正(2026-09-01): 当日委托净额并入持仓口径,
-        # 否则diff把"已下未回报"的买单当缺失 → 重复下单(CB首日每只超配3倍)
+        # 统一归一化: 信号code无后缀('600276'), positions/orders带后缀('600276.SH')
+        # 2026-09-01 两次事故根因: key格式错位导致diff把持仓当0 → 重复下单
+        def _norm(c):
+            return str(c).split(".")[0]
+        positions = {_norm(k): v for k, v in self.client.get_positions().items()
+                     if self._in_scope(k, strategy_id)}
+        # 成交回报延迟修正: 当日委托净额并入持仓口径(已下未回报的买单不再被当缺失)
         try:
             for o in self.client.get_today_orders():
-                code = o.get("code")
+                code = _norm(o.get("code"))
                 if not self._in_scope(code, strategy_id):
                     continue
                 d = o.get("direction"); q = o.get("shares", 0)
@@ -161,10 +164,10 @@ class Trader:
                     cur["volume"] -= q
         except Exception:
             pass
-        target_shares = sig.get("shares", {})
-        holdings      = set(sig.get("holdings", []))
-        sell_set      = set(sig.get("sell", []))
-        ref_prices    = sig.get("prices", {})
+        target_shares = {_norm(k): v for k, v in sig.get("shares", {}).items()}
+        holdings      = {_norm(c) for c in sig.get("holdings", [])}
+        sell_set      = {_norm(c) for c in sig.get("sell", [])}
+        ref_prices    = {_norm(k): v for k, v in sig.get("prices", {}).items()}
         results = {"sells": [], "buys": [], "blocked": []}
 
         # ── 卖出差量：清仓票全卖 / 目标<实际 补卖差量 ──
