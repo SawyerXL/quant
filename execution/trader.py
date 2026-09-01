@@ -104,9 +104,10 @@ class Trader:
         return gw, account
 
     def _execute_bear(self, strategy_id: str, sig: dict) -> dict:
-        """熊市：卖出所有持仓。"""
+        """熊市：卖出本track所有持仓（CB清仓只卖转债，股票清仓只卖股票）。"""
         gw, _ = self._build_gateway(strategy_id)
-        positions = self.client.get_positions()
+        positions = {c: v for c, v in self.client.get_positions().items()
+                     if self._in_scope(c, strategy_id)}
         results = {"sells": [], "buys": [], "blocked": []}
 
         for code, pos in positions.items():
@@ -127,6 +128,15 @@ class Trader:
         send_alert(msg, level="warning")
         return results
 
+    @staticmethod
+    def _in_scope(code: str, strategy_id: str) -> bool:
+        """按track隔离持仓域: CB策略只碰转债(11/12/127前缀), 股票策略只碰股票。
+        2026-09-01 事故: CB执行器把账户股票当成'CB该清掉的持仓'误卖(600276)。"""
+        cb = str(code).split(".")[0][:3] in ("110", "111", "113", "118", "123", "127", "128")
+        if "cb" in strategy_id:
+            return cb
+        return not cb
+
     def _execute_bull(self, strategy_id: str, sig: dict) -> dict:
         """目标仓位 diff 式下单（2026-08-31 幂等化改造）。
 
@@ -134,7 +144,8 @@ class Trader:
         杜绝增量式指令重发导致的重复下单与仓位漂移。先卖后买。
         """
         gw, account = self._build_gateway(strategy_id)
-        positions   = self.client.get_positions()
+        positions = {c: v for c, v in self.client.get_positions().items()
+                     if self._in_scope(c, strategy_id)}
         target_shares = sig.get("shares", {})
         holdings      = set(sig.get("holdings", []))
         sell_set      = set(sig.get("sell", []))
