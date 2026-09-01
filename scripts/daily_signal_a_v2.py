@@ -244,11 +244,6 @@ def run():
     logger.info(f"\n{'='*60}\n[Track A v2] 调仓日: {today}\n{'='*60}")
 
     pos_ratio = _get_position_ratio(today)
-    # 仓位覆盖(环境变量, 用于人工保守/激进调整, 如 POSITION_RATIO_OVERRIDE=0.6)
-    _override = os.getenv("POSITION_RATIO_OVERRIDE", "")
-    if _override:
-        pos_ratio = float(_override)
-        logger.warning(f"[人工覆盖] 仓位档覆盖为 {pos_ratio:.0%} (环境变量 POSITION_RATIO_OVERRIDE)")
     logger.info(f"[大势] CSI800/MA200 → 仓位: {pos_ratio:.0%}")
 
     if pos_ratio <= 0.30:
