@@ -182,14 +182,22 @@ class Trader:
             if sell_qty <= 0:
                 continue
             price = ref_prices.get(code) or positions.get(code, {}).get("cost_price", 1.0)
-            ok, reason = gw.check(strategy_id, code, "sell", sell_qty, price)
-            if ok:
-                oid = self.client.place_order(code, "sell", sell_qty, price * 0.998)
-                results["sells"].append({"code": code, "shares": sell_qty,
+            # 卖出分笔: 单笔不超过防错单红线(10万), 超配收敛14万/笔会被拦
+            MAX_ORD = 100_000
+            remaining = sell_qty
+            while remaining > 0:
+                q = min(remaining, int(MAX_ORD / max(price, 0.01)))
+                if q <= 0:
+                    q = remaining
+                ok, reason = gw.check(strategy_id, code, "sell", q, price)
+                if not ok:
+                    results["blocked"].append({"code": code, "direction": "sell", "reason": reason})
+                    break
+                oid = self.client.place_order(code, "sell", q, price * 0.998)
+                results["sells"].append({"code": code, "shares": q,
                                          "price": price, "order_id": oid})
-                logger.info(f"卖出 {code} {sell_qty}股 @{price:.2f}")
-            else:
-                results["blocked"].append({"code": code, "direction": "sell", "reason": reason})
+                logger.info(f"卖出 {code} {q}股 @{price:.2f}")
+                remaining -= q
 
         # ── 买入差量：目标 − 实际，只买缺的部分 ──
         for code, tgt in target_shares.items():
