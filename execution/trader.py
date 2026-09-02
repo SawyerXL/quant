@@ -19,7 +19,7 @@ _NAV_HIGH_FILE = Path("data_store/meta/nav_high.json")
 
 # 各track名义资金(2026-09-01 配比定案: 股票40万+CB60万)。信号文件自带capital
 # 时以信号为准，此处仅作信号缺失时的兜底。
-TRACK_CAPITAL_FALLBACK = {"track_a": 400_000, "track_b": 400_000, "track_cb": 600_000}
+TRACK_CAPITAL_FALLBACK = {"track_a": 1_000_000, "track_b": 400_000, "track_cb": 600_000}
 
 # 板块涨跌停幅度(涨停禁买/跌停禁卖推算用); ST 单独 5%
 _BOARD_BANDS = {("60", "00"): 0.10, ("30", "68"): 0.20, ("8", "4", "92"): 0.30}
