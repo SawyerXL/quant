@@ -31,7 +31,7 @@ from monitoring.alerts import send_alert
 
 logger.add("logs/execute_{time:YYYY-MM-DD}.log", rotation="1 day", retention="30 days")
 
-LINUX_SERVER  = os.getenv("LINUX_SERVER", "47.116.166.139")
+LINUX_SERVER  = os.getenv("LINUX_SERVER", "106.15.61.81")  # 2026-09-02: 旧IP47.116.166.139已弃用
 LINUX_USER    = os.getenv("LINUX_USER",   "root")
 SSH_KEY       = os.getenv("SSH_KEY", "")
 SIGNAL_DIR    = "data_store/meta"
