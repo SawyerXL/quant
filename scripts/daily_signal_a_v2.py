@@ -66,10 +66,11 @@ def _load_prev_signal() -> dict:
     except Exception: return {}
 
 def _check_ma10_exits(holdings, today, prev_days_below):
-    """检查持仓是否连续 MA10_EXIT_DAYS 跌破 MA10。用 load_daily 直接加载(只需15天)。"""
-    if not holdings: return [], {}
+    """检查持仓是否连续 MA10_EXIT_DAYS 跌破 MA10。用 load_daily 直接加载(只需15天)。
+    返回 (exits, new_days, latest_closes)——closes顺带用于补算缺失的目标手数。"""
+    if not holdings: return [], {}, {}
     start = (date.fromisoformat(today) - timedelta(days=25)).strftime("%Y-%m-%d")
-    exits, new_days = [], {}
+    exits, new_days, latest = [], {}, {}
     for code in holdings:
         try:
             df = load_daily(code, start, today)
@@ -81,9 +82,28 @@ def _check_ma10_exits(holdings, today, prev_days_below):
         closes = pd.to_numeric(df["close"], errors="coerce").dropna()
         if len(closes) < 10: new_days[code] = 0; continue
         ma10, cur_p = closes.iloc[-10:].mean(), closes.iloc[-1]
+        latest[code] = float(cur_p)
         new_days[code] = prev_days_below.get(code, 0) + 1 if cur_p < ma10 else 0
         if new_days[code] >= MA10_EXIT_DAYS: exits.append(code)
-    return exits, new_days
+    return exits, new_days, latest
+
+
+def _fill_missing_shares(holdings, shares, prices, capital):
+    """给缺失目标手数的持仓补算等权手数(2026-09-02 修复: 9/1事故根因是
+    MA10补买/持仓校正后的票没有shares条目, 执行器把'无目标'当'目标=0'全额卖)。
+    无价格 → 不写条目(执行器侧fail-safe保护), 绝不写0。
+    """
+    out = {str(k): int(v) for k, v in (shares or {}).items()}
+    budget = float(capital) / max(len(holdings), 1)
+    for code in holdings:
+        code = str(code)
+        if code in out:
+            continue
+        p = prices.get(code)
+        if p and not np.isnan(float(p)) and float(p) > 0:
+            min_lot = 200 if code.startswith("688") else 100
+            out[code] = int(budget / float(p) / min_lot) * min_lot
+    return out
 
 def _select_top_turnover(amt_panel, prices, capital, n=60):
     """
@@ -179,7 +199,8 @@ def run():
         days_below_ma10  = {k: v for k, v in days_below_ma10.items() if k in set(actual)}
 
     # ── 每日: MA10出清检查(含自动补买) ──
-    ma10_exits, days_below_ma10 = _check_ma10_exits(current_holdings, today, days_below_ma10)
+    ma10_exits, days_below_ma10, latest_closes = _check_ma10_exits(
+        current_holdings, today, days_below_ma10)
     if ma10_exits:
         logger.warning(f"[MA10出清] {today}: {ma10_exits}")
         current_holdings = [c for c in current_holdings if c not in set(ma10_exits)]
@@ -187,6 +208,7 @@ def run():
 
         # ── 自动补买: 从成交额TOP80候补中选 ──
         replacements = []
+        rprices = {}
         try:
             start = (date.today() - timedelta(days=350)).strftime("%Y-%m-%d")
             csi800 = load_meta("csi800"); codes = sorted(csi800["code"].tolist())
@@ -207,10 +229,24 @@ def run():
         except Exception as e:
             logger.warning(f"[MA10补买失败] {e}")
 
+        # 2026-09-02 修复: 补买/校正后的持仓必须补齐shares+prices,
+        # 否则执行器把"无目标手数"当"目标=0"全额卖出(9/1事故路径)
+        prices_all = dict(prev_signal.get("prices", {}))
+        prices_all.update({c: round(float(rprices.get(c)), 2)
+                           for c in current_holdings
+                           if rprices.get(c) and not pd.isna(rprices.get(c))})
+        capital_now = TRACK_A_CAPITAL * _get_position_ratio(today)
+        held = set(current_holdings)
+        prev_shares = {k: v for k, v in prev_signal.get("shares", {}).items()
+                       if str(k) in held}   # 先剔出清仓票的旧条目(防买回)
         partial = dict(prev_signal); partial.update({
             "signal_date": today, "ma10_exits": ma10_exits,
             "holdings": current_holdings, "sell": ma10_exits,
             "buy": replacements, "days_below_ma10": days_below_ma10,
+            "shares": _fill_missing_shares(current_holdings,
+                                           prev_shares,
+                                           prices_all, capital_now),
+            "prices": prices_all,
             "note": f"MA10出清: {ma10_exits}, 补买: {replacements}" if replacements else f"MA10出清: {ma10_exits}, 无候补可买",
         })
         SIGNAL_FILE.write_text(json.dumps(partial, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -232,8 +268,20 @@ def run():
                 # 持仓校正到实盘真相(止损可能已卖掉一些), 否则reconcile天天报假差异
                 sig["holdings"] = current_holdings
                 sig["days_below_ma10"] = days_below_ma10
-                if isinstance(sig.get("shares"), dict):
-                    sig["shares"] = {c: s for c, s in sig["shares"].items() if c in set(current_holdings)}
+                # 2026-09-02 修复: 只过滤不补齐会让校正/补买票缺shares条目
+                # → 执行器误读为"目标=0"全额卖出; 这里给缺口补齐手数+价格
+                prices_now = dict(sig.get("prices", {}))
+                prices_now.update({c: round(v, 2) for c, v in latest_closes.items()
+                                   if c in set(current_holdings)})
+                capital_now = float(sig.get("effective_capital")
+                                    or TRACK_A_CAPITAL)
+                sig["prices"] = prices_now
+                held = set(current_holdings)
+                prev_shares = {k: v for k, v in sig.get("shares", {}).items()
+                               if str(k) in held}   # 先剔掉已不在持仓的旧条目
+                sig["shares"] = _fill_missing_shares(
+                    current_holdings, prev_shares,
+                    prices_now, capital_now)
                 SIGNAL_FILE.write_text(json.dumps(sig, ensure_ascii=False, indent=2), encoding="utf-8")
             logger.info(f"{today} 非调仓日, MA10正常, 持仓{len(current_holdings)}只, 已刷新信号日期")
             return

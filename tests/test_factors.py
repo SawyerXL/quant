@@ -102,12 +102,14 @@ class TestRiskGateway:
             "nav_high":     total,
             "current_nav":  total,
             "strategy_positions": {"track_a": positions or {}},
+            "limit_prices": lambda code: {"up": 1e9, "down": 0.0},
         }
         return RiskGateway(state)
 
     def test_order_amount_limit(self):
-        gw = self._make_state()
-        ok, reason = gw.check("track_a", "000001", "buy", 10000, 10.0)  # 10万 > 5万上限
+        # 2026-09-02 对齐: MAX_SINGLE_ORDER_VALUE=10万(settings.py, 与trader分笔一致)
+        gw = self._make_state(total=10_000_000)
+        ok, reason = gw.check("track_a", "000001", "buy", 1000, 100.1)  # 10.01万 > 10万上限
         assert not ok
         assert "单笔金额" in reason
 

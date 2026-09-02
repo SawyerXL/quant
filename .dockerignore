@@ -1,0 +1,19 @@
+# 2026-09-02 新增: deploy/Dockerfile 的 COPY . . 会把全仓(.env/数据/密钥)
+# 烤进镜像层。构建上下文排除以下内容。
+.env
+.env.*
+.venv/
+venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+data_store/
+data/
+logs/
+config/my_holdings.csv
+quantflow/
+*.parquet
+*.csv
+docs/
+tests/

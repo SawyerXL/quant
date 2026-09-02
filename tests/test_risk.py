@@ -23,6 +23,11 @@ from execution.risk import RiskGateway
 
 # ── 测试用账户状态构造器 ────────────────────────────────────────────
 
+def _wide_limits(code):
+    """测试默认: 任意code都给无限宽的涨跌停带(只测其他检查项时用)。"""
+    return {"up": 1e9, "down": 0.0}
+
+
 def make_state(
     total_assets: float = 1_000_000,
     cash: float = 500_000,
@@ -31,6 +36,7 @@ def make_state(
     current_nav: float = 1.0,
     strategy_positions: dict = None,
     industry_map: dict = None,
+    limit_prices=None,
 ):
     return {
         "total_assets": total_assets,
@@ -40,6 +46,8 @@ def make_state(
         "current_nav": current_nav,
         "strategy_positions": strategy_positions or {"track_a": {}, "track_b": {}},
         "industry_map": industry_map or {},
+        # 2026-09-02 涨跌停检查实装后: 默认宽限价带; 缺失时fail-closed
+        "limit_prices": limit_prices if limit_prices is not None else _wide_limits,
     }
 
 
@@ -347,16 +355,33 @@ class TestIndustryConcentration:
 
 
 # ══════════════════════════════════════════════════
-# 7. 已知 Stub 文档化测试
+# 7. 涨跌停检查（2026-09-02 实装, 原stub文档化测试升级为行为测试）
 # ══════════════════════════════════════════════════
 
-class TestKnownStubs:
+class TestLimitPrice:
 
-    def test_limit_price_check_is_stub(self):
-        """
-        [已知] _check_limit_price 是 stub，始终返回 True。
-        接入 QMT 实时行情后需实现：涨停不买 / 跌停不卖。
-        """
-        gw = RiskGateway(make_state())
-        result = gw._check_limit_price("track_a", "000001", "buy", 100, 100.0, 10000, {})
-        assert result == (True, ""), "涨跌停检查是 stub，接入 QMT 后需更新此测试"
+    LIMITS = {"000001": {"up": 11.0, "down": 9.0}}
+
+    def test_buy_at_limit_up_blocked(self):
+        gw = RiskGateway(make_state(limit_prices=self.LIMITS))
+        ok, msg = gw.check("track_a", "000001", "buy", 100, 11.0)
+        assert not ok
+        assert "涨停" in msg
+
+    def test_buy_below_limit_passes(self):
+        gw = RiskGateway(make_state(limit_prices=self.LIMITS))
+        ok, msg = gw.check("track_a", "000001", "buy", 100, 10.5)
+        assert ok, msg
+
+    def test_sell_at_limit_down_blocked(self):
+        gw = RiskGateway(make_state(limit_prices=self.LIMITS))
+        ok, msg = gw.check("track_a", "000001", "sell", 100, 9.0)
+        assert not ok
+        assert "跌停" in msg
+
+    def test_missing_limit_data_fail_closed(self):
+        # 限价数据缺失 → 拦截而非放行(红线不得fail-open)
+        gw = RiskGateway(make_state(limit_prices={}))
+        ok, msg = gw.check("track_a", "000001", "buy", 100, 10.0)
+        assert not ok
+        assert "限价" in msg

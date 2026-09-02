@@ -42,6 +42,14 @@ class BacktestConfig:
     commission: float = 0.0013        # 双边(佣金+印花+滑点)
     cash_yield: float = 0.02          # 现金年化收益
     min_bars: int = 250               # 最少K线数
+    # ── lot约束(0=关闭): 一手=lot_size股(688板200股), 调仓按
+    # initial_capital资金floor-to-lot, 买不起一手的票跳过不重归一
+    # (与execution/trader.py的floor-to-lot实盘语义一致, 2026-09-01) ──
+    lot_size: int = 0
+    initial_capital: float = 500_000.0
+    # 敞口诊断(2026-09-01): 逐日记录实际持仓权重/目标档位权重/净值,
+    # 用于lot约束"隐形去杠杆"归因, 仅诊断脚本开启
+    diag_exposure: bool = False
 
     # ── 仓位 ──
     max_position_pct: float = 0.10    # 新票仓位上限

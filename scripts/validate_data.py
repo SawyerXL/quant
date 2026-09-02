@@ -41,8 +41,13 @@ def check_coverage(data_dir: Path, trade_calendar: list) -> dict:
 
 
 def check_price_anomaly(codes: list, start: str, end: str) -> dict:
-    """检查价格异常（单日涨跌幅>50%，非停牌复牌情况）。"""
-    anomalies = []
+    """检查价格异常（单日涨跌幅>50%，非停牌复牌情况）。
+
+    2026-09-02 补盲: NaN pct_chg 单独统计——旧版 `df["pct_chg"].abs() > 50`
+    对 NaN 返回 False, 最新bar大面积NaN(新浪单行取数bug)完全漏检, 而
+    NaN 恰恰会静默清空敞口归因/动量面板(月内任一天NaN→整月收益NaN→丢股)。
+    """
+    anomalies, nan_codes = [], []
     sample = codes[:500]   # 抽样500只
     for code in sample:
         df = load_daily(code, start, end)
@@ -52,7 +57,13 @@ def check_price_anomaly(codes: list, start: str, end: str) -> dict:
         bad = df[df["pct_chg"].abs() > 50]
         if not bad.empty:
             anomalies.append({"code": code, "count": len(bad)})
-    return {"checked": len(sample), "with_anomaly": len(anomalies), "samples": anomalies[:5]}
+        nan_n = int(df["pct_chg"].isna().sum())
+        if nan_n > 0:
+            nan_codes.append({"code": code, "nan_count": nan_n})
+    return {"checked": len(sample), "with_anomaly": len(anomalies),
+            "samples": anomalies[:5],
+            "with_nan_pct_chg": len(nan_codes),
+            "nan_samples": nan_codes[:5]}
 
 
 def check_benchmark(start="2024-01-01", end="2024-12-31") -> dict:

@@ -19,9 +19,10 @@ class AkshareSource(DataSource):
         东财(stock_zh_a_hist)主用；若东财被封/超时返回空，自动落新浪(stock_zh_a_daily)。
         两端点同为 qfq，输出列契约一致，调用方无感知。
         """
-        df = self._daily_em(code, start, end)
+        # 东财2026-07-01起封本服IP, 主源切新浪, 东财仅兜底
+        df = self._daily_sina(code, start, end)
         if df.empty:
-            df = self._daily_sina(code, start, end)
+            df = self._daily_em(code, start, end)
         return df
 
     def _daily_em(self, code: str, start: str, end: str) -> pd.DataFrame:
@@ -38,6 +39,9 @@ class AkshareSource(DataSource):
             })
             df["date"] = df["date"].astype(str)
             df["code"] = code
+            # 2026-09-02 单位归一: 东财成交量单位=手, 全库统一存"股"
+            # (新浪=股)。此前两源交错写导致volume列100倍混用污染所有量比类指标
+            df["volume"] = pd.to_numeric(df["volume"], errors="coerce") * 100
             return df[self._COLS].sort_values("date")
         except Exception as e:
             logger.warning(f"get_daily(东财) {code} failed: {e} -> 转新浪")
@@ -47,15 +51,23 @@ class AkshareSource(DataSource):
         # 新浪要带市场前缀；沪6/京489/其余深
         prefix = "sh" if code.startswith("6") else ("bj" if code[:1] in "489" else "sz")
         try:
+            # 2026-09-02 修复: 多拉10个日历日算pct_chg再裁剪——单行取数时
+            # pct_change首行必NaN, 增量更新路径让每个新bar的pct_chg都是NaN
+            # (8.1%的2026 bars), 敞口归因/脏跳扫描全部静默失真
+            import datetime as _dt
+            ext_start = (_dt.datetime.strptime(start, "%Y-%m-%d")
+                         - _dt.timedelta(days=10)).strftime("%Y%m%d")
             df = ak.stock_zh_a_daily(
                 symbol=f"{prefix}{code}",
-                start_date=start.replace("-", ""), end_date=end.replace("-", ""),
+                start_date=ext_start, end_date=end.replace("-", ""),
                 adjust="qfq",
             )
             df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
             df["code"] = code
             # 新浪不返回涨跌幅，用收盘价自算以保持契约
             df["pct_chg"] = (df["close"].astype(float).pct_change() * 100).round(4)
+            df = df[df["date"] >= start].reset_index(drop=True)
+            # 新浪volume单位=股, 与归一后的东财一致, 无需转换
             return df[self._COLS].sort_values("date")
         except Exception as e:
             logger.warning(f"get_daily(新浪) {code} failed: {e}")
@@ -74,6 +86,8 @@ class AkshareSource(DataSource):
                 "今开": "open", "最高": "high", "最低": "low",
             })
             df["date"] = date
+            # 2026-09-02 单位归一: 东财spot成交量=手 → ×100存"股"
+            df["volume"] = pd.to_numeric(df["volume"], errors="coerce") * 100
             return df[["date", "code", "name", "open", "high", "low",
                         "close", "volume", "amount", "pct_chg"]]
         except Exception as e:
