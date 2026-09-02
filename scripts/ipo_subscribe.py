@@ -60,8 +60,8 @@ def _fetch_ipo_list():
     from execution.qmt_client import get_client
     client = get_client()
     try:
-        raw = client.trader.query_ipo_data(client.account)
-    except AttributeError:
+        raw = client.trader.query_ipo_data()
+    except (AttributeError, TypeError):
         raw = None
     if not raw:
         return []
