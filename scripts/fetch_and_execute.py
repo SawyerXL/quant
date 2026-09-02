@@ -109,11 +109,21 @@ def preflight(signal: dict, track: str) -> list[str]:
             issues.append(f"域违规: CB信号含股票 {c}")
         if track in ("a", "b") and is_cb:
             issues.append(f"域违规: 股票信号含转债 {c}")
-    # 价格新鲜度
-    sig_date = signal.get("signal_date", "")
+    # 价格新鲜度(文档承诺的"过期>3交易日告警"实装: generated_at才是数据生成时点,
+    # signal_date只是执行日标签; 2026-09-02 修复——8/28生成价在9/1被执行的漏洞)
+    generated_at = signal.get("generated_at", "")
+    if generated_at:
+        try:
+            gen_d = datetime.fromisoformat(generated_at).date()
+            age = (date.today() - gen_d).days
+            if age > 3:
+                issues.append(f"价格过期: generated_at={gen_d} ({age}天前, >3交易日)")
+        except Exception:
+            pass
+    # 资金口径(信号写的是effective_capital, 不是capital; 2026-09-02 修复)
     shares, prices = signal.get("shares", {}), signal.get("prices", {})
     total = sum(shares.get(c, 0) * prices.get(c, 0) for c in holdings)
-    capital = float(signal.get("capital") or 0)
+    capital = float(signal.get("capital") or signal.get("effective_capital") or 0)
     if capital > 0 and abs(total - capital) / capital > 0.15:
         issues.append(f"资金偏离: 目标市值{total:,.0f} vs capital{capital:,.0f} ({(total/capital-1)*100:+.0f}%)")
     return issues
@@ -139,16 +149,17 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
     logger.info(f"Track {track.upper()} 信号执行  模式={mode}")
     logger.info("=" * 60)
 
-    # 1. 拉取信号
+    # 1. 拉取信号（必须先判 None 再预检——SCP失败时preflight会AttributeError,
+    #    原顺序让"信号拉取失败"告警变成死代码, 2026-09-02 修复）
     signal = fetch_signal_from_linux(track)
+    if signal is None:
+        send_alert(f"[执行失败] Track {track.upper()} 信号拉取失败", level="error")
+        return
     issues = preflight(signal, track)
     if issues:
         for i in issues:
             logger.error(f"[预检失败] {i}")
         send_alert(f"[{track}] 执行前预检失败, 拒绝下单: {'; '.join(issues)}", level="error")
-        return
-    if signal is None:
-        send_alert(f"[执行失败] Track {track.upper()} 信号拉取失败", level="error")
         return
 
     # 2. 检查信号新鲜度（--setup 模式跳过，用于初始建仓）
@@ -228,8 +239,12 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
 
         assumed_prices = signal.get("prices", {})
         slippage_data  = []
+        # key归一化: QMT positions带后缀('600176.SH'), 信号无后缀——
+        # 旧版直接取交集恒空 → fill_rate恒0%, 掩盖真实成交失败(2026-09-02修复)
+        actual_positions = {str(k).split(".")[0]: v
+                            for k, v in actual_positions.items()}
         filled_codes   = set(actual_positions.keys())
-        target_buys    = set(buy_list)
+        target_buys    = {str(c).split(".")[0] for c in buy_list}
 
         for code in target_buys:
             assumed = assumed_prices.get(code)
@@ -273,9 +288,10 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
             "blocked":            result.get("blocked", []),
         }
 
-        # 保存到本地并推回 Linux
+        # 保存到本地并推回 Linux（按track分文件: 旧版同日期名被cb覆盖, Track A
+        # 执行记录丢失, 2026-09-02 修复）
         today_str   = date.today().strftime("%Y%m%d")
-        result_file = EXEC_RESULT_DIR / f"execution_result_{today_str}.json"
+        result_file = EXEC_RESULT_DIR / f"execution_result_{today_str}_{track}.json"
         EXEC_RESULT_DIR.mkdir(parents=True, exist_ok=True)
         result_file.write_text(
             json.dumps(exec_record, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -305,7 +321,7 @@ def backfill_fills():
     import json as _json
     from pathlib import Path as _Path
     today_str = date.today().strftime("%Y%m%d")
-    result_file = EXEC_RESULT_DIR / f"execution_result_{today_str}.json"
+    result_file = EXEC_RESULT_DIR / f"execution_result_{today_str}_a.json"
     logger.info(f"补拉今日成交: {today_str}")
     try:
         from execution.qmt_client import get_client as _gc

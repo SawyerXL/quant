@@ -11,9 +11,13 @@ except ImportError:
     STRATEGY_B = None  # Track B 未启用/配置缺失 → Track A 不受影响
 
 
+# Track B 未启用时的兜底(2026-09-02 修复: 原{}会让单票/行业检查KeyError
+# 且Track B红线静默失效; 兜底值按CLAUDE.md红线 Track B 8%/50%)
+_TRACK_B_DEFAULT_RISK = {"max_single_position": 0.08, "max_sector_position": 0.50}
+
 _STRATEGY_RISK = {
     "track_a": STRATEGY_A["risk"],
-    "track_b": STRATEGY_B["risk"] if STRATEGY_B else {},
+    "track_b": STRATEGY_B["risk"] if STRATEGY_B else _TRACK_B_DEFAULT_RISK,
 }
 
 
@@ -89,8 +93,25 @@ class RiskGateway:
         return True, ""
 
     def _check_limit_price(self, strategy_id, code, direction, shares, price, order_value, risk):
-        # 涨停不买、跌停不卖（调用前应传入涨跌停状态，此处用价格变动代理）
-        # 实际接入 QMT 后用实时行情判断
+        # 涨停禁买、跌停禁卖（红线）。限价来自 state["limit_prices"]：
+        # trader 用信号收盘价 × 板块涨跌幅推算（主板±10%/创业科创±20%/ST±5%），
+        # 信号价即昨收，涨跌停价=昨收×(1±幅度)。限价数据缺失时 fail-closed 拦截
+        # （宁可拦住也不放行红线）。近似性：盘中实时涨跌停无法感知，拦截的是
+        # "信号价已在涨跌停板"的确定性违规单。
+        limits_src = self.state.get("limit_prices")
+        if callable(limits_src):
+            limits = limits_src(code)
+        elif isinstance(limits_src, dict):
+            limits = limits_src.get(code)
+        else:
+            limits = None
+        if not limits:
+            return False, f"限价数据缺失，涨停禁买/跌停禁卖无法校验（fail-closed）"
+        up, down = limits["up"], limits["down"]
+        if direction == "buy" and price >= up:
+            return False, f"涨停价 {up:.2f} 禁止买入（委托价 {price:.2f}）"
+        if direction == "sell" and price <= down:
+            return False, f"跌停价 {down:.2f} 禁止卖出（委托价 {price:.2f}）"
         return True, ""
 
     def _check_single_position(self, strategy_id, code, direction, shares, price, order_value, risk):
