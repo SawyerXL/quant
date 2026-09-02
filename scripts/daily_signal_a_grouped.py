@@ -80,23 +80,42 @@ def _load_group_signal(g: str) -> dict:
         return {}
 
 
-def _initial_split(today: str, pos_ratio: float):
-    """首次部署: 现有单信号持仓交替分配给两组, 组内等权50万。"""
+def _initial_split(today: str, pos_ratio: float, calendar):
+    """首次部署: 持仓交替分配给两组, 组内等权50万。
+
+    2026-09-02 修正: 基准优先用最新QMT快照(30只)而非旧信号文件(24只)——
+    用旧文件做基准会让执行器把"今早新买但不在分组名单"的持仓误卖。
+    价格: 快照 market_value/volume; 旧信号prices补缺。
+    """
     if any(GROUP_FILE[g].exists() for g in GROUPS):
         return
-    if not LEGACY_FILE.exists():
-        logger.warning("[分组初始化] 无旧信号文件, 两组从空开始")
+    actual = _load_actual_qmt_holdings(calendar)
+    legacy = {}
+    if LEGACY_FILE.exists():
+        try:
+            legacy = json.loads(LEGACY_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            legacy = {}
+    base = sorted(actual) if actual is not None else legacy.get("holdings", [])
+    if not base:
+        logger.warning("[分组初始化] 无持仓基准(快照和旧信号都空), 两组从空开始")
         return
-    try:
-        legacy = json.loads(LEGACY_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        return
-    holdings = legacy.get("holdings", [])
-    if not holdings:
-        return
-    g0 = holdings[0::2]
-    g1 = holdings[1::2]
-    prices = legacy.get("prices", {})
+    prices = dict(legacy.get("prices", {}))
+    snap = Path("logs/qmt_positions_latest.json")
+    if snap.exists():
+        try:
+            d = json.loads(snap.read_text(encoding="utf-8"))
+            for k, v in d.get("positions", {}).items():
+                code = str(k).split(".")[0]
+                if code in set(base) and code not in prices:
+                    mv = v.get("market_value", 0)
+                    vol = v.get("volume", 0)
+                    if mv and vol:
+                        prices[code] = round(mv / vol, 2)
+        except Exception:
+            pass
+    g0 = base[0::2]
+    g1 = base[1::2]
     capital = GROUP_CAPITAL * pos_ratio
     for g, hs in (("g0", g0), ("g1", g1)):
         sig = {
@@ -112,7 +131,8 @@ def _initial_split(today: str, pos_ratio: float):
         }
         GROUP_FILE[g].write_text(json.dumps(sig, ensure_ascii=False, indent=2),
                                  encoding="utf-8")
-    send_alert(f"[摊平分组初始化] {today}: 现有持仓{g0}只+{g1}只交替分配 g0/g1 两组")
+    send_alert(f"[摊平分组初始化] {today}: 基准{len(base)}只(快照{'✓' if actual else '旧信号'})"
+               f" → g0={len(g0)}只 g1={len(g1)}只")
 
 
 def _correct_group(g: str, calendar, holdings, days_below):
@@ -221,7 +241,7 @@ def run():
     logger.info(f"[摊平分组] {today} pos_ratio={pos_ratio:.0%}")
 
     # 首次部署: 交替分配现有持仓
-    _initial_split(today, pos_ratio)
+    _initial_split(today, pos_ratio, calendar)
 
     # 共用一次面板加载(两组同源数据)
     start = (date.today() - timedelta(days=350)).strftime("%Y-%m-%d")
