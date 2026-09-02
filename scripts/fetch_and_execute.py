@@ -58,6 +58,60 @@ def push_result_to_linux(result_file: Path) -> bool:
         return False
 
 
+def fetch_group_signals() -> dict | None:
+    """摊平模式(2026-09-02): 拉取两组信号并合并为账户级目标(100万)。
+
+    合并语义: holdings=并集, shares=两组之和, sell/buy=并集——执行端仍按
+    账户级幂等diff下单, 组的独立性只存在于信号生成端(各自日历+选股)。
+    任一文件缺失/日期不新鲜 → 返回None(回退单信号路径)。
+    """
+    merged = {"holdings": [], "shares": {}, "prices": {},
+              "sell": [], "buy": [], "position_ratio": 1.0}
+    for g in ("g0", "g1"):
+        remote_file = f"{SIGNAL_DIR}/signal_a_{g}.json"
+        local_file = ROOT / f"data_store/meta/signal_a_{g}.json"
+        local_file.parent.mkdir(parents=True, exist_ok=True)
+        ssh_opts = ["-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
+        if SSH_KEY:
+            ssh_opts += ["-i", SSH_KEY]
+        cmd = ["scp"] + ssh_opts + [
+            f"{LINUX_USER}@{LINUX_SERVER}:/root/quant/{remote_file}",
+            str(local_file)]
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            if r.returncode != 0:
+                logger.warning(f"拉取组信号 {g} 失败: {r.stderr.strip()[:150]}")
+                return None
+            sig = json.loads(local_file.read_text(encoding="utf-8"))
+            if sig.get("signal_date") != merged.get("signal_date"):
+                if "signal_date" not in merged:
+                    merged["signal_date"] = sig.get("signal_date")
+                    merged["regime"] = sig.get("regime", "bull")
+                    merged["position_ratio"] = sig.get("position_ratio", 1.0)
+                else:
+                    logger.error(f"两组信号日期不一致: {merged['signal_date']} vs {sig.get('signal_date')}")
+                    return None
+            def _n(c):
+                return str(c).split(".")[0]
+            merged["holdings"] = sorted(
+                set(merged["holdings"]) | {_n(c) for c in sig.get("holdings", [])})
+            for c, s in sig.get("shares", {}).items():
+                merged["shares"][_n(c)] = merged["shares"].get(_n(c), 0) + int(s)
+            merged["prices"].update(
+                {_n(k): v for k, v in sig.get("prices", {}).items()})
+            merged["sell"] = sorted(set(merged["sell"]) | {_n(c) for c in sig.get("sell", [])})
+            merged["buy"] = sorted(set(merged["buy"]) | {_n(c) for c in sig.get("buy", [])})
+            merged["effective_capital"] = float(
+                merged.get("effective_capital", 0)
+                + float(sig.get("effective_capital") or sig.get("capital") or 0))
+        except Exception as e:
+            logger.warning(f"拉取组信号 {g} 异常: {e}")
+            return None
+    logger.info(f"[摊平合并] {merged['signal_date']}: 持仓{len(merged['holdings'])}只 "
+                f"资金{merged.get('effective_capital', 0):,.0f}")
+    return merged
+
+
 def fetch_signal_from_linux(track: str = "a") -> dict | None:
     """通过 SSH 从 Linux 服务器拉取最新信号文件。"""
     remote_file = f"{SIGNAL_DIR}/signal_{track}_latest.json"
@@ -151,7 +205,17 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
 
     # 1. 拉取信号（必须先判 None 再预检——SCP失败时preflight会AttributeError,
     #    原顺序让"信号拉取失败"告警变成死代码, 2026-09-02 修复）
-    signal = fetch_signal_from_linux(track)
+    #    摊平模式(2026-09-02): track=a 优先拉两组信号合并, 缺失回退单信号
+    signal = None
+    merged_path = None
+    if track == "a" and not setup:
+        signal = fetch_group_signals()
+        if signal is not None:
+            merged_path = ROOT / "data_store/meta/signal_a_merged_tmp.json"
+            merged_path.write_text(json.dumps(signal, ensure_ascii=False, indent=2),
+                                   encoding="utf-8")
+    if signal is None:
+        signal = fetch_signal_from_linux(track)
     if signal is None:
         send_alert(f"[执行失败] Track {track.upper()} 信号拉取失败", level="error")
         return
@@ -223,7 +287,9 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
             result = trader.execute_signal(temp_path, strategy_id=f"track_{track}")
             temp_path.unlink(missing_ok=True)
         else:
-            sig_file = ROOT / f"data_store/meta/signal_{track}_latest.json"
+            # 摊平模式: 执行合并信号(账户级目标100万); 否则单信号
+            sig_file = (merged_path if merged_path is not None
+                        else ROOT / f"data_store/meta/signal_{track}_latest.json")
             result   = trader.execute_signal(sig_file, strategy_id=f"track_{track}")
 
         logger.info(f"委托提交完成，等待 {FILL_WAIT_SECS}s 后采集成交价...")
