@@ -74,23 +74,33 @@ def collect_spans():
 
 
 def fetch_dividends(codes, start_year, end_year):
+    def _bs_code(c):
+        return ("sh." if c.startswith(("60", "68", "90")) else "sz.") + c
     bs.login()
     events = []
     for ci, code in enumerate(sorted(codes)):
         for y in range(start_year, end_year + 1):
             try:
-                rs = bs.query_dividend_data(code=code, year=str(y),
+                rs = bs.query_dividend_data(code=_bs_code(code), year=str(y),
                                             yearType="report")
                 while rs.next():
-                    row = rs.get_row_data()
-                    d = rs.fields.index if False else dict(zip(
-                        rs.fields, row))
-                    if d.get("dividCashPsBeforeTax"):
-                        events.append({
-                            "code": code,
-                            "date": d.get("dividPreNoticeDate") or "",
-                            "cash": float(d["dividCashPsBeforeTax"]),
-                        })
+                    d = dict(zip(rs.fields, rs.get_row_data()))
+                    cash = d.get("dividCashPsBeforeTax")
+                    if not cash:
+                        continue
+                    try:
+                        cash_f = float(str(cash).split("或")[0])
+                    except ValueError:
+                        continue
+                    # 除权除息日=dividOperateDate, 缺失回退dividPreNoticeDate
+                    dt = d.get("dividOperateDate") or \
+                        d.get("dividPreNoticeDate") or ""
+                    if not dt:
+                        continue
+                    events.append({
+                        "code": str(d.get("code", code)).split(".")[-1],
+                        "date": dt, "cash": cash_f,
+                    })
             except Exception:
                 continue
         if (ci + 1) % 200 == 0:
