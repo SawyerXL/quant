@@ -175,11 +175,17 @@ def preflight(signal: dict, track: str) -> list[str]:
         except Exception:
             pass
     # 资金口径(信号写的是effective_capital, 不是capital; 2026-09-02 修复)
+    # 2026-09-02 摊平口径修正: 超配>20%才拦截(防错单/口径混用); 低配只告警
+    # ——floor-to-lot跳票的现金拖累在摊平口径下天然有20~30%低配, 不是错误
     shares, prices = signal.get("shares", {}), signal.get("prices", {})
     total = sum(shares.get(c, 0) * prices.get(c, 0) for c in holdings)
     capital = float(signal.get("capital") or signal.get("effective_capital") or 0)
-    if capital > 0 and abs(total - capital) / capital > 0.15:
-        issues.append(f"资金偏离: 目标市值{total:,.0f} vs capital{capital:,.0f} ({(total/capital-1)*100:+.0f}%)")
+    if capital > 0:
+        dev = total / capital - 1
+        if dev > 0.20:
+            issues.append(f"资金超配: 目标市值{total:,.0f} vs capital{capital:,.0f} ({dev*100:+.0f}%)")
+        elif dev < -0.35:
+            issues.append(f"资金低配异常: 目标市值{total:,.0f} vs capital{capital:,.0f} ({dev*100:+.0f}%, 超出lot跳票正常范围)")
     return issues
 
 

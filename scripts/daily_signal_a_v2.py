@@ -171,8 +171,12 @@ def _load_actual_qmt_holdings(calendar):
             logger.warning(f"[持仓校正] QMT快照({exported})早于上一交易日({prev_td}), 不校正")
             return None
         pos = d.get("positions", {})
+        # 2026-09-02 修复: 快照含CB持仓(转债11/12/127/128前缀), 混入股票
+        # 信号会触发执行端preflight域违规→整批拒绝(9/2事故: 14:30被拦)。
+        cb_prefix = ("110", "111", "113", "118", "123", "127", "128")
         codes = sorted({str(c).split(".")[0] for c, v in pos.items()
-                        if isinstance(v, dict) and v.get("volume", 0) > 0})
+                        if isinstance(v, dict) and v.get("volume", 0) > 0
+                        and str(c).split(".")[0][:3] not in cb_prefix})
         return codes if codes else None
     except Exception as e:
         logger.warning(f"[持仓校正] 读QMT快照失败: {e}")
