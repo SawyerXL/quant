@@ -26,6 +26,88 @@ def sf(v):
     try: return float(v)
     except: return 0.0
 
+def _northbound_summary():
+    """读取本地北向资金缓存, 处理数据中断问题"""
+    from pathlib import Path
+    nb_file = Path("data_store/northbound_combined.parquet")
+    sh_file = Path("data_store/northbound_sh_daily.parquet")
+
+    if not nb_file.exists():
+        return {"status": "⚠️ 无本地缓存, 请先运行 northbound_daily.py"}
+
+    try:
+        df = pd.read_parquet(nb_file).sort_values("date")
+
+        # Find last row with actual net flow data (post-2024 data is NaN)
+        df_valid = df[(df['sh_net'].notna()) | (df['sz_net'].notna())].copy()
+        if df_valid.empty:
+            # Fallback: try raw files
+            if sh_file.exists():
+                raw = pd.read_parquet(sh_file).sort_values('date')
+                raw_valid = raw[raw['当日成交净买额'].notna()]
+                if not raw_valid.empty:
+                    last_row = raw_valid.iloc[-1]
+                    last_date = str(last_row['date'])[:10]
+                    last_net = sf(last_row.get('当日成交净买额', 0))
+                    return {
+                        "status": "⚠️ 数据源中断(2024年8月起停止披露日度数据)",
+                        "latest_date": last_date,
+                        "last_known_daily": last_net,
+                        "note": f"最后有效数据: {last_date} 净流入{last_net:+.1f}亿 | Q2外资持仓增至3.13万亿,季度净流入+2193亿创新高",
+                    }
+            return {"status": "⚠️ 数据源中断, Q2外资持仓3.13万亿 | 季度净流入+2193亿创新高"}
+
+        # Use last valid row
+        latest = df_valid.iloc[-1]
+        latest_date = str(latest['date'])[:10]
+        daily_net = sf(latest.get('sh_net', 0)) + sf(latest.get('sz_net', 0))
+        total_hold = sf(latest.get('total_hold', 0))
+
+        # Check staleness
+        days_stale = (date.today() - pd.Timestamp(latest_date).date()).days
+        stale_msg = None
+        if days_stale > 3:
+            stale_msg = f"数据滞后{days_stale}天(Q2外资持仓3.13万亿,季度净流入+2193亿创新高)"
+
+        # Recent trend from valid data
+        n_valid = len(df_valid)
+        net_5d = 0; net_20d = 0
+        if n_valid >= 5:
+            for i in range(n_valid-5, n_valid):
+                net_5d += sf(df_valid.iloc[i].get('sh_net', 0)) + sf(df_valid.iloc[i].get('sz_net', 0))
+        if n_valid >= 20:
+            for i in range(n_valid-20, n_valid):
+                net_20d += sf(df_valid.iloc[i].get('sh_net', 0)) + sf(df_valid.iloc[i].get('sz_net', 0))
+
+        # Trend direction
+        trend = "数据不足"
+        if n_valid >= 10:
+            recent = []
+            for i in range(n_valid-10, n_valid):
+                recent.append(sf(df_valid.iloc[i].get('sh_net', 0)) + sf(df_valid.iloc[i].get('sz_net', 0)))
+            pos = sum(1 for r in recent if r > 0)
+            if pos >= 7: trend = "🟢 持续流入"
+            elif pos >= 5: trend = "🟡 偏多"
+            elif pos >= 3: trend = "🟠 震荡"
+            else: trend = "🔴 持续流出"
+
+        result = {
+            "status": "✅",
+            "latest_date": latest_date,
+            "daily_net": daily_net,
+            "net_5d": net_5d,
+            "net_20d": net_20d,
+            "total_hold": total_hold,
+            "trend": trend,
+            "stale": stale_msg,
+        }
+        if daily_net != daily_net:  # NaN check
+            result["daily_net"] = 0
+            result["status"] = "⚠️ 日度数据中断, 参考季度"
+        return result
+    except Exception as e:
+        return {"status": f"⚠️ 读取失败: {str(e)[:50]}"}
+
 def run(send_email=False):
     now = datetime.now().strftime('%m/%d %H:%M')
     today_str = date.today().strftime('%Y-%m-%d')
@@ -225,8 +307,19 @@ def run(send_email=False):
             lines.append(f"    🔴 卖出 {r['code']} {r['name']}: {r['shares']}股 ≈ ¥{r['mkt_val']:,.0f} (MA10下{r['days_below']}d, 盈亏{r['pnl_pct']:+.1f}%)")
         elif '止盈' in r['new_verdict']:
             sell_frac = 2/3 if 'TP2' in r['new_verdict'] else 1/3
-            sell_n = int(r['shares'] * sell_frac)
-            lines.append(f"    🔴 止盈 {r['code']} {r['name']}: 卖{sell_n}股 ≈ ¥{sell_n*r['cur']:,.0f} (盈亏{r['pnl_pct']:+.0f}%, 留{int(r['shares']*(1-sell_frac))}股)")
+            sell_n_raw = int(r['shares'] * sell_frac)
+            # 最少卖1手(100股)，且留至少1手
+            if sell_n_raw >= 100 and r['shares'] - sell_n_raw >= 100:
+                sell_n = (sell_n_raw // 100) * 100
+            elif r['shares'] >= 200:
+                sell_n = 100  # 至少卖1手
+            else:
+                sell_n = 0  # 不足2手无法止盈
+            keep_n = r['shares'] - sell_n
+            if sell_n > 0:
+                lines.append(f"    🔴 止盈 {r['code']} {r['name']}: 卖{sell_n}股 ≈ ¥{sell_n*r['cur']:,.0f} (盈亏{r['pnl_pct']:+.0f}%, 留{keep_n}股)")
+            else:
+                lines.append(f"    🔴 止盈 {r['code']} {r['name']}: 仓位不足2手, 暂不执行TP (盈亏{r['pnl_pct']:+.0f}%)")
 
     warn_list = [r for r in results if '预警' in r['new_verdict']]
     if warn_list:
@@ -253,8 +346,40 @@ def run(send_email=False):
     # MCP note
     lines.append("")
     lines.append("━" * 50)
+    # ── 资金流向 (flow_monitor) ──
+    lines.append("━" * 50)
+    try:
+        from scripts.flow_monitor import analyze as flow_analyze
+        f_score, f_signal, f_alerts, f_details = flow_analyze()
+        lines.append(f"  [资金面] 评分 {f_score:+d}/100 | {f_signal}")
+        for k, v in f_details.items():
+            lines.append(f"  · {k}: {v}")
+        if f_alerts:
+            for a in f_alerts:
+                lines.append(f"  ⚠️ {a}")
+    except Exception as e:
+        lines.append(f"  [资金面] 分析失败: {e}")
+
+    # ── 北向资金 ──
+    nb_info = _northbound_summary()
+    lines.append("")
+    lines.append("━" * 50)
+    if nb_info.get('note'):
+        lines.append(f"  [北向资金] {nb_info['note']}")
+    elif nb_info.get('latest_date') and nb_info.get('daily_net', 0) != 0:
+        lines.append(f"  [北向资金] {nb_info.get('status', '')}")
+        lines.append(f"  最新: {nb_info['latest_date']} | 当日净流入: {nb_info.get('daily_net', 0):+.1f}亿")
+        if nb_info.get('total_hold', 0) > 0:
+            lines.append(f"  总持股市值: {nb_info['total_hold']/1e8:.0f}亿 | 趋势: {nb_info.get('trend', '?')}")
+        if nb_info.get('stale'):
+            lines.append(f"  ⚠️ {nb_info['stale']}")
+    else:
+        lines.append(f"  [北向资金] {nb_info.get('status', '数据暂缺')}")
+        if nb_info.get('stale'):
+            lines.append(f"  {nb_info['stale']}")
+        if nb_info.get('last_known_daily'):
+            lines.append(f"  最后已知: {nb_info['latest_date']} 净流入{nb_info['last_known_daily']:+.1f}亿")
     lines.append(f"  [MCP资金流] 仅供参考, 不决定买卖方向")
-    lines.append(f"  MA10定方向, MCP仅影响执行时机(开盘vs尾盘)")
 
     report = '\n'.join(lines)
     print(report)

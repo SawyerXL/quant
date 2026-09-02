@@ -55,7 +55,7 @@ def save_daily(code: str, df: pd.DataFrame) -> None:
         path = _daily_path(code, year)
         if path.exists():
             existing = pd.read_parquet(path)
-            grp = pd.concat([existing, grp]).drop_duplicates("date").sort_values("date")
+            grp = pd.concat([existing, grp]).drop_duplicates("date", keep="last").sort_values("date")
         grp.to_parquet(path, index=False)
 
 

@@ -222,11 +222,8 @@ def run():
     if alerts:
         print(f"\n  ⚠️ 告警:")
         for a in alerts: print(f"    {a}")
-        try:
-            from monitoring.alerts import send_alert
-            send_alert(f"【盘中监测 {now:%H:%M}】\n" + "\n".join(alerts))
-        except Exception:
-            pass
+        # DISABLED — replaced by realtime_monitor_daemon + morning_10dim_report
+        logger.info(f"告警抑制({len(alerts)}条) — 使用新系统查看")
 
     print(f"{'='*50}\n")
 
