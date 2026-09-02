@@ -70,7 +70,7 @@ class BacktestConfig:
 
     # ── 账户回撤熔断(回测模拟, 实盘红线25%) ──
     halt_mode: str = "none"            # "none" | "A"全清仓 | "B"暂停开仓(持仓按MA10自然退出) | "C"触发日降至30%底仓
-    halt_dd_limit: float = 0.25        # 触发线
+    halt_dd_limit: float = 0.15        # 触发线(2026-09-02 约束网格定案: -15%黄金档)
     halt_recover_rebound: float = 0.05 # 从触发后最低点反弹5%恢复
     halt_recover_min_days: int = 10    # 触发后至少10个交易日才允许恢复
 
