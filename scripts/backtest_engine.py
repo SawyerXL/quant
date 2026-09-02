@@ -135,6 +135,14 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
     # MA10重入冷却: code -> 冷却截止日索引(2026-09-02 修复: 原引用未定义
     # 的cooldown_until, 开启ma10_reentry_cool直接NameError且永无写入)
     cooldown_until = {}
+    # 持仓区间诊断(红利税量化): code -> (进日, 进权重, 进价); 平仓时入holding_spans
+    span_entry = {}
+    holding_spans = []
+
+    def _close_span(code, dstr):
+        if config.diag_holding_spans and code in span_entry:
+            ed, w, ep = span_entry.pop(code)
+            holding_spans.append((code, ed, dstr, w, ep))
     max_single_track = []; top3_track = []
 
     for i, date in enumerate(all_dates):
@@ -215,6 +223,8 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 if config.halt_mode == "A" and cur_weights:
                     wsum = sum(cur_weights.values())
                     port_rets.iloc[i] -= wsum * config.commission
+                    for _c in list(cur_weights.keys()):
+                        _close_span(_c, str(date.date()))
                     cur_weights = {}; entry_prices = {}; days_below_ma10 = {}
                     trail_hwm = {}; overheat_tags = {}
                 elif config.halt_mode == "C" and cur_weights:
@@ -259,6 +269,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 cur_weights.pop(code, None)
                 entry_prices.pop(code, None); days_below_ma10.pop(code, None)
                 trail_hwm.pop(code, None)
+                _close_span(code, str(date.date()))
                 trade_count += 1; total_sells += 1
                 del pending_exits[code]
 
@@ -318,6 +329,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 port_rets.iloc[i] -= w * config.commission
                 entry_prices.pop(code, None); days_below_ma10.pop(code, None)
                 trail_hwm.pop(code, None)
+                _close_span(code, str(date.date()))
                 exit_ma10_sells += w
                 trade_count += 1; total_sells += 1
 
@@ -361,6 +373,8 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                     total_commission_paid += wsum * config.commission
                     port_rets.iloc[i] -= wsum * config.commission
                     tier_sells += wsum
+                    for _c in list(cur_weights.keys()):
+                        _close_span(_c, str(date.date()))
                 cur_weights = {}; entry_prices = {}; days_below_ma10 = {}
                 trail_hwm = {}; overheat_tags = {}
                 prev_pos_ratio = pos_ratio
@@ -467,11 +481,15 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                     ep = cp_s.get(c)
                     if ep and not pd.isna(ep):
                         entry_prices[c] = float(ep)
+                        if config.diag_holding_spans:
+                            span_entry[c] = (str(date.date()),
+                                             new_w.get(c, 0.0), float(ep))
                         total_buys += 1; trade_count += 1
                 # Remove tracking for sold stocks
                 for c in old_set - set(new_w.keys()):
                     entry_prices.pop(c, None); days_below_ma10.pop(c, None)
                     trail_hwm.pop(c, None)   # 2026-09-02: 重买票不得继承旧高水位
+                    _close_span(c, str(date.date()))
                     total_sells += 1; trade_count += 1
 
                 cur_weights = new_w
@@ -530,6 +548,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
         "annual_cost_drag": annual_cost_drag,
         "lot_skips": lot_skip_total,
         "exposure_ts": exposure_ts, "skip_ts": skip_ts,
+        "holding_spans": holding_spans,
         "max_single_weight": max_single_seen,
         "top3_concentration": top3_avg,
         "halt_triggers": halt_triggers,

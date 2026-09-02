@@ -50,6 +50,9 @@ class BacktestConfig:
     # 敞口诊断(2026-09-01): 逐日记录实际持仓权重/目标档位权重/净值,
     # 用于lot约束"隐形去杠杆"归因, 仅诊断脚本开启
     diag_exposure: bool = False
+    # 持仓区间诊断(2026-09-02): 记录每笔完整持仓的进出日期/权重/进价,
+    # 用于红利税量化(股息×税率按持有期), 仅诊断脚本开启
+    diag_holding_spans: bool = False
 
     # ── 仓位 ──
     max_position_pct: float = 0.10    # 新票仓位上限
