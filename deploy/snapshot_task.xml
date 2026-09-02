@@ -41,8 +41,9 @@
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>cmd.exe</Command>
-      <Arguments>/c cd /d H:\quant &amp;&amp; python scripts\export_qmt_positions.py</Arguments>
+      <Command>C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe</Command>
+      <Arguments>scripts\export_qmt_positions.py</Arguments>
+      <WorkingDirectory>H:\quant</WorkingDirectory>
     </Exec>
   </Actions>
 </Task>

@@ -107,6 +107,11 @@ def fetch_group_signals() -> dict | None:
         except Exception as e:
             logger.warning(f"拉取组信号 {g} 异常: {e}")
             return None
+    # 2026-09-02 组间卖出语义修正: 一组卖出但另一组仍持有的票, 合并后该票
+    # 仍有目标shares → 必须从sell清单移除(执行器按sell清单会全额清仓,
+    # 会误卖另一组的份额); 差量减仓由target_shares diff自然处理
+    merged["sell"] = [c for c in merged["sell"]
+                      if merged["shares"].get(c, 0) <= 0]
     logger.info(f"[摊平合并] {merged['signal_date']}: 持仓{len(merged['holdings'])}只 "
                 f"资金{merged.get('effective_capital', 0):,.0f}")
     return merged
