@@ -63,20 +63,20 @@ class TestAccountDrawdown:
         assert ok, msg
 
     def test_small_drawdown_passes(self):
-        # 15% 回撤，未达 25% 熔断线
-        gw = RiskGateway(make_state(nav_high=1.0, current_nav=0.85))
+        # 10% 回撤，未达 15% 熔断线(2026-09-02 约束网格重校后)
+        gw = RiskGateway(make_state(nav_high=1.0, current_nav=0.90))
         ok, msg = gw.check("track_a", "000001", "buy", 100, 10.0)
         assert ok, msg
 
     def test_exactly_at_limit_is_blocked(self):
-        # 25% 回撤 = 熔断线，应拒绝
-        gw = RiskGateway(make_state(nav_high=1.0, current_nav=0.75))
+        # 15% 回撤 = 熔断线，应拒绝
+        gw = RiskGateway(make_state(nav_high=1.0, current_nav=0.85))
         ok, msg = gw.check("track_a", "000001", "buy", 100, 10.0)
         assert not ok
         assert "熔断" in msg
 
     def test_beyond_limit_is_blocked(self):
-        # 30% 回撤，超过 25% 熔断
+        # 25% 回撤，超过 15% 熔断
         gw = RiskGateway(make_state(nav_high=1.0, current_nav=0.70))
         ok, msg = gw.check("track_a", "000001", "buy", 100, 10.0)
         assert not ok
