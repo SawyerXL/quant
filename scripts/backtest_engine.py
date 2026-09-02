@@ -127,6 +127,9 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
     lot_skip_total = 0           # lot约束: 买不起一手被跳过的票次数
     exposure_ts = []             # 敞口诊断: (date, 实际权重, 目标权重, nav)
     skip_ts = []                 # 敞口诊断: (date, 该调仓跳票数)
+    # MA10重入冷却: code -> 冷却截止日索引(2026-09-02 修复: 原引用未定义
+    # 的cooldown_until, 开启ma10_reentry_cool直接NameError且永无写入)
+    cooldown_until = {}
     max_single_track = []; top3_track = []
 
     for i, date in enumerate(all_dates):
@@ -204,27 +207,6 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                         port_rets.iloc[i] -= wsum * (1 - scale) * config.commission
                         cur_weights = {c: w * scale for c, w in cur_weights.items()}
 
-        # ── Step 0b: 延迟次日开盘卖的处理 ──
-        if pending_exits and i > 0:
-            for code in list(pending_exits.keys()):
-                w = cur_weights.get(code, 0)
-                if w <= 0:
-                    del pending_exits[code]
-                    continue
-                # 当日MTM已按昨收→今收计, 开盘卖需扣回今开→今收段
-                if open_panel is not None:
-                    o_t = open_panel.iloc[i].get(code)
-                    c_t = panel.iloc[i].get(code)
-                    if o_t and c_t and not pd.isna(o_t) and not pd.isna(c_t) and o_t > 0:
-                        port_rets.iloc[i] -= w * (c_t / o_t - 1)
-                total_commission_paid += w * config.commission
-                port_rets.iloc[i] -= w * config.commission
-                cur_weights.pop(code, None)
-                entry_prices.pop(code, None); days_below_ma10.pop(code, None)
-                trail_hwm.pop(code, None)
-                trade_count += 1; total_sells += 1
-                del pending_exits[code]
-
         # ── Step 1: Mark-to-market ──
         if cur_weights and i > 0:
             ret = 0.0
@@ -234,6 +216,34 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 if pp and cp and not pd.isna(pp) and not pd.isna(cp) and pp > 0:
                     ret += w * (cp/pp - 1)
             port_rets.iloc[i] += ret
+
+        # ── Step 1b: 延迟次日开盘卖的处理(2026-09-02 修复: 原在MTM之前执行,
+        #   持仓已被弹出→当日MTM漏计该票, 修正项 -w*(c/o-1) 从0基扣减,
+        #   净贡献=-(盘中涨跌) 符号翻转; 移到MTM后, MTM计入昨收→今收,
+        #   再扣回今开→今收段 → 净贡献=+w*(今开/昨收-1), 开盘卖语义正确 ──
+        if pending_exits and i > 0:
+            for code in list(pending_exits.keys()):
+                w = cur_weights.get(code, 0)
+                if w <= 0:
+                    del pending_exits[code]
+                    continue
+                if open_panel is not None:
+                    o_t = open_panel.iloc[i].get(code)
+                    c_t = panel.iloc[i].get(code)
+                    pp = panel.iloc[i - 1].get(code)
+                    # 开盘卖净贡献 = MTM(昨收→今收) − (今收−今开)/昨收
+                    # = w×(今开/昨收−1) 精确成立; 原 -(c/o-1) 在o≠c时
+                    # 会多乘一个 c/o 因子, 且旧位置在MTM前导致符号翻转
+                    if (o_t and c_t and pp and not pd.isna(o_t)
+                            and not pd.isna(c_t) and not pd.isna(pp) and pp > 0):
+                        port_rets.iloc[i] -= w * (c_t - o_t) / pp
+                total_commission_paid += w * config.commission
+                port_rets.iloc[i] -= w * config.commission
+                cur_weights.pop(code, None)
+                entry_prices.pop(code, None); days_below_ma10.pop(code, None)
+                trail_hwm.pop(code, None)
+                trade_count += 1; total_sells += 1
+                del pending_exits[code]
 
         # ── Step 2: Stops & exits (daily check) ──
         if cur_weights and i >= 10 and config.enable_stops:
@@ -277,6 +287,9 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
 
             for code in set(exits):
                 w = cur_weights.pop(code, 0)
+                cool = getattr(config, "ma10_reentry_cool", 0)
+                if cool > 0:
+                    cooldown_until[code] = i + cool   # 重入冷却: N日内不买回
                 if getattr(config, "ma10_exit_delay", False):
                     # 延迟次日开盘卖: 当日不卖出, 次日开盘价成交(开盘/昨收近似次日gap)
                     pending_exits[code] = i
@@ -345,7 +358,9 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                     pool = [c for c in pool if cooldown_until.get(c, -1) <= i]
                 selected, sel_tags = apply_filters(pool, panel, i, config, return_tags=True)
                 n = min(len(selected), config.pool_size)
+                old_set = set(cur_weights.keys())
                 # rank buffer: 旧持仓排名在池子规模×mult 以内者保留(进N出N×mult)
+                # 2026-09-02 修复: old_set原先在此块之后定义, 开启即NameError
                 rbm = getattr(config, "rank_buffer_mult", 1.0)
                 if rbm > 1.0 and i >= config.min_bars:
                     exit_rank = int(config.pool_size * rbm)
@@ -360,7 +375,6 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 # Update overheat tags for the new portfolio
                 overheat_tags = {c: sel_tags.get(c, False) for c in selected[:n]}
 
-                old_set = set(cur_weights.keys())
                 new_set = set(selected[:n])
 
                 # Keep existing weights for stocks that stay, cap at max_single
@@ -423,6 +437,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 # Remove tracking for sold stocks
                 for c in old_set - set(new_w.keys()):
                     entry_prices.pop(c, None); days_below_ma10.pop(c, None)
+                    trail_hwm.pop(c, None)   # 2026-09-02: 重买票不得继承旧高水位
                     total_sells += 1; trade_count += 1
 
                 cur_weights = new_w
@@ -514,8 +529,14 @@ def calc_metrics(nav_series, label=""):
     # Annualized volatility
     ann_vol = daily_r.std() * np.sqrt(252)
 
-    # Win rate
-    win_rate = (daily_r > 0).mean()
+    # Win rate (2026-09-02 修复: 原"月胜率"实际是日胜率, 标签误导;
+    # 改为真实月胜率: 月度收益>0的月份占比, 月数<3时回退日胜率)
+    monthly_r = (1 + daily_r).resample("ME").prod() - 1
+    monthly_r = monthly_r[monthly_r.notna()]
+    if len(monthly_r) >= 3:
+        win_rate = (monthly_r > 0).mean()
+    else:
+        win_rate = (daily_r > 0).mean()
 
     # Calmar
     calmar = ann_ret / abs(max_dd) if max_dd != 0 else 0
