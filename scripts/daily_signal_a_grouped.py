@@ -135,15 +135,23 @@ def _initial_split(today: str, pos_ratio: float, calendar):
                f" → g0={len(g0)}只 g1={len(g1)}只")
 
 
-def _correct_group(g: str, calendar, holdings, days_below):
-    """组持仓校正到QMT快照交集(止损卖掉的票从该组移除)。"""
+def _correct_group(g: str, calendar, holdings, days_below, prev_holdings):
+    """组持仓校正: 只有"上一期就持有、实盘已消失"的票才剔除(止损卖掉的票)。
+
+    2026-09-03 修复: 旧逻辑把"信号持仓⊆QMT实际"当不变式, 首次部署时新目标
+    还没买入 → 校正把昨天调仓的11只新目标当漂移删掉(26→15), 部署目标被
+    静默回滚。新语义: 新目标(上期不在持仓)豁免校正, 即使尚未成交也不删;
+    执行器差量会幂等重试直至买入。
+    """
     actual = _load_actual_qmt_holdings(calendar)
     if actual is None:
         return holdings, days_below
-    keep = [c for c in holdings if c in set(actual)]
-    gone = sorted(set(holdings) - set(keep))
+    prev_set = set(prev_holdings)
+    keep = [c for c in holdings
+            if c in set(actual) or c not in prev_set]
+    gone = sorted(set(prev_holdings) & (set(holdings) - set(actual)))
     if gone:
-        logger.warning(f"[{g}持仓漂移] 实盘已无: {gone}")
+        logger.warning(f"[{g}持仓漂移] 实盘已无(上期持有): {gone}")
     days_below = {k: v for k, v in days_below.items() if k in set(keep)}
     return keep, days_below
 
@@ -154,7 +162,9 @@ def run_group(g: str, offset: int, today: str, calendar, panel, amt,
     holdings = [str(c) for c in prev.get("holdings", [])]
     days_below = {str(k): int(v) for k, v
                   in prev.get("days_below_ma10", {}).items()}
-    holdings, days_below = _correct_group(g, calendar, holdings, days_below)
+    prev_holdings = list(holdings)   # 校正前快照: 用于区分"上期就持有"vs"新目标"
+    holdings, days_below = _correct_group(g, calendar, holdings, days_below,
+                                          prev_holdings)
 
     # 熊市: 清仓信号
     if pos_ratio <= 0.30:

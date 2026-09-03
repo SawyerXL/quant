@@ -110,11 +110,14 @@ class Trader:
         logger.info(f"[{strategy_id}] 读取信号: {sig.get('signal_date')} "
                     f"regime={sig.get('regime')} holdings={len(sig.get('holdings', []))}")
 
-        # 本track名义资金: 信号自带capital优先(单源), 缺省用兜底表
-        capital = float(sig.get("capital") or sig.get("effective_capital")
+        # 本track全资金口径(风控NAV/分母基数): 信号"capital"是全资金(CB),
+        # "effective_capital"是档位缩放后的目标市值——绝不能用它做NAV基准
+        # (9/3事故: 0.5档50万 vs nav_high 100万 → 假回撤48% → 熔断误拦34笔)
+        capital = float(sig.get("capital")
                         or TRACK_CAPITAL_FALLBACK.get(strategy_id, 400_000))
-        if not sig.get("capital") and not sig.get("effective_capital"):
-            logger.warning(f"[{strategy_id}] 信号无capital字段, 用兜底 {capital:,.0f}")
+        if not sig.get("capital"):
+            logger.warning(f"[{strategy_id}] 信号无capital字段, "
+                           f"风控按全资金兜底 {capital:,.0f}")
 
         # 熊市信号：清仓
         if sig.get("regime") == "bear":
