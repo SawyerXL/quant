@@ -305,10 +305,14 @@ class Trader:
                 if not ok:
                     results["blocked"].append({"code": code, "direction": "sell", "reason": reason})
                     break
-                oid = self.client.place_order(code, "sell", q, price * 0.998)
+                # 2026-09-03 卖出改市价单: 原×0.998限价在下跌日挂不上
+                # (9/3七笔卖单全天在途), 止损/调仓"必须成交"语义优先于
+                # 一两个tick的滑点(TOP30流动性充裕, 滑点可忽略)
+                oid = self.client.place_order(code, "sell", q, price,
+                                              order_type="market")
                 results["sells"].append({"code": code, "shares": q,
                                          "price": price, "order_id": oid})
-                logger.info(f"卖出 {code} {q}股 @{price:.2f}")
+                logger.info(f"卖出 {code} {q}股 (市价, 参考@{price:.2f})")
                 remaining -= q
 
         if missing_shares:
@@ -407,8 +411,10 @@ class Trader:
         for code, shares, price in sells:
             ok, reason = gw.check(strategy_id, code, "sell", shares, price)
             if ok:
+                # 2026-09-03 卖出改市价单(与_execute_bull/bear同口径)
                 results["sells"].append({"code": code, "order_id":
-                    self.client.place_order(code, "sell", shares, price * 0.998)})
+                    self.client.place_order(code, "sell", shares, price,
+                                            order_type="market")})
             else:
                 results["blocked"].append({"code": code, "direction": "sell", "reason": reason})
         for code, shares, price in buys:
