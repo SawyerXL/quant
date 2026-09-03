@@ -29,6 +29,22 @@ def _to_xt_code(code: str) -> str:
         return code + ".SZ"   # 深市主板/创业板
 
 
+def _tick_price(code: str, price: float) -> float:
+    """委托价归一为价位(tick)整数倍——所有下单路径的单一收口。
+
+    2026-09-03 教训固化: 价格乘数(×1.05/×0.998)产生5.89818这类多位小数,
+    柜台按'委托价不符合价位设定'废单(9/3 32笔、8/14 8笔历史废单同根因)。
+    股票/沪转债 tick=0.01; 深转债(12xxxx/127/128)/基金 tick=0.001。
+    """
+    code = str(code).zfill(6)
+    if code.startswith(("12", "127", "128", "5", "15", "16", "18", "51")):
+        tick = 0.001
+    else:
+        tick = 0.01
+    # 末尾round(3)清掉浮点残渣(如199.70000000000002会再触发价位校验)
+    return round(round(price / tick) * tick, 3)
+
+
 class QMTClient:
     """生产环境 QMT 客户端（仅限 Windows 服务器）。"""
 
@@ -94,6 +110,10 @@ class QMTClient:
         else:
             xt_price_type = xtc.FIX_PRICE
 
+        # tick归一: 防止'委托价不符合价位设定'废单(2026-09-03教训固化)
+        if price > 0:
+            price = _tick_price(code, price)
+
         order_id = self.trader.order_stock(
             self.account,
             _to_xt_code(code),
@@ -104,7 +124,7 @@ class QMTClient:
             strategy_name="quant",
             order_remark=f"{direction}_{shares}",
         )
-        logger.info(f"下单: {direction} {code} {shares}股 @{price:.2f} → order_id={order_id}")
+        logger.info(f"下单: {direction} {code} {shares}股 @{price} → order_id={order_id}")
         return order_id
 
     def cancel_order(self, order_id: int) -> bool:

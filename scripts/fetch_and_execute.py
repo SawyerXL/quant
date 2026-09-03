@@ -314,6 +314,24 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
         except Exception as qe:
             logger.warning(f"获取持仓失败，跳过成交价记录: {qe}")
 
+        # 废单检测(2026-09-03教训固化): status=57=柜台废单, 历史上多次
+        # 静默发生(8/14×8、9/3×32), 现在执行后立即告警不再沉默
+        try:
+            rejected = [o for o in client.get_today_orders()
+                        if o.get("status") == 57]
+            if rejected:
+                n_rej = sum(o.get("shares", 0) for o in rejected)
+                codes = sorted({str(o.get("code", "")).split(".")[0]
+                                for o in rejected})
+                send_alert(
+                    f"🔴 [{track}] {len(rejected)}笔委托被柜台废单(共{n_rej}股): "
+                    f"{codes[:8]}{'...' if len(codes) > 8 else ''} —— 请查QMT"
+                    f"废单原因(常见: 委托价不符合价位/可卖不足/资金不足)",
+                    level="error")
+                logger.warning(f"废单 {len(rejected)}笔: {codes[:10]}")
+        except Exception as e:
+            logger.warning(f"废单检测失败: {e}")
+
         assumed_prices = signal.get("prices", {})
         slippage_data  = []
         # key归一化: QMT positions带后缀('600176.SH'), 信号无后缀——
