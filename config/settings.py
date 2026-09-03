@@ -39,4 +39,6 @@ MAX_ACCOUNT_DRAWDOWN     = 0.15      # 账户回撤熔断线(2026-09-02 约束�
 
 # ---------- 环境标志 ----------
 ENV = os.getenv("ENV", "development")
-IS_PROD = ENV == "production"
+IS_PROD = ENV in ("production", "simulation")  # 2026-09-02: 仿真环境也走真实下单
+# → 告警必须真实推送(原仅production, Windows仿真户ENV=simulation时所有告警被mock,
+#   9/2 CB执行日志实锤[Alert-Mock]=团队一直没收到执行告警)
