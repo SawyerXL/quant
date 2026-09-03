@@ -1,7 +1,9 @@
 """
 做T自动执行器 — QMT仿真盘验证版
 状态机: 每只持仓票独立跟踪 做T生命周期
-铁律: 1/3仓位 | ±2%触发±1%了结 | 挂单 | 次日开盘必了结
+铁律: 1/3仓位 | ±2%触发±1%了结 | 挂单 | 14:50尾盘了结(次日开盘兜底)
+影子: G1止损口径(-1%含费-1.26%)只记录不执行, 验证"先触止损还是先触了结"
+      (backtest_t0_tail_stop.py 两判读假设跨零轴+0.085%/-0.121%, 需实盘tick裁定)
 
 用法:
   python scripts/t0_auto.py --once    # 跑一轮检查
@@ -21,14 +23,26 @@ from loguru import logger
 
 STATE_FILE = ROOT / "logs" / "t0_state.json"
 RECORD_FILE = ROOT / "config" / "t_trade_log.csv"
+SHADOW_LOG = ROOT / "config" / "t_shadow_stop_log.csv"
 
 TRIGGER = 0.02   # ±2%触发
 SETTLE = 0.01    # ±1%了结
 FRAC = 1/3       # 1/3仓位
+COMM = 0.0013 * 2  # 双边成本0.26%, 影子G1口径与回测一致
+SHADOW_STOP = 0.01  # 影子止损: 反T买价×0.99 / 正T卖价×1.01 触到即记(不执行)
 # 趋势过滤(回测最优): 跳空日跳过, 避免隔夜强平吃跳空亏损
 GAP_SKIP_POS = 0.005  # 高开>0.5%不做正T
 GAP_SKIP_NEG = 0.01   # 低开>1%不做反T
+TAIL_CLOSE = dtime(14, 50)  # 尾盘了结时刻(机构标准做法: 不留隔夜T仓)
 _last_empty_warn = 0.0  # 空持仓告警节流(秒时间戳)
+
+# 板块涨跌停幅度(与execution/trader.py _BOARD_BANDS一致; ST票在此错算会被柜台拒,
+# 次日兜底承接——持仓均为非ST白马, 风险可接受)
+_BOARD_BANDS = {("60", "00"): 0.10, ("30", "68"): 0.20, ("8", "4", "92"): 0.30}
+
+
+def _board_band(code: str) -> float:
+    return next((b for pfx, b in _BOARD_BANDS.items() if str(code).startswith(pfx)), 0.10)
 
 # QMT订单状态码: 48未报 49待报 50已报 51已报待撤 52撤单中 53已撤 54部撤 55部成 56已成 57废单
 # Mock客户端返回字符串 "filled"，兼容两者
@@ -82,6 +96,27 @@ def save_state(state):
     STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2))
 
 
+def log_shadow(st, exit_kind, real_pnl_pct):
+    """影子止损记录(G1口径, 只记不执行): 对比真实结果 vs 若加-1%止损会怎样。
+    30秒轮询可能漏掉秒级折返→shadow_touched偏保守(漏记止损触发)。"""
+    import pandas as pd
+    touched = bool(st.get("shadow_stop_touched"))
+    shadow_pnl = round(-(SHADOW_STOP + COMM) * 100, 3) if touched else round(real_pnl_pct, 3)
+    rec = {
+        "date": str(date.today()), "code": st.get("code", ""),
+        "name": st.get("name", ""), "direction": st.get("direction", ""),
+        "entry_price": st.get("price"), "shadow_touched": touched,
+        "real_pnl_pct": round(real_pnl_pct, 3), "shadow_pnl_pct": shadow_pnl,
+        "exit_kind": exit_kind,
+    }
+    if SHADOW_LOG.exists():
+        df = pd.read_csv(SHADOW_LOG, dtype={"code": str})
+        df = pd.concat([df, pd.DataFrame([rec])], ignore_index=True)
+    else:
+        df = pd.DataFrame([rec])
+    df.to_csv(SHADOW_LOG, index=False)
+
+
 def log_trade(code, name, direction, sell_p, buy_p, shares):
     """记录做T到CSV（与网页记录表同格式）。"""
     import pandas as pd
@@ -104,11 +139,13 @@ def log_trade(code, name, direction, sell_p, buy_p, shares):
 
 
 def is_trading_time():
+    """循环有效窗口开到14:57: 14:50尾盘了结单的成交确认需要这7分钟。
+    新信号扫描另有14:50闸门, 尾盘不会开新仓。"""
     now = datetime.now()
     if now.weekday() >= 5:
         return False
     t = now.time()
-    return dtime(9, 30) <= t <= dtime(14, 50)
+    return dtime(9, 30) <= t <= dtime(14, 57)
 
 
 def settle_check(client, state):
@@ -134,20 +171,36 @@ def settle_check(client, state):
         t_shares = int(st.get("shares", 0))
         has_base = st.get("base") is not None
         base = int(st.get("base", 0))
+        # 涨跌停价限价单(2026-09-03教训: 市价单被仿真柜台废单; 跌停价=立即成交且永远合法)
+        cur, prev, _ = rt_price(code)
+        ref = prev if prev and prev > 0 else float(st.get("price", 0))
+        band = _board_band(code)
         if st["direction"] == "反T":
-            # 无base的旧条目不做跳过判断, 直接市价卖(宁卖勿漂)
+            # 无base的旧条目不做跳过判断, 直接卖(宁卖勿漂)
             if has_base and cur_vol.get(code, 0) <= base:
                 logger.info(f"{code} 反T多余仓已不在(卖单已成交), 只销状态不重复卖")
                 st["phase"] = "force_settled"; st["settle_date"] = today; changed = True
                 continue
-            oid = client.place_order(code, "sell", t_shares, -1, "market")
+            if ref <= 0:
+                continue
+            down_px = ref * (1 - band)
+            if cur and cur <= down_px:  # 跌停封死禁卖(红线), 下轮再试
+                logger.warning(f"{code} 开盘跌停, 隔夜卖出延后")
+                continue
+            oid = client.place_order(code, "sell", t_shares, down_px)
         else:  # 正T: 卖飞了没接回 → 买回
             if has_base and cur_vol.get(code, 0) >= base:
                 logger.info(f"{code} 正T已接回, 只销状态")
                 st["phase"] = "force_settled"; st["settle_date"] = today; changed = True
                 continue
-            oid = client.place_order(code, "buy", t_shares, -1, "market")
-        logger.warning(f"隔夜未了结 {code} {st['direction']} → 市价平仓")
+            if ref <= 0:
+                continue
+            up_px = ref * (1 + band)
+            if cur and cur >= up_px:  # 涨停封死禁买(红线), 下轮再试
+                logger.warning(f"{code} 开盘涨停, 隔夜买回延后")
+                continue
+            oid = client.place_order(code, "buy", t_shares, up_px)
+        logger.warning(f"隔夜未了结 {code} {st['direction']} → 涨跌停价限价平仓")
         if oid and oid > 0:
             # 不直接标force_settled: 等成交后用实际成交价记账(亏损也必须入CSV)
             st["phase"] = "force_settle_pending"
@@ -199,6 +252,21 @@ def run_cycle(client, quiet=False):
             continue
         base = int(st.get("base", 0))
         cur = int(positions.get(code, {}).get("volume", 0))
+        if st.get("phase") == "force_settle_pending":
+            # 昨尾盘了结单未确认成交: 核对实仓。未闭环→转隔夜了结兜底, 已闭环→销状态
+            if st.get("direction") == "反T" and st.get("base") is not None and cur > base:
+                st["phase"] = "waiting_sellout"; st["order_id"] = None
+                logger.warning(f"{code} 昨尾盘了结未成交, 转隔夜卖出")
+                pruned = True
+                continue
+            if st.get("direction") == "正T" and st.get("base") is not None and cur < base:
+                st["phase"] = "waiting_buyback"; st["order_id"] = None
+                logger.warning(f"{code} 昨尾盘了结未成交, 转隔夜买回")
+                pruned = True
+                continue
+            del state[code]
+            pruned = True
+            continue
         if st.get("phase") == "waiting_buy" and st.get("base") is not None and cur > base:
             st["phase"] = "waiting_sellout"  # 买单已成交没检测到 → 隔夜卖出
             logger.warning(f"{code} 昨反T买单已成交未了结, 转隔夜卖出")
@@ -243,6 +311,10 @@ def run_cycle(client, quiet=False):
                     logger.info(f"{code} 卖单成交@{sell_p} → 挂接回@{buy_p}")
                     break
         elif phase == "waiting_buyback":
+            # 影子止损(G1口径, 只记不执行): 正T卖飞, 价涨超卖价1%→记shadow_touched
+            cur_sh, _, _ = rt_price(code)
+            if cur_sh and cur_sh >= st["price"] * (1 + SHADOW_STOP):
+                st["shadow_stop_touched"] = True
             # 兜底: 订单状态查不到成交, 但实仓已回base → 视为已接回
             base = int(st.get("base", 0))
             filled = any(o.get("order_id") == oid and _is_filled(o.get("status")) for o in orders)
@@ -252,6 +324,7 @@ def run_cycle(client, quiet=False):
                 sell_p = st["price"]
                 buy_p = st["buy_price"]
                 log_trade(code, st.get("name", ""), "正T", sell_p, buy_p, st["shares"])
+                log_shadow(st, "当日了结", (sell_p - buy_p) / sell_p * 100)
                 state[code] = {"date": today, "code": code, "phase": "done_today"}
                 save_state(state)
         elif phase == "waiting_buy":
@@ -267,6 +340,10 @@ def run_cycle(client, quiet=False):
                     logger.info(f"{code} 买单成交@{buy_p} → 挂卖出@{sell_p}")
                     break
         elif phase == "waiting_sellout":
+            # 影子止损(G1口径, 只记不执行): 反T买套, 价跌破买价1%→记shadow_touched
+            cur_sh, _, _ = rt_price(code)
+            if cur_sh and cur_sh <= st["price"] * (1 - SHADOW_STOP):
+                st["shadow_stop_touched"] = True
             # 兜底: 订单状态查不到成交, 但实仓已回base → 视为已卖出
             base = int(st.get("base", 0))
             filled = any(o.get("order_id") == oid and _is_filled(o.get("status")) for o in orders)
@@ -276,10 +353,11 @@ def run_cycle(client, quiet=False):
                 sell_p = st["sell_price"]
                 buy_p = st["price"]
                 log_trade(code, st.get("name", ""), "反T", sell_p, buy_p, st["shares"])
+                log_shadow(st, "当日了结", (sell_p - buy_p) / buy_p * 100)
                 state[code] = {"date": today, "code": code, "phase": "done_today"}
                 save_state(state)
         elif phase == "force_settle_pending":
-            # 隔夜强平成交后按实际成交价记账(亏损也入CSV, 防止胜率虚高)
+            # 强平成交后按实际成交价记账(亏损也入CSV, 防止胜率虚高) + 影子对照
             for o in orders:
                 if o.get("order_id") == oid and _is_filled(o.get("status")):
                     fill_p = float(o.get("price", 0) or 0)
@@ -289,10 +367,14 @@ def run_cycle(client, quiet=False):
                         # 强平卖出: 卖价=实际成交, 买价=原反T买入价
                         if fill_p > 0:
                             log_trade(code, st.get("name", ""), "反T", fill_p, st["price"], st["shares"])
+                            log_shadow(st, "尾盘了结" if st.get("tail_close") else "隔夜强平",
+                                       (fill_p - st["price"]) / st["price"] * 100)
                     else:
                         # 强平买回: 买价=实际成交, 卖价=原正T卖出价
                         if fill_p > 0:
                             log_trade(code, st.get("name", ""), "正T", st["price"], fill_p, st["shares"])
+                            log_shadow(st, "尾盘了结" if st.get("tail_close") else "隔夜强平",
+                                       (st["price"] - fill_p) / st["price"] * 100)
                     st["phase"] = "force_settled"
                     save_state(state)
                     break
@@ -304,6 +386,8 @@ def run_cycle(client, quiet=False):
         if st.get("phase") == "done_today"
     }
     for code, pos in positions.items():
+        if t >= TAIL_CLOSE:
+            break  # 14:50后不开新仓, 尾盘只做了结(了结腿有7分钟成交确认窗口)
         if code in state or code in done_today:
             continue  # 已在做T流程中 或 今日已完成
         cur, prev, opn = rt_price(code)
@@ -348,14 +432,60 @@ def run_cycle(client, quiet=False):
                 save_state(state)
                 logger.info(f"反T触发 {code} {chg*100:.1f}% → 挂买{t_shares}股@{buy_p}")
 
-    # 5. 收盘前撤单（14:50后撤销所有未成交挂单，避免隔夜）
-    if t >= dtime(14, 50):
+    # 5. 14:50尾盘了结(替代次日开盘强平): 未闭环T仓涨跌停价限价单立即了结,
+    #    跌停/涨停封死(红线)或了结单未成交 → 次日settle_check兜底
+    if t >= TAIL_CLOSE:
         for code, st in list(state.items()):
-            if st.get("date") == today and st.get("phase") in ("waiting_sell", "waiting_buyback", "waiting_buy", "waiting_sellout"):
+            if st.get("date") != today:
+                continue
+            phase = st.get("phase")
+            base = int(st.get("base", 0) or 0)
+            cur_vol = int(positions.get(code, {}).get("volume", 0))
+            if phase in ("waiting_sell", "waiting_buy"):
+                # 首腿没成交: 撤单。实仓已变化(成交未回传)→转尾盘了结; 否则销状态
                 oid = st.get("order_id")
                 if oid:
                     client.cancel_order(oid)
-                    logger.info(f"14:50撤单 {code} {st['phase']}")
+                if st["direction"] == "正T" and cur_vol < base:
+                    st["phase"] = "waiting_buyback"; st["order_id"] = None
+                    logger.warning(f"{code} 正T首腿已成交未检测, 14:50转尾盘买回")
+                elif st["direction"] == "反T" and cur_vol > base:
+                    st["phase"] = "waiting_sellout"; st["order_id"] = None
+                    logger.warning(f"{code} 反T首腿已成交未检测, 14:50转尾盘卖出")
+                else:
+                    del state[code]
+                    logger.info(f"14:50撤单销状态 {code} {phase}")
+                    continue
+            if st.get("phase") not in ("waiting_buyback", "waiting_sellout"):
+                continue
+            oid = st.get("order_id")
+            if oid:
+                client.cancel_order(oid)  # 撤限价了结单, 防与尾盘单双成交
+            cur, prev, _ = rt_price(code)
+            ref = prev if prev and prev > 0 else float(st.get("price", 0))
+            if ref <= 0:
+                continue
+            band = _board_band(code)
+            t_shares = int(st.get("shares", 0))
+            if st["direction"] == "反T":
+                down_px = ref * (1 - band)
+                if cur and cur <= down_px:  # 跌停封死禁卖(红线), 留次日兜底
+                    logger.warning(f"{code} 尾盘跌停封死, 卖出延至次日")
+                    continue
+                oid2 = client.place_order(code, "sell", t_shares, down_px)
+            else:
+                up_px = ref * (1 + band)
+                if cur and cur >= up_px:  # 涨停封死禁买(红线), 留次日兜底
+                    logger.warning(f"{code} 尾盘涨停封死, 买回延至次日")
+                    continue
+                oid2 = client.place_order(code, "buy", t_shares, up_px)
+            if oid2 and oid2 > 0:
+                st["phase"] = "force_settle_pending"
+                st["order_id"] = oid2
+                st["settle_date"] = today
+                st["tail_close"] = True
+                save_state(state)
+                logger.warning(f"14:50尾盘了结 {code} {st['direction']} 涨跌停价限价单")
 
     return state, len(positions)
 
