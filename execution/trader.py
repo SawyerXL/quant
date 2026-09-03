@@ -201,8 +201,11 @@ class Trader:
                     results["blocked"].append({"code": code, "direction": "sell",
                                                "reason": reason})
                     break
-                oid = self.client.place_order(code, "sell", q, price,
-                                              order_type="market")
+                # 2026-09-03: 熊市清仓同口径——跌停价限价单(市价单被
+                # 仿真柜台废单实测, 跌停价限价=立即市价成交且永远合法)
+                limits = gw.state.get("limit_prices", {}).get(code)
+                order_px = limits["down"] if limits else round(price * 0.9, 2)
+                oid = self.client.place_order(code, "sell", q, order_px)
                 results["sells"].append({"code": code, "shares": q, "order_id": oid})
                 remaining -= q
 
@@ -305,14 +308,16 @@ class Trader:
                 if not ok:
                     results["blocked"].append({"code": code, "direction": "sell", "reason": reason})
                     break
-                # 2026-09-03 卖出改市价单: 原×0.998限价在下跌日挂不上
-                # (9/3七笔卖单全天在途), 止损/调仓"必须成交"语义优先于
-                # 一两个tick的滑点(TOP30流动性充裕, 滑点可忽略)
-                oid = self.client.place_order(code, "sell", q, price,
-                                              order_type="market")
+                # 2026-09-03 卖出定价: 跌停价限价单——立即以市价成交且
+                # 永远合法(原×0.998下跌日挂不上; 市价单被仿真柜台废单
+                # 301526实测57)。跌停价=昨收×(1-板块幅度), 从风控limit
+                # 表取; 触及跌停的票已被风险检查拦截, 不会排队
+                limits = gw.state.get("limit_prices", {}).get(code)
+                order_px = limits["down"] if limits else round(price * 0.9, 2)
+                oid = self.client.place_order(code, "sell", q, order_px)
                 results["sells"].append({"code": code, "shares": q,
-                                         "price": price, "order_id": oid})
-                logger.info(f"卖出 {code} {q}股 (市价, 参考@{price:.2f})")
+                                         "price": order_px, "order_id": oid})
+                logger.info(f"卖出 {code} {q}股 (限价@跌停{order_px}, 参考@{price:.2f})")
                 remaining -= q
 
         if missing_shares:
@@ -411,10 +416,11 @@ class Trader:
         for code, shares, price in sells:
             ok, reason = gw.check(strategy_id, code, "sell", shares, price)
             if ok:
-                # 2026-09-03 卖出改市价单(与_execute_bull/bear同口径)
+                # 2026-09-03 卖出定价: 跌停价限价单(与_execute_bull同口径)
+                limits = gw.state.get("limit_prices", {}).get(code)
+                order_px = limits["down"] if limits else round(price * 0.9, 2)
                 results["sells"].append({"code": code, "order_id":
-                    self.client.place_order(code, "sell", shares, price,
-                                            order_type="market")})
+                    self.client.place_order(code, "sell", shares, order_px)})
             else:
                 results["blocked"].append({"code": code, "direction": "sell", "reason": reason})
         for code, shares, price in buys:
