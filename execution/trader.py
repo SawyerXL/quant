@@ -237,18 +237,26 @@ class Trader:
         raw_positions = self.client.get_positions()
         positions = {_norm(k): v for k, v in raw_positions.items()
                      if self._in_scope(k, strategy_id)}
-        # 成交回报延迟修正: 当日委托净额并入持仓口径(已下未回报的买单不再被当缺失)
+        # 成交回报延迟修正: 未终态委托的未成交净额并入持仓口径
+        # (已下未回报的买单不再被当缺失)。2026-09-03 修复: 原把废单(57)/
+        # 已撤/全成单的整单量都计入 → 32笔废单被当成"已买入" → 重跑时
+        # 买入差量=0、部署静默漏买; 正确口径只计未终态(50已报/52部成/
+        # 54部成待撤)的 shares-filled 净额。
         try:
+            OPEN_STATUS = (50, 52, 54)
             for o in self.client.get_today_orders():
                 code = _norm(o.get("code"))
                 if not self._in_scope(code, strategy_id):
                     continue
-                d = o.get("direction"); q = o.get("shares", 0)
+                if o.get("status") not in OPEN_STATUS:
+                    continue
+                d = o.get("direction")
+                net = max(0, o.get("shares", 0) - o.get("filled", 0))
                 cur = positions.setdefault(code, {"volume": 0, "market_value": 0})
                 if d == "buy":
-                    cur["volume"] += q
+                    cur["volume"] += net
                 elif d == "sell":
-                    cur["volume"] -= q
+                    cur["volume"] -= net
         except Exception:
             pass
         target_shares = {_norm(k): v for k, v in sig.get("shares", {}).items()}
