@@ -60,8 +60,10 @@ def main():
         real_sell = min(shares, cur_vol)
         batches = _split_batches(real_sell, price)
         for i, qty in enumerate(batches, 1):
-            oid = client.place_order(code, "sell", qty, price)
-            logger.info(f"  SELL {code} 批{i} {qty}股 @{price:.2f} → {oid}")
+            # 2026-09-04 修复: 原按ref价挂卖单, 下跌日挂不上(与主线同坑);
+            # 改×0.98限价保证成交, place_order自动tick归一
+            oid = client.place_order(code, "sell", qty, price * 0.98)
+            logger.info(f"  SELL {code} 批{i} {qty}股 @{price * 0.98:.2f} → {oid}")
             ok_cnt += 1
 
     print(f"\n  已提交 {ok_cnt} 笔委托")
