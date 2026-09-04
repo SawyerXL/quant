@@ -201,11 +201,14 @@ class Trader:
                     results["blocked"].append({"code": code, "direction": "sell",
                                                "reason": reason})
                     break
-                # 2026-09-03: 熊市清仓同口径——跌停价限价单(市价单被
-                # 仿真柜台废单实测, 跌停价限价=立即市价成交且永远合法)
-                limits = gw.state.get("limit_prices", {}).get(code)
-                order_px = limits["down"] if limits else round(price * 0.9, 2)
-                oid = self.client.place_order(code, "sell", q, order_px)
+                # 2026-09-04: 熊市清仓同口径——实时价×0.98限价单
+                # (市价单被仿真柜台废单实测; 跌停价依赖昨收, Windows
+                # 拿不到实时昨收, 用持仓市值/股数的实时价最稳)
+                if pos.get("volume") and pos.get("market_value"):
+                    live_px = float(pos["market_value"]) / pos["volume"]
+                    if live_px > 0:
+                        price = live_px
+                oid = self.client.place_order(code, "sell", q, round(price * 0.98, 2))
                 results["sells"].append({"code": code, "shares": q, "order_id": oid})
                 remaining -= q
 
@@ -296,10 +299,12 @@ class Trader:
                 sell_qty = 0
             if sell_qty <= 0:
                 continue
-            # 2026-09-04 修复: 卖单参考价用持仓实时市值/股数刷新——信号价
-            # 可能过期数天(300408实锤: 信号价109.22→涨到~115, 旧价算的
-            # 跌停87.38低于真实跌停92→柜台废单)。实时价保证跌停估算在
-            # 交易所有效带内。
+            # 2026-09-04 卖单定价v3: 参考价用持仓实时市值/股数, 限价=实时×0.98。
+            # 教训链: ×0.998挂不上(9/3) → 跌停价限价单(9/3)依赖昨收, 信号价
+            # 过期时跌停估算低于真实跌停→废单(300408×2实锤: 旧价109.22已涨
+            # 到115) → Windows无法访问新浪实时昨收(本地代理7892挂了)。
+            # 实时×0.98: 在非跌停场景下恒在有效带内、低于市价立即成交、
+            # 每次执行用最新市值刷新→自愈。跌停禁卖由风险层粗筛拦截。
             pos_live = positions.get(code, {})
             if pos_live.get("volume") and pos_live.get("market_value"):
                 live_px = float(pos_live["market_value"]) / pos_live["volume"]
@@ -307,7 +312,6 @@ class Trader:
                     price = live_px
             else:
                 price = ref_prices.get(code) or pos_live.get("cost_price", 1.0)
-            # 用实时价刷新该code的涨跌停表
             gw.state["limit_prices"][code] = _limit_prices(
                 [code], {code: price}, _build_st_map()).get(code)
             # 卖出分笔: 单笔不超过防错单红线(10万), 超配收敛14万/笔会被拦
@@ -321,16 +325,11 @@ class Trader:
                 if not ok:
                     results["blocked"].append({"code": code, "direction": "sell", "reason": reason})
                     break
-                # 2026-09-03 卖出定价: 跌停价限价单——立即以市价成交且
-                # 永远合法(原×0.998下跌日挂不上; 市价单被仿真柜台废单
-                # 301526实测57)。跌停价=昨收×(1-板块幅度), 从风控limit
-                # 表取; 触及跌停的票已被风险检查拦截, 不会排队
-                limits = gw.state.get("limit_prices", {}).get(code)
-                order_px = limits["down"] if limits else round(price * 0.9, 2)
+                order_px = round(price * 0.98, 2)
                 oid = self.client.place_order(code, "sell", q, order_px)
                 results["sells"].append({"code": code, "shares": q,
                                          "price": order_px, "order_id": oid})
-                logger.info(f"卖出 {code} {q}股 (限价@跌停{order_px}, 参考@{price:.2f})")
+                logger.info(f"卖出 {code} {q}股 (限价@{order_px}, 实时@{price:.2f})")
                 remaining -= q
 
         if missing_shares:
@@ -429,11 +428,11 @@ class Trader:
         for code, shares, price in sells:
             ok, reason = gw.check(strategy_id, code, "sell", shares, price)
             if ok:
-                # 2026-09-03 卖出定价: 跌停价限价单(与_execute_bull同口径)
-                limits = gw.state.get("limit_prices", {}).get(code)
-                order_px = limits["down"] if limits else round(price * 0.9, 2)
+                # 2026-09-04: 实时价×0.98限价单(与_execute_bull同口径,
+                # current_price由调用方实时传入)
                 results["sells"].append({"code": code, "order_id":
-                    self.client.place_order(code, "sell", shares, order_px)})
+                    self.client.place_order(code, "sell", shares,
+                                            round(price * 0.98, 2))})
             else:
                 results["blocked"].append({"code": code, "direction": "sell", "reason": reason})
         for code, shares, price in buys:
