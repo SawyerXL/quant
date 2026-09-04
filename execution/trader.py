@@ -296,7 +296,20 @@ class Trader:
                 sell_qty = 0
             if sell_qty <= 0:
                 continue
-            price = ref_prices.get(code) or positions.get(code, {}).get("cost_price", 1.0)
+            # 2026-09-04 修复: 卖单参考价用持仓实时市值/股数刷新——信号价
+            # 可能过期数天(300408实锤: 信号价109.22→涨到~115, 旧价算的
+            # 跌停87.38低于真实跌停92→柜台废单)。实时价保证跌停估算在
+            # 交易所有效带内。
+            pos_live = positions.get(code, {})
+            if pos_live.get("volume") and pos_live.get("market_value"):
+                live_px = float(pos_live["market_value"]) / pos_live["volume"]
+                if live_px > 0:
+                    price = live_px
+            else:
+                price = ref_prices.get(code) or pos_live.get("cost_price", 1.0)
+            # 用实时价刷新该code的涨跌停表
+            gw.state["limit_prices"][code] = _limit_prices(
+                [code], {code: price}, _build_st_map()).get(code)
             # 卖出分笔: 单笔不超过防错单红线(10万), 超配收敛14万/笔会被拦
             MAX_ORD = 100_000
             remaining = sell_qty
