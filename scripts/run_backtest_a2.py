@@ -84,6 +84,8 @@ def ind_zscore(factor: pd.Series, ind_map: pd.Series) -> pd.Series:
 
 
 # ── ② 阶梯式仓位（5档）────────────────────────────────────────────────────
+MA200_THRESH_SHIFT = -0.03  # 2026-09-04 定案: 五档-更早降档3%(归因过闸门, 双窗口回撤-1.2~-4.2pp, OOS收益反优)
+
 def get_position_ratio(index_close: pd.Series, date: pd.Timestamp) -> float:
     """
     CSI800 收盘价 / MA200：
@@ -98,7 +100,7 @@ def get_position_ratio(index_close: pd.Series, date: pd.Timestamp) -> float:
         return 0.85  # 数据不足时保守70%
 
     ma200 = hist.rolling(MA_PERIOD).mean().iloc[-1]
-    ratio = float(hist.iloc[-1]) / float(ma200)
+    ratio = float(hist.iloc[-1]) / float(ma200) + MA200_THRESH_SHIFT
 
     if ratio >= 1.05:   return 1.00
     elif ratio >= 1.02: return 0.85

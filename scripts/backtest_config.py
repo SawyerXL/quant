@@ -58,7 +58,7 @@ class BacktestConfig:
     max_position_pct: float = 0.10    # 新票仓位上限
     max_single: float = 0.15           # 单票绝对上限(旧持仓超标时削减)
     timing_scale: float = 1.0          # MA200择时仓位系数(1=现网; <1=熊市降仓更狠)
-    ma200_thresh_shift: float = 0.0    # 择时阈值整体平移(敏感性测试用, 实盘不设)
+    ma200_thresh_shift: float = -0.03  # 择时阈值整体平移(2026-09-04定案: 更早降档3%, 回撤-4.2pp/收益-0.35pp全期, OOS反优)
     ma200_bear_pos: float = None       # 熊市档仓位覆盖(敏感性测试用, None=默认0.30)
 
     # ── 目标波动率控仓(0=关, 走五档; >0=仓位=min(1,target/realized_vol)) ──
@@ -153,6 +153,7 @@ DEFAULT_CONFIG = BacktestConfig(
     # vs 防御票1.0~1.7%。vol20_use_today=False=只用T-1及以前。
     max_vol20=5.0,
     vol20_use_today=False,
+    ma200_thresh_shift=-0.03,
     # ── 成本 ──
     commission=0.0013,
     cash_yield=0.02,
