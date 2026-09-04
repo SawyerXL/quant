@@ -187,19 +187,28 @@ def run_group(g: str, offset: int, today: str, calendar, panel, amt,
         holdings = [c for c in holdings if c not in set(ma10_exits)]
         days_below = {k: v for k, v in days_below.items()
                       if k not in set(ma10_exits)}
-        # 组内补买: 成交额候补(跳过已持有)
+        # 组内补买: 成交额候补(跳过已持有 + 跳过刚出清的票)
+        # 2026-09-04 修复: 出清后立刻买回同一批票的bug——刚出清的票从
+        # holdings移除后变成"候补资格", 而它们是成交额头部 → 立刻被买回
         replacements = []
         if not amt.empty:
             rprices = latest_prices
             budget = GROUP_CAPITAL * pos_ratio / N_HOLDINGS
             candidates = _select_top_turnover(
                 amt, rprices, budget * N_HOLDINGS, int(N_HOLDINGS * 1.5))
+            excluded = set(holdings) | set(ma10_exits)
             for c in candidates:
-                if c not in holdings and c not in replacements:
+                if c not in excluded and c not in replacements:
                     replacements.append(c)
                 if len(replacements) >= len(ma10_exits):
                     break
             holdings += replacements
+            # 补买票的价格/手数补齐(原缺prices→缺shares条目→执行器fail-safe跳过)
+            if replacements:
+                for c in replacements:
+                    px = rprices.get(c)
+                    if px and not pd.isna(px) and px > 0:
+                        latest_closes[c] = float(px)
             logger.info(f"[{g} MA10补买] {today}: 出清{ma10_exits} 补入{replacements}")
 
     if is_rebal:
