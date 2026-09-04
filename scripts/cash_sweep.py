@@ -65,6 +65,12 @@ def main(dry_run: bool):
     target = max(0.0, min(target, STOCK_CAPITAL * 0.7))
 
     delta = target - bond_held
+    # 分批建仓(spec §7 2d: 单日新增敞口≤20万)——首次建仓50万分3天
+    MAX_PER_RUN = 200_000
+    if delta > MAX_PER_RUN:
+        logger.info(f"[cash_sweep] 分批: 本次买入封顶{MAX_PER_RUN:,.0f} "
+                    f"(总缺口{delta:,.0f})")
+        delta = MAX_PER_RUN
     if abs(delta) < MIN_AMOUNT and not (tier > 0.5 and bond_held > 0):
         logger.info(f"[cash_sweep] tier={tier} 债券持仓{bond_held:,.0f} "
                     f"目标{target:,.0f} 差{delta:+,.0f} < {MIN_AMOUNT} 不动")
