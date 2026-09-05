@@ -417,6 +417,15 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                     pool = mom.nlargest(config.pool_size * 2).index.tolist()
                 else:
                     pool = amt_avg.nlargest(config.pool_size * 2).index.tolist()
+                if getattr(config, "pool_style", "amount") == "lowvol":
+                    # 2026-09-05 IC立项V2: 成交额2N内按vol20升序取N
+                    # (T-1严格: 21根bar止于i-1 = 20个日收益)
+                    vols = {}
+                    for c in pool:
+                        rr = panel[c].iloc[max(0, i-21):i].pct_change().dropna()
+                        if len(rr) >= 10:
+                            vols[c] = float(rr.iloc[-20:].std() * np.sqrt(252))
+                    pool = sorted(vols, key=vols.get)[:config.pool_size]
                 # 重入冷却: MA10退出的票N日内不买回
                 if getattr(config, "ma10_reentry_cool", 0) > 0 and i >= config.min_bars:
                     pool = [c for c in pool if cooldown_until.get(c, -1) <= i]
@@ -468,6 +477,21 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                         if config.overheat_mode == "reduce" and overheat_tags.get(c, False):
                             w *= config.overheat_position_ratio
                         new_w[c] = w
+
+                # 逆波动率加权(2026-09-05 IC立项V1): 保持总权重=档位,
+                # 内部按1/vol20重分配(T-1严格); 单票上限由lot/max_position_pct兜底
+                if getattr(config, "weight_scheme", "equal") == "inv_vol" and new_w:
+                    vols = {}
+                    for c in new_w:
+                        rr = panel[c].iloc[max(0, i-21):i].pct_change().dropna()
+                        if len(rr) >= 10:
+                            v = float(rr.iloc[-20:].std() * np.sqrt(252))
+                            vols[c] = 1.0 / max(v, 0.005)
+                    if vols:
+                        tot = sum(vols.values())
+                        w_sum = sum(new_w.values())
+                        new_w = {c: (vols.get(c, 1.0) / tot) * w_sum
+                                 for c in new_w}
 
                 # lot约束: 按实盘floor-to-lot语义落地(2026-09-01)
                 # 买不起一手(688板200股)的票跳过, 释放资金不重归一=现金拖累,
