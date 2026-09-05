@@ -165,10 +165,35 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
             try:
                 hist = index_close[index_close.index <= date].dropna()
                 if len(hist) >= 200:
-                    ratio = float(hist.iloc[-1] / hist.rolling(200).mean().iloc[-1]) \
-                            + getattr(config, "ma200_thresh_shift", 0.0)
+                    ens = getattr(config, "ma_ensemble", ())
+                    if ens and len(hist) >= max(ens):
+                        # 择时集成(2026-09-05): MA{150,200,250}组合喂五档,
+                        # 不改档位结构改输入(广度扩张, 与摊平同源)
+                        rs = [float(hist.iloc[-1] / hist.rolling(p).mean().iloc[-1])
+                              for p in ens]
+                        if getattr(config, "ma_ensemble_mode", "mean") == "vote":
+                            import statistics as _st
+                            def _tier(r):
+                                if r >= 1.05: return 4
+                                if r >= 1.02: return 3
+                                if r >= 0.98: return 2
+                                if r >= 0.95: return 1
+                                return 0
+                            # 三票取中位档, 直接给目标档(集成本身就是平滑,
+                            # 绕过升档确认态机)
+                            t = _st.median([_tier(r) for r in rs])
+                            pos_ratio_now = TIER_POS[int(t)]
+                            tier_state = int(t)
+                            pending_tier, pending_days = None, 0
+                            ratio = None
+                        else:
+                            ratio = float(np.mean(rs)) \
+                                + getattr(config, "ma200_thresh_shift", 0.0)
+                    else:
+                        ratio = float(hist.iloc[-1] / hist.rolling(200).mean().iloc[-1]) \
+                                + getattr(config, "ma200_thresh_shift", 0.0)
                     sm = getattr(config, "ma200_smooth_days", 0)
-                    if sm > 1:
+                    if ratio is not None and sm > 1:
                         rs = (hist / hist.rolling(200).mean()).dropna()
                         if len(rs) >= sm:
                             ratio = float(rs.rolling(sm).mean().iloc[-1]) + getattr(config, "ma200_thresh_shift", 0.0)
@@ -181,14 +206,14 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                         if r >= 0.95: return 1
                         return 0
                     # 降档: 即时生效（避损快）
-                    if TIER_LOW[tier_state] is not None and ratio < TIER_LOW[tier_state]:
+                    if ratio is not None and TIER_LOW[tier_state] is not None and ratio < TIER_LOW[tier_state]:
                         new_t = tier_of(ratio)
                         if new_t < tier_state:
                             tier_switch_count += 1
                             tier_state = new_t
                             pending_tier, pending_days = None, 0
                     # 升档: 需确认（追涨慢）
-                    if TIER_UP[tier_state] is not None and ratio >= TIER_UP[tier_state] + hyst:
+                    if ratio is not None and TIER_UP[tier_state] is not None and ratio >= TIER_UP[tier_state] + hyst:
                         new_t = tier_of(ratio)
                         if new_t > tier_state:
                             if conf <= 1:

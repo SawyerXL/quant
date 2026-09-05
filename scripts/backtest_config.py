@@ -66,6 +66,11 @@ class BacktestConfig:
     vol_window: int = 20               # 波动率估计窗口(交易日)
     vol_floor_pos: float = 0.30        # 仓位下限(桩②: 防急跌顺周期踏空V反)
 
+    # ── 择时集成(2026-09-05 专家评审立项): 多均线组合喂五档, 空=单MA200。
+    #    与摊平同源的广度扩张(改输入不改结构); vote=三票取中位档绕过确认态机 ──
+    ma_ensemble: tuple = ()
+    ma_ensemble_mode: str = "mean"   # "mean"=比值均值 | "vote"=各票投票取中位档
+
     # ── MA200择时抗噪机制(2026-08-30, 互斥测试不叠加; 降档始终即时, 升档才确认) ──
     ma200_confirm_days: int = 0        # A: 升档需连续N日维持目标档(0=关)
     ma200_hysteresis: float = 0.0      # B: 升档附加带(ratio需超上界+band)
