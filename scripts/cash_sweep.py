@@ -65,12 +65,18 @@ def main(dry_run: bool):
     target = max(0.0, min(target, STOCK_CAPITAL * 0.7))
 
     delta = target - bond_held
-    # 分批建仓(spec §7 2d: 单日新增敞口≤20万)——首次建仓50万分3天
+    # 分批建仓(spec §7 2d: 单日新增敞口≤20万)——首次建仓50万分3天。
+    # 例外(2026-09-06 定案): bear清仓日(tier≤0.3)现金一次性全进短债——
+    # 分批规则防的是"新增风险敞口"突变, 现金→短债(波动0.7%)是低风险
+    # 资产切换不适用; 且80万裸现金零收益空转5天无意义
     MAX_PER_RUN = 200_000
-    if delta > MAX_PER_RUN:
+    if delta > MAX_PER_RUN and tier > 0.3:
         logger.info(f"[cash_sweep] 分批: 本次买入封顶{MAX_PER_RUN:,.0f} "
                     f"(总缺口{delta:,.0f})")
         delta = MAX_PER_RUN
+    elif delta > MAX_PER_RUN and tier <= 0.3:
+        logger.info(f"[cash_sweep] bear清仓日: 一次性配置{delta:,.0f} "
+                    f"(豁免分批, 短债为低风险资产切换)")
     if abs(delta) < MIN_AMOUNT and not (tier > 0.5 and bond_held > 0):
         logger.info(f"[cash_sweep] tier={tier} 债券持仓{bond_held:,.0f} "
                     f"目标{target:,.0f} 差{delta:+,.0f} < {MIN_AMOUNT} 不动")
