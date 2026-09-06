@@ -46,6 +46,9 @@ MIN_FILLS             = 100    # §6.8 钉死: 裁决所需最少成交笔数
 A_TURNOVER            = 9.03   # 完整栈年换手 903%
 C_TURNOVER            = 3.49   # 完整栈-MA10 年换手 349%
 
+# 库内被指数数据占位的个股代码(daily/{code}.parquet 存的是指数, 见 daily_data_update.INDEX_CODES)
+INDEX_SHADOW_CODES = {"000001", "000688", "000905", "000906"}
+
 T0_MATCH_MINUTES = 5
 
 # 正T: 涨2%抛1/3→回落1%接回(腿1卖/腿2买); 反T: 跌2%吸1/3→反弹1%卖(腿1买/腿2卖)
@@ -181,6 +184,10 @@ def _parse_time(t):
 
 
 def load_close(code: str, d: str) -> float | None:
+    # 000001/000688/000905/000906 的 parquet 被指数数据占用(INDEX_CODES 约定),
+    # 个股单读到的是指数点位——宁可无参考价剔除, 不可算出垃圾滑点
+    if code in INDEX_SHADOW_CODES:
+        return None
     from data.storage import load_daily
     try:
         df = load_daily(code, d, d)
