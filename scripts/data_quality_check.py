@@ -233,16 +233,22 @@ def check_csi800_freshness():
     except Exception as e:
         return False, f"🔴 CSI800数据读取失败: {e}"
 
-# ── 检查8: 信号文件新鲜度 (2026-07-07修复后新增) ──
+# ── 检查8: 信号文件新鲜度 (2026-07-07修复后新增; 2026-09-06改分组口径) ──
 def check_signal_freshness():
     """信号文件日期必须='最近一个应已生成信号的交易日', 否则QMT会误判过期并可能错误清仓。
-    信号08:55生成: 交易日盘前(09:00前)或周末/节假日, 期望的是上一个交易日, 不算过期。"""
-    sig_path = Path('data_store/meta/signal_a_latest.json')
-    if not sig_path.exists():
-        return False, "🔴 信号文件不存在"
+    摊平部署(2026-09-02)后执行端读分组信号 g0/g1(fetch_group_signals),
+    旧单文件 signal_a_latest 已停写——检查改为分组口径, 单文件仅作无分组时的兜底。
+    信号14:25生成: 盘前(9:00前)/周末检查时, 期望的是上一个交易日, 不算过期。"""
+    paths = [Path('data_store/meta/signal_a_g0.json'),
+             Path('data_store/meta/signal_a_g1.json')]
+    if not paths[0].exists() and not paths[1].exists():
+        legacy = Path('data_store/meta/signal_a_latest.json')
+        if not legacy.exists():
+            return False, "🔴 分组信号文件(g0/g1)与旧信号文件均不存在"
+        paths = [legacy]
     try:
-        sig = json.loads(sig_path.read_text(encoding='utf-8'))
-        sig_date = sig.get('signal_date', sig.get('date', ''))
+        sigs = [json.loads(p.read_text(encoding='utf-8')) for p in paths if p.exists()]
+        sig_dates = {s.get('signal_date', s.get('date', '')) for s in sigs}
         today_str = date.today().strftime('%Y-%m-%d')
         cal = load_meta('trade_calendar')
         tdays = sorted(cal['trade_date'].tolist()) if not cal.empty else []
@@ -251,9 +257,9 @@ def check_signal_freshness():
         # 今天是交易日但信号还没到生成时间(09:00前) → 期望上一个交易日
         if expected == today_str and datetime.now().hour < 9:
             expected = past[-2] if len(past) >= 2 else today_str
-        if sig_date != expected:
-            return False, f"🔴 信号日期过期: {sig_date} != 期望{expected} — QMT会跳过执行"
-        return True, f"✅ 信号日期{sig_date}"
+        if expected not in sig_dates:
+            return False, f"🔴 信号日期过期: {sorted(sig_dates)} != 期望{expected} — QMT会跳过执行"
+        return True, f"✅ 信号日期{expected}({'分组g0/g1' if len(paths) > 1 else '旧单文件'})"
     except Exception as e:
         return False, f"🔴 信号文件读取失败: {e}"
 
