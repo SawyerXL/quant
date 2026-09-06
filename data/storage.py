@@ -55,6 +55,9 @@ def save_daily(code: str, df: pd.DataFrame) -> None:
         path = _daily_path(code, year)
         if path.exists():
             existing = pd.read_parquet(path)
+            # 存量库被全库重算脚本写成str日期(f95f2c4), 与入参Timestamp混合后
+            # sort_values报"<' not supported..."(9/2起增量更新全挂的根因); 读回时统一归化
+            existing["date"] = pd.to_datetime(existing["date"])
             grp = pd.concat([existing, grp]).drop_duplicates("date", keep="last").sort_values("date")
         grp.to_parquet(path, index=False)
 
@@ -80,6 +83,7 @@ def save_intraday(code: str, freq: str, df: pd.DataFrame) -> None:
         path = _intraday_path(code, freq, year)
         if path.exists():
             existing = pd.read_parquet(path)
+            existing["datetime"] = pd.to_datetime(existing["datetime"])  # 同save_daily防混型
             grp = pd.concat([existing, grp]).drop_duplicates("datetime").sort_values("datetime")
         grp.to_parquet(path, index=False)
 
