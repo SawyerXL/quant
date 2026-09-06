@@ -145,15 +145,9 @@ def run_bt(strategy="dblow"):
 # ══════════════════════════════════════════════════════════════════
 print("═" * 80)
 
-# 2026-09-06: 保存双低策略日收益序列(与主策略相关性度量用)
-nav_d.to_frame("cb").to_csv("logs/cb_doublelow_nav.csv")
-print("已保存 logs/cb_doublelow_nav.csv")
 print("可转债双低策略 — 基准对照(全市场等权)")
 print("═" * 80)
 
-# 2026-09-06: 保存双低策略日收益序列(与主策略相关性度量用)
-nav_d.to_frame("cb").to_csv("logs/cb_doublelow_nav.csv")
-print("已保存 logs/cb_doublelow_nav.csv")
 
 nav_dblow = run_bt("dblow")
 nav_equal = run_bt("equal")
@@ -207,7 +201,7 @@ for y in range(2020, 2026):
     ey = (ne.iloc[-1]/ne.iloc[0])**(252/len(ne)) - 1
     print(f"  {y:<8} {dy*100:+7.1f}% {ey*100:+7.1f}% {dy-ey:+7.1f}pp")
 print("═" * 80)
-
 # 2026-09-06: 保存双低策略日收益序列(与主策略相关性度量用)
 nav_d.to_frame("cb").to_csv("logs/cb_doublelow_nav.csv")
 print("已保存 logs/cb_doublelow_nav.csv")
+
