@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from loguru import logger
-from monitoring.alerts import send_alert
+from monitoring.alerts import send_alert, p0_alert, p0_ack
 
 STATE_FILE = Path("logs/tunnel_state.json")
 PROBE_CMD = ["ssh", "-i", "~/.ssh/id_rsa", "-p", "2222",
@@ -57,13 +57,14 @@ def main():
             _save_state("up")
             logger.info(f"隧道恢复: {now}")
             send_alert(f"🟢 Windows隧道已恢复 ({now})", level="info")
+            p0_ack("隧道断")  # 恢复=自动确认(条件已消除)
     else:
         if prev != "down":
             _save_state("down")
             logger.warning(f"隧道断开: {now}（Windows端计划任务将在≤5分钟内自愈）")
-            send_alert(f"🔴 Windows隧道断开 ({now})，QMT持仓同步/执行链受影响。"
-                       f"Windows端Quant-TunnelKeep应≤5分钟自愈，"
-                       f"若超15分钟未恢复请检查Windows。", level="error")
+            p0_alert("隧道断", f"{now} 断开。QMT持仓同步/成本实测拉取受影响"
+                     f"(执行链走公网IP不受影响)。Windows端Quant-TunnelKeep应≤5分钟"
+                     f"自愈, 超15分钟未恢复请检查Windows")
 
 
 if __name__ == "__main__":

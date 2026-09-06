@@ -440,10 +440,11 @@ def run(fix=False):
 
     # ── 告警 ──
     if has_errors:
-        from monitoring.alerts import send_alert
+        # P0(2026-09-06): 数据质量异常=必须响应, 登记后两天未确认升级重发
+        from monitoring.alerts import p0_alert
         msg = f"【{phase}数据质量告警 {now}】\n" + "\n".join(results["errors"])
         msg += "\n\n⚠️ 脏数据/缺失数据会影响信号和回测，必须修复后再运行策略。"
-        send_alert(msg, level="error")
+        p0_alert("质量异常", f"{len(results['errors'])}项: {'; '.join(results['errors'])[:120]}")
         logger.error(f"数据质量告警: {len(results['errors'])}项异常")
         return False
 

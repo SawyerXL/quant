@@ -93,7 +93,8 @@ def _update_stock_meta_full():
 # 这4个代码既是指数也是个股(000001=上证指数/平安银行)。用个股源拉会得到个股价格
 # 覆盖掉指数点位 —— 2026-08-25 手工补数时踩过一次，上证指数变成了11.59元。
 # 任何遍历全市场的循环都必须排除它们，指数走 _update_index_daily 的独立通道。
-INDEX_CODES = {"000001", "000688", "000905", "000906"}
+# 2026-09-06 上移到 data.storage 单一来源(save_daily 价格断言也要用)
+from data.storage import INDEX_CODES
 INDEX_SYMBOLS = [
     ("000001", "sh000001"),   # 上证指数
     ("000688", "sh000688"),   # 科创50
@@ -406,7 +407,13 @@ def update_today():
     send_alert(msg)
 
     if len(failed) > 50:
-        send_alert(f"警告：失败股票数量异常 ({len(failed)} 只)，请检查数据源", level="warning")
+        # P0(2026-09-06): 数据缺口=必须响应。9/2-9/4 曾 5547/5547 全挂三天
+        # 而 warning 邮件被忽略——缺口类告警升级为 P0 并登记, 两天未确认再升级重发
+        from monitoring.alerts import p0_alert
+        p0_alert("数据缺口", f"{today} 失败 {len(failed)} 只, 请检查数据源并回补")
+    else:
+        from monitoring.alerts import p0_ack
+        p0_ack("数据缺口")  # 数据流恢复=条件消除, 自动确认
 
 
 if __name__ == "__main__":

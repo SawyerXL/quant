@@ -35,6 +35,9 @@ SSH_PORT  = 2222
 SSH_USER  = "Administrator"
 SSH_HOST  = "127.0.0.1"
 WIN_QUANT = "H:/quant"
+# Windows 上必须用装了 xtquant 的那个解释器全路径; 裸 python 在非交互 ssh
+# 里不是它 → 导出静默失败(与 qmt_snapshot.py 同一教训)
+WIN_PY = r"C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe"
 
 LOGS_DIR      = ROOT / "logs"
 ORDERS_PREFIX = "qmt_orders_"
@@ -46,8 +49,7 @@ MIN_FILLS             = 100    # §6.8 钉死: 裁决所需最少成交笔数
 A_TURNOVER            = 9.03   # 完整栈年换手 903%
 C_TURNOVER            = 3.49   # 完整栈-MA10 年换手 349%
 
-# 库内被指数数据占位的个股代码(daily/{code}.parquet 存的是指数, 见 daily_data_update.INDEX_CODES)
-INDEX_SHADOW_CODES = {"000001", "000688", "000905", "000906"}
+from data.storage import INDEX_CODES as INDEX_SHADOW_CODES
 
 T0_MATCH_MINUTES = 5
 
@@ -77,10 +79,9 @@ def pull_orders() -> bool:
         logger.warning(f"导出脚本部署失败: {e}")
         return False
 
-    export_cmd = (
-        f'powershell -NoProfile -Command '
-        f'"cd {WIN_QUANT}; python scripts/dump_qmt_orders.py"'
-    )
+    # 直接 ssh 传全路径解释器(与 qmt_snapshot.trigger_export 同款, 避开
+    # powershell 嵌套引号搅碎问题); 脚本内部 ROOT 由 __file__ 解析, 不依赖 cwd
+    export_cmd = f'"{WIN_PY}" H:\\quant\\scripts\\dump_qmt_orders.py'
     try:
         r1 = subprocess.run(
             ["ssh", "-i", SSH_KEY, "-p", str(SSH_PORT),
@@ -316,8 +317,61 @@ def _verdict_alert(measured: pd.DataFrame):
 
 
 # ── 输出 ─────────────────────────────────────────────────────────
+def _archive_snapshot(df, measured) -> Path | None:
+    """成本明细存档——样本期盲盒纪律(§6.8): 报表不显示中间值, 数据不丢。"""
+    if not len(df):
+        return None
+    rows = df[["date", "code", "side", "price", "shares", "tag", "ref",
+               "slip_bp", "fees_bp", "cost_bp", "notional"]].copy()
+    for c in ("slip_bp", "fees_bp", "cost_bp"):
+        rows[c] = rows[c].round(2)
+    cuts = {}
+    for label, sub in [("buy", df[df["side"] == "buy"]),
+                       ("sell", df[df["side"] == "sell"]),
+                       ("rebalance", df[df["tag"] == "调仓"]),
+                       ("ma10", df[df["tag"] == "MA10"]),
+                       ("t0", df[df["tag"] == "做T"])]:
+        m = sub[sub["slip_bp"].notna()]
+        if len(m):
+            cuts[label] = {"n": int(len(m)), "side_eq_bp": round(side_eq_of(m), 2)}
+    payload = {"generated_at": datetime.now().isoformat(),
+               "n_strategy_measured": int(len(measured)),
+               "min_fills": MIN_FILLS,
+               "cuts": cuts,
+               "fills": rows.to_dict(orient="records")}
+    out = LOGS_DIR / f"cost_snapshot_{datetime.now().strftime('%Y%m%d')}.json"
+    out.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return out
+
+
+def _dir_stats(sub):
+    """卖出侧成交价 vs 收盘价的方向分布: (中位滑点bp, 低于收盘成交占比%)。
+
+    卖出滑点>0 = 成交价低于收盘价 = 比回测(收盘价成交)卖得差。系统性为正
+    说明回测收盘价假设偏乐观, 直接影响 A vs C 裁决的证据权重。
+    """
+    m = sub[(sub["side"] == "sell") & sub["slip_bp"].notna()]
+    if not len(m):
+        return None
+    return float(m["slip_bp"].median()), float((m["slip_bp"] > 0).mean() * 100)
+
+
+def _t0_anomaly_alert(df):
+    """做T标签=异常检测器: t0 开关关闭期间(9/23判定前)匹配到非零,
+    说明有非预期成交——不只分类, 即告警。"""
+    from monitoring.alerts import send_alert
+    t0 = df[df["tag"] == "做T"]
+    if not len(t0):
+        return
+    days = sorted(t0["date"].unique())
+    send_alert(f"做T标签非零: {len(t0)}笔疑似做T成交(日:{','.join(days)})"
+               f" — t0开关应为关(9/23判定前), 查是否有非预期成交", level="warning")
+
+
 def print_report(exec_days, df, measured):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    blind = len(measured) < MIN_FILLS  # 样本期盲盒: 中途瞄18bp线=锚定偏差(§6.8 纪律)
+    snap = _archive_snapshot(df, measured) if len(df) else None
     print(f"\n{'='*72}\n静跑期成本实测报表  {now}\n{'='*72}")
 
     # 数据覆盖
@@ -333,36 +387,53 @@ def print_report(exec_days, df, measured):
         print("\n尚无订单数据 —— 待周一 15:55 首拉(或隧道恢复后手动 --pull)")
         return
 
-    # 逐日明细
+    # 逐日明细(计数永远可见; bp 列样本期盲盒)
     print(f"\n[逐日明细]")
     print(f"{'日期':<10}{'调仓买':>7}{'调仓卖':>7}{'MA10卖':>7}{'做T':>6}{'其他':>6}{'策略单边bp':>11}")
     for d, g in df.groupby("date"):
-        side_eq = side_eq_of(g[g["tag"].isin(["调仓", "MA10"]) & g["slip_bp"].notna()])
         def cnt(tag, side=None):
             q = g[g["tag"] == tag]
             return len(q) if side is None else len(q[q["side"] == side])
-        eq_s = f"{side_eq:>10.1f}" if side_eq is not None else f"{'  -':>11}"
+        eq_s = f"{'  盲盒':>11}" if blind else (
+            f"{side_eq_of(g[g['tag'].isin(['调仓', 'MA10']) & g['slip_bp'].notna()]):>10.1f}"
+            if len(g[g["tag"].isin(["调仓", "MA10"]) & g["slip_bp"].notna()]) else f"{'  -':>11}")
         print(f"{d:<10}{cnt('调仓','buy'):>7}{cnt('调仓','sell'):>7}{cnt('MA10','sell'):>7}"
               f"{cnt('做T'):>6}{cnt('其他'):>6}{eq_s}")
 
     # 分侧/分型
     print(f"\n[成本分解(单边等效 bp, 成交额加权)]")
-    cuts = [("买入侧", df[df["side"] == "buy"]),
-            ("卖出侧", df[df["side"] == "sell"]),
-            ("  调仓单", df[df["tag"] == "调仓"]),
-            ("  MA10单", df[df["tag"] == "MA10"]),
-            ("  做T单(不计入裁决)", df[df["tag"] == "做T"]),
-            ("  CB/其他(不计入裁决)", df[~df["tag"].isin(["调仓", "MA10", "做T"])])]
-    for label, sub in cuts:
-        m = sub[sub["slip_bp"].notna()]
-        if not len(m):
-            print(f"  {label}: 无有效参考价样本")
-            continue
-        slip = (m["slip_bp"] * m["notional"]).sum() / m["notional"].sum()
-        fees = (m["fees_bp"] * m["notional"]).sum() / m["notional"].sum()
-        tot = side_eq_of(m)
-        print(f"  {label}: 滑点{slip:+.1f} + 费用{fees:.1f} = {tot:.1f} bp"
-              f"  ({len(m)}笔)")
+    if blind:
+        print(f"  样本期盲盒: 明细已存档 {snap.name if snap else '无'},"
+              f" 累够 {MIN_FILLS} 笔后统一打开(§6.8 纪律: 中途瞄线=锚定偏差)")
+        print(f"  当前进度: 策略单 {len(measured)}/{MIN_FILLS} 笔")
+    else:
+        cuts = [("买入侧", df[df["side"] == "buy"]),
+                ("卖出侧", df[df["side"] == "sell"]),
+                ("  调仓单", df[df["tag"] == "调仓"]),
+                ("  MA10单", df[df["tag"] == "MA10"]),
+                ("  做T单(不计入裁决)", df[df["tag"] == "做T"]),
+                ("  CB/其他(不计入裁决)", df[~df["tag"].isin(["调仓", "MA10", "做T"])])]
+        for label, sub in cuts:
+            m = sub[sub["slip_bp"].notna()]
+            if not len(m):
+                print(f"  {label}: 无有效参考价样本")
+                continue
+            slip = (m["slip_bp"] * m["notional"]).sum() / m["notional"].sum()
+            fees = (m["fees_bp"] * m["notional"]).sum() / m["notional"].sum()
+            tot = side_eq_of(m)
+            print(f"  {label}: 滑点{slip:+.1f} + 费用{fees:.1f} = {tot:.1f} bp"
+                  f"  ({len(m)}笔)")
+        # 卖出侧方向分布: 回测收盘价假设的偏差探测器
+        print(f"\n[卖出侧方向分布(成交价 vs 收盘价; 滑点>0=卖得比收盘低)]")
+        for label, sub in [("调仓卖", df[df["tag"] == "调仓"]),
+                           ("MA10卖", df[df["tag"] == "MA10"])]:
+            st = _dir_stats(sub)
+            if st is None:
+                print(f"  {label}: 无卖出样本")
+                continue
+            med, below = st
+            print(f"  {label}: 中位{med:+.1f}bp, 低于收盘成交占比 {below:.0f}%"
+                  f"  {'⚠️系统性偏负, 回测收盘价假设偏乐观' if med > 3 else ''}")
 
     # 裁决
     print(f"\n[18bp 裁决]")
@@ -403,6 +474,7 @@ def main():
         print_report(exec_days, df, measured)
         if len(df):
             _verdict_alert(measured)
+            _t0_anomaly_alert(df)
 
 
 if __name__ == "__main__":

@@ -6,6 +6,13 @@ import pyarrow.parquet as pq
 from loguru import logger
 from config.settings import DATA_STORE
 
+# 库内被指数数据占位的代码: daily/{code}.parquet 存的是指数日线(上证/科创50/
+# 中证500/中证800), 与深市同名个股(平安银行等)冲突——个股单读这些代码会拿到
+# 指数点位。2026-09-06 从 daily_data_update 上移到此单一来源。
+INDEX_CODES = {"000001", "000688", "000905", "000906"}
+# A股千元股白名单(价格身份断言用): 收盘价>1000 且不在此列的代码=污染数据
+PRICE_WHITELIST = {"600519"}  # 贵州茅台(真>1000元)
+
 
 # ---------- 路径规则 ----------
 def _daily_path(code: str, year: int) -> Path:
@@ -51,6 +58,15 @@ def save_daily(code: str, df: pd.DataFrame) -> None:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
             except Exception:
                 df.drop(columns=[col], inplace=True)  # 转换失败的辅助列直接丢弃
+    # ── 价格身份断言(2026-09-06, 000001读回3942点教训): A股无四位数股价,
+    # 超千元且非指数/白名单=身份污染(指数点位混入个股库), 直接拒绝该行入库
+    if "close" in df.columns:
+        over = pd.to_numeric(df["close"], errors="coerce") > 1000
+        allowed = code in INDEX_CODES or code in PRICE_WHITELIST
+        if over.any() and not allowed:
+            n = int(over.sum())
+            logger.warning(f"{code}: 拒绝{n}行收盘价>1000(疑似指数点位污染) — 白名单外不入库")
+            df = df[~over]
     for year, grp in df.groupby(df["date"].dt.year):
         path = _daily_path(code, year)
         if path.exists():
