@@ -67,6 +67,40 @@ def save_daily(code: str, df: pd.DataFrame) -> None:
             n = int(over.sum())
             logger.warning(f"{code}: 拒绝{n}行收盘价>1000(疑似指数点位污染) — 白名单外不入库")
             df = df[~over]
+    # ── 相对跳变检查(2026-09-06 加): 收盘价 vs 前一根健康收盘跳变>50% 且日期
+    # ≥1997(涨跌停制度后)拒绝。白名单式绝对断言会随时间失效(新高价股/拆股),
+    # 相对检查零维护; 50%阈值与 update_today 脏过滤一致(30%会误拒合法的
+    # 44%新股首日涨幅)。qfq库无除权跳变, 主要盲点=长期停牌复牌的真实大涨。
+    # 逐行游标而非向量shift: 污染行被拒后, 后续行的prev必须停留在最后一根
+    # 健康收盘(向量shift会连坐后一行); 首行prev=库内最后一根收盘
+    if "close" in df.columns and "date" in df.columns and not df.empty:
+        df = df.sort_values("date").reset_index(drop=True)
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        store_last = None
+        valid_dates = df["date"].dropna()
+        if len(valid_dates):
+            p = _daily_path(code, int(valid_dates.iloc[0].year))
+            if p.exists():
+                try:
+                    ex = pd.read_parquet(p)
+                    if not ex.empty:
+                        store_last = float(pd.to_numeric(ex["close"], errors="coerce").iloc[-1])
+                except Exception:
+                    pass
+        drop_idx, prev_close = [], (store_last if store_last and store_last > 0 else None)
+        for idx, r in df.iterrows():
+            c = r["close"]
+            c = float(c) if pd.notna(c) else None
+            if (prev_close and c and pd.notna(r["date"])
+                    and r["date"] >= pd.Timestamp("1997-01-01")
+                    and abs(c / prev_close - 1) > 0.5):
+                drop_idx.append(idx)
+                continue  # 不更新prev: 后续行仍与最后健康收盘比
+            if c and c > 0:
+                prev_close = c
+        if drop_idx:
+            logger.warning(f"{code}: 拒绝{len(drop_idx)}行相对前收跳变>50%(疑似数据错配)")
+            df = df.drop(index=drop_idx)
     for year, grp in df.groupby(df["date"].dt.year):
         path = _daily_path(code, year)
         if path.exists():

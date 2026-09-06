@@ -10,6 +10,8 @@ P0 告警状态管理（2026-09-06 建，告警分级的第一层落地）
 (必须响应); 其余降级或聚合日报。P0 连续 2 天未确认 → 升级重发。
 静跑期没有真金白银, 是校准告警灵敏度的最佳窗口——两个月后带钱跑时
 再发现"告警会被忽略"就晚了。
+P0 通道公信力纪律: 只承载真实事件, 测试一律 --dry-run 或 [TEST] 前缀,
+零假警报——发过一次假警报, 人的响应阈值永久性升高。
 """
 import argparse
 import sys
@@ -41,7 +43,7 @@ def cmd_list():
               f"{_days_since(e.get('first_seen','')):>8.1f}  {e.get('detail','')}")
 
 
-def cmd_sweep():
+def cmd_sweep(dry_run: bool = False):
     """升级清扫: open 状态超过阈值天数的 P0 重发告警(带未确认天数前缀)。"""
     state = p0_list()
     if not state:
@@ -51,9 +53,12 @@ def cmd_sweep():
     for t, e in state.items():
         days = _days_since(e.get("first_seen", ""))
         if days >= P0_ESCALATE_DAYS:
-            send_alert(f"[P0未确认×{int(days)}天] {t} 已持续 {int(days)} 天未确认"
-                       f" — 请立即处理(确认: python scripts/p0_alerts.py --ack {t})",
-                       level="error")
+            msg = (f"[P0未确认×{int(days)}天] {t} 已持续 {int(days)} 天未确认"
+                   f" — 请立即处理(确认: python scripts/p0_alerts.py --ack {t})")
+            if dry_run:
+                print(f"[dry-run] 将发送: {msg}")
+            else:
+                send_alert(msg, level="error")
             n += 1
     logger.info(f"升级重发 {n} 条 P0" if n else f"无超阈值 P0({len(state)} 条 open)")
 
@@ -62,6 +67,7 @@ def main():
     parser = argparse.ArgumentParser(description="P0 告警状态管理")
     parser.add_argument("--list", action="store_true")
     parser.add_argument("--sweep", action="store_true")
+    parser.add_argument("--dry-run", action="store_true", help="只打印将发送的内容, 不发信")
     parser.add_argument("--ack", metavar="TYPE|all")
     args = parser.parse_args()
 
@@ -69,7 +75,7 @@ def main():
         n = p0_ack(None if args.ack == "all" else args.ack)
         print(f"已确认 {n} 条 P0")
     elif args.sweep:
-        cmd_sweep()
+        cmd_sweep(dry_run=args.dry_run)
     else:
         cmd_list()
 

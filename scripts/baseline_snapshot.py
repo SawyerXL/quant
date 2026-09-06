@@ -20,6 +20,9 @@ SNAP_FILE     = ROOT / "logs" / "qmt_positions_latest.json"
 NAV_FILE      = ROOT / "logs" / "qmt_nav_history.parquet"
 PARAMS_DIR    = ROOT / "config" / "strategy_params"
 DEFAULT_OUT   = ROOT / "logs" / "static_period_baseline.json"
+# Day-1 最早可行日(9/7 清仓日)。快照导出日期必须 ≥ 此日, 否则基线推迟——
+# 用户 2026-09-06 定: 基线必须当日新鲜, 不接受旧快照凑合起算
+DAY1_EARLIEST = "2026-09-07"
 
 
 def _sha256(p: Path) -> str:
@@ -40,7 +43,7 @@ def build() -> dict:
             snap["account"] = d.get("account", {})
             snap["positions"] = d.get("positions", {})
             snap["position_count"] = len(d.get("positions", {}))
-            snap["fresh_9_7"] = str(d.get("exported_at", "")).startswith("2026-09-07")
+            snap["fresh"] = str(d.get("exported_at", "")) >= DAY1_EARLIEST
             snap["note"] = ("account.total_assets 含仿真污染值(4888万), "
                             "真实净值以 qmt_nav_history 为准(见 qmt_live_nav_tracking 记忆)")
         except Exception as e:
@@ -91,15 +94,23 @@ def build() -> dict:
 def main():
     parser = argparse.ArgumentParser(description="Day-1 基线快照")
     parser.add_argument("--out", default=str(DEFAULT_OUT))
-    parser.add_argument("--force", action="store_true", help="覆盖已有基线(慎用)")
+    parser.add_argument("--force", action="store_true", help="覆盖已有基线/跳过新鲜度门槛(慎用)")
     args = parser.parse_args()
 
     out = Path(args.out)
     if out.exists() and not args.force:
-        print(f"基线已存在({out}), 拒绝覆盖。基线只应有一份——若确要重做请先人工复核再 --force")
-        return 1
+        print(f"基线已存在({out})——正常。静跑期基线只应有一份, 此任务完成。")
+        return 0
 
     payload = build()
+    fresh = bool(payload["snapshot"].get("fresh"))
+    if not fresh and not args.force:
+        # 快照非当日新鲜(隧道断时是旧文件) → 基线推迟, Day 1 顺延至首个成功落盘日
+        print(f"⏳ 基线推迟: 持仓快照导出于 {payload['snapshot'].get('exported_at', '?')}"
+              f" (非 {DAY1_EARLIEST} 后新鲜数据)。"
+              f"Day 1 顺延至首个新鲜快照日, 不接受旧快照凑合起算(§6.8 ⑧)。")
+        return 1
+
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str),
                    encoding="utf-8")
@@ -108,7 +119,7 @@ def main():
     print(f"  git HEAD:    {payload['git_head'][:12]}")
     print(f"  持仓快照:    {payload['snapshot'].get('position_count', '?')} 只"
           f" (导出于 {payload['snapshot'].get('exported_at', '?')},"
-          f" 9/7新鲜={payload['snapshot'].get('fresh_9_7')})")
+          f" 新鲜={payload['snapshot'].get('fresh')})")
     print(f"  NAV 行数:    {payload['nav_history'].get('rows', '?')}")
     return 0
 
