@@ -293,7 +293,8 @@ def _verdict_alert(measured: pd.DataFrame):
     from monitoring.alerts import send_alert
     n = len(measured)
     if n < MIN_FILLS:
-        state = f"样本不足({n}/{MIN_FILLS})"
+        # 状态串不含计数: 否则每天+几笔也算"变更", 样本期天天告警
+        state = "样本不足"
     else:
         eq = side_eq_of(measured)
         state = f"切C({eq:.1f}bp>18)" if eq > MEASURED_THRESHOLD_BP else f"维持A({eq:.1f}bp)"
