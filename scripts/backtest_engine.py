@@ -126,6 +126,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
 
     trade_count = 0; total_sells = 0; total_buys = 0
     exit_ma10_sells = 0.0    # MA10/止损退出的权重和(换手分解诊断用)
+    rotation_sells = 0.0     # 调仓轮换卖出的权重和(2026-09-06 换手口径对齐)
     rebal_sells = 0.0        # 调仓轮换卖出的权重和
     tier_sells = 0.0         # 切档减仓的权重和(pos_ratio下降)
     total_commission_paid = 0.0  # track cumulative commission
@@ -538,6 +539,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 for c in old_set - set(new_w.keys()):
                     entry_prices.pop(c, None); days_below_ma10.pop(c, None)
                     trail_hwm.pop(c, None)   # 2026-09-02: 重买票不得继承旧高水位
+                    rotation_sells += cur_weights.get(c, 0.0)
                     _close_span(c, str(date.date()))
                     total_sells += 1; trade_count += 1
 
@@ -603,6 +605,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
         "halt_triggers": halt_triggers,
         "tier_switch_count": tier_switch_count,
         "exit_ma10_sells": round(exit_ma10_sells, 4),
+        "rotation_sells": round(rotation_sells, 4),
         "rebal_sells": round(rebal_sells, 4),
         "tier_sells": round(tier_sells, 4),
     }
