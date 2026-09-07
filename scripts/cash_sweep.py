@@ -92,6 +92,17 @@ def main(dry_run: bool):
         if dry_run:
             logger.info(f"{msg} [DRY] 拟买{qty}份 @~{ref:.3f}")
             return
+        # 可用资金前置检查(2026-09-07 教训: 清仓卖出资金T+1到账, 当日可用
+        # 不足→下单必废单。事前查可用资金跳过, 优于事后查废单补救)
+        acct = c.get_account_info() or {}
+        avail = float(acct.get("cash", 0) or 0)
+        need = qty * ref * 1.002
+        if avail < need * 1.005:
+            send_alert(f"{msg}\n⏸️ 可用资金不足(可用{avail:,.0f} < 需{need:,.0f})"
+                       f" 跳过本次扫货——若为清仓次日T+1场景, 明日自动重跑即成交",
+                       level="warning")
+            logger.warning(f"可用资金不足: {avail:,.0f} < {need:,.0f}")
+            return
         oid = c.place_order(BOND_ETF, "buy", qty, ref * 1.002)
         logger.info(f"{msg} 买入{qty}份 → {oid}")
         # 废单/未成交检查(2026-09-07 教训: 9/7 70万扫货单废单静默失败,

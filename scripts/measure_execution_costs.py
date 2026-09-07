@@ -117,10 +117,63 @@ def pull_orders() -> bool:
     dest = LOGS_DIR / f"{ORDERS_PREFIX}{signal_date}.json"
     tmp.rename(dest)
     logger.info(f"订单拉取: {payload.get('order_count', 0)}笔 → {dest}")
+    _archive_signals(signal_date)
     return True
 
 
+SIGNAL_ARCHIVE_DIR = LOGS_DIR / "signal_archive"
+
+
+def _archive_signals(signal_date: str):
+    """归档当日分组信号(供 bear_clear 标签判定)。
+
+    信号文件每天 14:25 被覆盖, 而 bear_clear 判定依赖当日 regime——
+    必须在拉取订单的当日把信号存底(用户 2026-09-07 定: 集中清仓滑点
+    是 regime 事件, 不得混入 MA10 成本样本)。
+    """
+    d = signal_date.replace("-", "")
+    archived = 0
+    for g in ("g0", "g1"):
+        src = Path("data_store/meta") / f"signal_a_{g}.json"
+        if not src.exists():
+            continue
+        try:
+            sig = json.loads(src.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if str(sig.get("signal_date", "")).replace("-", "") != d:
+            continue  # 信号非当日, 不归档(防把旧信号贴到新日期上)
+        dst = SIGNAL_ARCHIVE_DIR / f"{d}_{g}.json"
+        SIGNAL_ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
+        dst.write_text(json.dumps(sig, ensure_ascii=False, indent=2), encoding="utf-8")
+        archived += 1
+    if archived:
+        logger.info(f"信号归档: {d} g0/g1 ×{archived}")
+
+
 # ── 数据装载 ─────────────────────────────────────────────────────
+def load_bear_clear_days() -> set:
+    """从信号归档判定 regime 清仓日(bear_clear)。
+
+    bear_clear 是 regime 集中清仓事件(如 9/7 32只全清), 与 MA10 逐笔
+    触发结构不同: 单日样本 + 当日市场漂移混入滑点——入 100 笔池会拉偏
+    18bp 裁决线(且偏向切C)。单独归档, 不计入裁决(2026-09-07 用户定)。
+    """
+    days = set()
+    if not SIGNAL_ARCHIVE_DIR.exists():
+        return days
+    for f in SIGNAL_ARCHIVE_DIR.glob("*_g0.json"):
+        try:
+            sig = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if str(sig.get("regime", "")).lower() == "bear":
+            d = str(sig.get("signal_date", "")).replace("-", "")
+            if d:
+                days.add(d)
+    return days
+
+
 def load_exec_days() -> dict:
     """扫描 execution_result_*.json → {date: {code: 信号价}}。
 
@@ -241,6 +294,7 @@ def _is_stock(code: str) -> bool:
 # ── 聚合 ─────────────────────────────────────────────────────────
 def build_report():
     exec_days = load_exec_days()
+    bear_days = load_bear_clear_days()
     t0_legs = load_t0_legs()
     fills = load_order_fills()
 
@@ -249,6 +303,8 @@ def build_report():
         tag = "其他"
         if _is_stock(fl["code"]):
             tag = "调仓" if fl["date"] in exec_days else "MA10"
+            if fl["date"] in bear_days and tag == "调仓":
+                tag = "bear_clear"  # regime集中清仓, 独立归档不入裁决池
             for (d, code, side, secs) in t0_legs:
                 if (d == fl["date"] and code == fl["code"] and side == fl["side"]
                         and fl["secs"] is not None
@@ -330,6 +386,7 @@ def _archive_snapshot(df, measured) -> Path | None:
                        ("sell", df[df["side"] == "sell"]),
                        ("rebalance", df[df["tag"] == "调仓"]),
                        ("ma10", df[df["tag"] == "MA10"]),
+                       ("bear_clear", df[df["tag"] == "bear_clear"]),
                        ("t0", df[df["tag"] == "做T"])]:
         m = sub[sub["slip_bp"].notna()]
         if len(m):
@@ -389,7 +446,7 @@ def print_report(exec_days, df, measured):
 
     # 逐日明细(计数永远可见; bp 列样本期盲盒)
     print(f"\n[逐日明细]")
-    print(f"{'日期':<10}{'调仓买':>7}{'调仓卖':>7}{'MA10卖':>7}{'做T':>6}{'其他':>6}{'策略单边bp':>11}")
+    print(f"{'日期':<10}{'调仓买':>7}{'调仓卖':>7}{'MA10卖':>7}{'BC卖':>6}{'做T':>6}{'其他':>6}{'策略单边bp':>11}")
     for d, g in df.groupby("date"):
         def cnt(tag, side=None):
             q = g[g["tag"] == tag]
@@ -398,7 +455,7 @@ def print_report(exec_days, df, measured):
             f"{side_eq_of(g[g['tag'].isin(['调仓', 'MA10']) & g['slip_bp'].notna()]):>10.1f}"
             if len(g[g["tag"].isin(["调仓", "MA10"]) & g["slip_bp"].notna()]) else f"{'  -':>11}")
         print(f"{d:<10}{cnt('调仓','buy'):>7}{cnt('调仓','sell'):>7}{cnt('MA10','sell'):>7}"
-              f"{cnt('做T'):>6}{cnt('其他'):>6}{eq_s}")
+              f"{cnt('bear_clear','sell'):>6}{cnt('做T'):>6}{cnt('其他'):>6}{eq_s}")
 
     # 分侧/分型
     print(f"\n[成本分解(单边等效 bp, 成交额加权)]")
@@ -411,8 +468,9 @@ def print_report(exec_days, df, measured):
                 ("卖出侧", df[df["side"] == "sell"]),
                 ("  调仓单", df[df["tag"] == "调仓"]),
                 ("  MA10单", df[df["tag"] == "MA10"]),
+                ("  bear_clear单(不计入裁决)", df[df["tag"] == "bear_clear"]),
                 ("  做T单(不计入裁决)", df[df["tag"] == "做T"]),
-                ("  CB/其他(不计入裁决)", df[~df["tag"].isin(["调仓", "MA10", "做T"])])]
+                ("  CB/其他(不计入裁决)", df[~df["tag"].isin(["调仓", "MA10", "bear_clear", "做T"])])]
         for label, sub in cuts:
             m = sub[sub["slip_bp"].notna()]
             if not len(m):
@@ -426,7 +484,8 @@ def print_report(exec_days, df, measured):
         # 卖出侧方向分布: 回测收盘价假设的偏差探测器
         print(f"\n[卖出侧方向分布(成交价 vs 收盘价; 滑点>0=卖得比收盘低)]")
         for label, sub in [("调仓卖", df[df["tag"] == "调仓"]),
-                           ("MA10卖", df[df["tag"] == "MA10"])]:
+                           ("MA10卖", df[df["tag"] == "MA10"]),
+                           ("清仓卖", df[df["tag"] == "bear_clear"])]:
             st = _dir_stats(sub)
             if st is None:
                 print(f"  {label}: 无卖出样本")
