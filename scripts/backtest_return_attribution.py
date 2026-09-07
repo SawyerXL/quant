@@ -48,6 +48,19 @@ ARMS = [
 ]
 
 
+def load_blacklist() -> set:
+    """qfq跳变未修复/新浪无覆盖/北交所真实大波动的代码, 回测池须排除
+    (data_store/meta/price_blacklist.json, 2026-09-07 第三级审计产出)。"""
+    import json
+    p = Path("data_store/meta/price_blacklist.json")
+    if p.exists():
+        try:
+            return set(json.loads(p.read_text(encoding="utf-8")).get("codes", []))
+        except Exception:
+            pass
+    return set()
+
+
 def load_pit_memberships() -> list:
     """csi800_universe_bs → [(snap_date, set(codes))] 按日期升序。"""
     df = pd.read_parquet("data_store/meta/csi800_universe_bs.parquet")
@@ -148,7 +161,9 @@ def main():
     args = ap_.parse_args()
 
     meta = load_meta("stock_info_full")
-    codes = meta["code"].tolist() if not meta.empty else []
+    blacklist = load_blacklist()
+    codes = [c for c in meta["code"].tolist() if c not in blacklist] \
+        if not meta.empty else []
     pit = load_pit_memberships()
     entry_map = load_entry_map()
 
