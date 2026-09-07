@@ -94,7 +94,19 @@ def main(dry_run: bool):
             return
         oid = c.place_order(BOND_ETF, "buy", qty, ref * 1.002)
         logger.info(f"{msg} 买入{qty}份 → {oid}")
-        send_alert(f"{msg}\n买入 {BOND_ETF} {qty}份")
+        # 废单/未成交检查(2026-09-07 教训: 9/7 70万扫货单废单静默失败,
+        # 根因T+1资金未到账)——对齐 fetch_and_execute 的 status 57 告警纪律
+        import time as _t
+        _t.sleep(5)
+        o = next((x for x in (c.get_today_orders() or [])
+                  if x.get("order_id") == oid), None)
+        st = o.get("status") if o else None
+        if st is None or st != 56:
+            send_alert(f"{msg}\n🔴 {BOND_ETF} 买入未成交/异常: "
+                       f"order_id={oid} status={st} (57=废单, 常见: 资金未到账T+1/价位)",
+                       level="error")
+            return
+        send_alert(f"{msg}\n买入 {BOND_ETF} {qty}份 ✅已成交")
     else:
         if dry_run:
             logger.info(f"{msg} [DRY] 拟卖{bond_shares}份")
