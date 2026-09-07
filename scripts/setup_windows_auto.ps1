@@ -5,11 +5,18 @@
 #   1. 每次开机自动建立到 Linux 的反向 SSH 隧道
 #   2. 每日 15:35 自动导出 QMT 持仓到 Linux
 #   3. 保证 sshd 开机自启
+#
+# 2026-09-07 修正: 旧IP 47.116.166.139 已弃用(现 106.15.61.81);
+#   Linux SSH 端口=12201(2026-09-05 从 22 迁移, 缺 -p 曾致隧道断 33 小时);
+#   隧道任务以 Administrator 身份运行(SYSTEM 被私钥 ACL 拒)。
+#   注意: 现网隧道的正主是 Quant-TunnelKeep 任务 → tunnel_keepalive.ps1
+#   (端到端验证+半开自愈), 本脚本仅作初次引导。
 # ================================================================
 
 $QuantDir = "H:\quant"
-$LinuxServer = "47.116.166.139"
+$LinuxServer = "106.15.61.81"
 $LinuxUser = "root"
+$LinuxPort = "12201"
 
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host "  Quant Windows 自动化配置" -ForegroundColor Cyan
@@ -27,7 +34,7 @@ if ($sshd) {
 
 # ── 2. 创建定时任务：开机后自动建立 SSH 反向隧道 ────────────────
 $tunnelTaskName = "Quant-SSH-Tunnel"
-$tunnelCommand = "ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -R 2222:localhost:22 -N ${LinuxUser}@${LinuxServer}"
+$tunnelCommand = "ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -R 2222:localhost:22 -N ${LinuxUser}@${LinuxServer} -p ${LinuxPort} -i C:\Users\Administrator\.ssh\id_ed25519"
 
 $tunnelExists = Get-ScheduledTask -TaskName $tunnelTaskName -ErrorAction SilentlyContinue
 if ($tunnelExists) {
@@ -36,13 +43,13 @@ if ($tunnelExists) {
 }
 
 $tunnelAction = New-ScheduledTaskAction -Execute "ssh.exe" `
-    -Argument "-o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -R 2222:localhost:22 -N ${LinuxUser}@${LinuxServer}"
+    -Argument "-o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -R 2222:localhost:22 -N ${LinuxUser}@${LinuxServer} -p ${LinuxPort} -i C:\Users\Administrator\.ssh\id_ed25519"
 $tunnelTrigger = New-ScheduledTaskTrigger -AtStartup
 $tunnelSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
     -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 5)
 Register-ScheduledTask -TaskName $tunnelTaskName -Action $tunnelAction `
     -Trigger $tunnelTrigger -Settings $tunnelSettings -Description "开机自动建立到 Linux 的反向 SSH 隧道" -Force `
-    -RunLevel Highest -User "NT AUTHORITY\SYSTEM"
+    -RunLevel Highest -User "Administrator"
 Write-Host "[OK] 隧道任务已创建：$tunnelTaskName" -ForegroundColor Green
 
 # ── 3. 创建定时任务：每日 15:35 导出 QMT 持仓 ──────────────────
@@ -58,7 +65,7 @@ $exportAction = New-ScheduledTaskAction -Execute "C:\Users\Administrator\AppData
 $exportTrigger = New-ScheduledTaskTrigger -Daily -At "15:35"
 Register-ScheduledTask -TaskName $exportTaskName -Action $exportAction `
     -Trigger $exportTrigger -Description "每日收盘后导出 QMT 持仓并推送到 Linux" -Force `
-    -RunLevel Highest -User "NT AUTHORITY\SYSTEM"
+    -RunLevel Highest -User "Administrator"
 Write-Host "[OK] QMT导出任务已创建：$exportTaskName (每日 15:35)" -ForegroundColor Green
 
 # ── 4. 创建定时任务：调仓日 14:33 拉取信号并预检查（不执行） ──
@@ -76,13 +83,13 @@ $fetchAction = New-ScheduledTaskAction -Execute "C:\Users\Administrator\AppData\
 $fetchTrigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At "14:33"
 Register-ScheduledTask -TaskName $fetchTaskName -Action $fetchAction `
     -Trigger $fetchTrigger -Description "每日 14:33 拉取信号并 dry-run 预检查" -Force `
-    -RunLevel Highest -User "NT AUTHORITY\SYSTEM"
+    -RunLevel Highest -User "Administrator"
 Write-Host "[OK] 信号预检任务已创建：$fetchTaskName (周一至五 14:33)" -ForegroundColor Green
 
 # ── 5. 立即启动隧道（本次） ─────────────────────────────────────
 Write-Host ""
 Write-Host "[INFO] 正在启动 SSH 隧道..." -ForegroundColor Yellow
-Start-Process -FilePath "ssh.exe" -ArgumentList "-o StrictHostKeyChecking=no -o ServerAliveInterval=60 -R 2222:localhost:22 -N ${LinuxUser}@${LinuxServer}" -WindowStyle Hidden
+Start-Process -FilePath "ssh.exe" -ArgumentList "-o StrictHostKeyChecking=no -o ServerAliveInterval=60 -R 2222:localhost:22 -N ${LinuxUser}@${LinuxServer} -p ${LinuxPort} -i C:\Users\Administrator\.ssh\id_ed25519" -WindowStyle Hidden
 Write-Host "[OK] SSH 隧道已在后台启动" -ForegroundColor Green
 
 Write-Host ""
