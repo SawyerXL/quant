@@ -26,6 +26,11 @@ PERIOD_STOP=-0.15; TRAIL_STOP=None   # TRAIL_STOP=None → 追踪止损停用(�
 TAKE_PROFIT_1 = 0.30  # 第一档止盈(卖当前仓位1/3)
 TAKE_PROFIT_2 = 0.45  # 第二档(剩余全清, 原0.60→0.45, +0.3pp年化)
 TP_TRAIL      = 0.08  # TP1后兜底: 从TP1后最高点回落8%即全清(防利润归零)
+# 2026-09-08 关闭止盈(用户批准, 量化证据): 引擎口径TP 7.5年触发731次,
+# 年化-0.49pp仅换回撤0.7pp=净负; 实盘v4(30/45全清+兜底)的回测依据跑在
+# 被污染池数据上已作废; 三方配置漂移(引擎25/50、spec v3 30/60、实盘v4
+# 30/45)见§6.9深夜复核②。止损(优先级最高)不受影响。
+TP_ENABLED = False
 STATE=os.path.join("H:/quant/logs","stop_state.json")
 GO="--go" in sys.argv
 
@@ -72,13 +77,13 @@ def main():
                 sells.append((code,vol,round(last*0.995,2)))
                 st[code]["tp_level"] = 0; st[code]["tp_peak"] = cost  # 止损出场, 重置TP
         # ── TP1: +30%卖1/3 ──
-        elif ret >= TAKE_PROFIT_1 and tp_level < 1:
+        elif TP_ENABLED and ret >= TAKE_PROFIT_1 and tp_level < 1:
             sell_vol = max(100, int(vol / 3 / 100) * 100)
             note = "止盈TP1(+%.0f%%) 卖%s股@%s"%(ret*100, sell_vol, round(last,2))
             sells.append((code, sell_vol, round(last*0.995,2)))
             st[code]["tp_level"] = 1; st[code]["tp_peak"] = last  # 记录TP1触发时的价格作为起点
         # ── TP1后: TP2(+45%)或回撤兜底(-8%从tp_peak) ──
-        elif tp_level == 1:
+        elif TP_ENABLED and tp_level == 1:
             tp_peak = max(tp_peak, last); st[code]["tp_peak"] = tp_peak  # 更新TP后峰值
             if ret >= TAKE_PROFIT_2:
                 note = "止盈TP2(+%.0f%%) 全卖%s股@%s"%(ret*100, vol, round(last,2))

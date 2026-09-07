@@ -132,8 +132,10 @@ STAGE_B_CONFIGS = [
 # 默认配置（当前个人策略）
 # 2026-07-08 消融测试优化：砍掉入场过滤+过热过滤+追踪止损+绝对止损
 # 仅保留 MA10(4天)退出 + 30%/60% 分批止盈，年化 5.7%→9.3%，回撤持平
+# 2026-09-08: pool_size 60→30 对齐现网 pool30 定案(配置一致性检查实锤
+# 漂移——直接用本配置的回测此前都在跑TOP60); 需要TOP60的脚本须显式覆盖
 DEFAULT_CONFIG = BacktestConfig(
-    pool_size=60,
+    pool_size=30,
     rebalance_freq="biweekly",
     # ── 过热过滤：关闭 (测试证明入场过滤+过热过滤是纯破坏) ──
     max_20d_return=999,
