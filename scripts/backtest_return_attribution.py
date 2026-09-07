@@ -66,10 +66,14 @@ def load_entry_map() -> dict:
 
 
 def members_on(date, pit, entry_map):
-    """date 日的 800 成员。主窗口用 PIT 快照前向填充; OOS 用 entry_date。"""
+    """date 日的 800 成员。主窗口用 PIT 快照前向填充, 首快照(2019-06-28)
+    之前回填首快照成员(避免 2019 上半年空仓低估 A0); OOS 用 entry_date
+    (幸存者偏差: 剔除/退市成员缺失 → A0 OOS 偏乐观, 判读时保守)。"""
     if pit:
         use = [s for s in pit if s[0] <= date]
-        return use[-1][1] if use else None
+        if use:
+            return use[-1][1]
+        return pit[0][1]  # 首快照回填
     return {c for c, e in entry_map.items() if e <= date} or None
 
 
