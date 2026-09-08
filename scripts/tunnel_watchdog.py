@@ -54,17 +54,18 @@ def main():
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if up:
         if prev != "up":
-            _save_state("up")
             logger.info(f"隧道恢复: {now}")
             send_alert(f"🟢 Windows隧道已恢复 ({now})", level="info")
             p0_ack("隧道断")  # 恢复=自动确认(条件已消除)
     else:
         if prev != "down":
-            _save_state("down")
             logger.warning(f"隧道断开: {now}（Windows端计划任务将在≤5分钟内自愈）")
             p0_alert("隧道断", f"{now} 断开。QMT持仓同步/成本实测拉取受影响"
                      f"(执行链走公网IP不受影响)。Windows端Quant-TunnelKeep应≤5分钟"
                      f"自愈, 超15分钟未恢复请检查Windows")
+    # 每tick都写状态(2026-09-08): updated_at=心跳——9/7事件教训: 状态文件被
+    # 手工探测写成stale"up"后, watchdog全程静默, 30小时断链零告警
+    _save_state("up" if up else "down")
 
 
 if __name__ == "__main__":
