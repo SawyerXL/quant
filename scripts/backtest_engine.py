@@ -91,11 +91,13 @@ def apply_filters(pool_codes, panel, idx, config, return_tags=False):
     return selected
 
 
-def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, open_panel=None, cash_asset_ret=None):
+def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, open_panel=None, cash_asset_ret=None, pit_members=None):
     """
     主回测引擎。open_panel 可选(ma10_exit_delay=True 时用于次日开盘卖价)。
     cash_asset_ret: 现金资产的日收益序列(如国债ETF), 传入则现金部分按该资产计收益
     (2026-09-01 方向一: 熊市档现金升级为国债久期), 否则按 config.cash_yield。
+    pit_members: {date_str: [codes]} — pool_style="pit800" 时池=该日PIT成员
+    (2026-09-08 T3: A0 重建为同引擎退化臂, 池语义与臂端同路径)。
     返回: (nav_series, metrics_dict)
     """
     all_dates = panel.index
@@ -406,7 +408,12 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 prev_pos_ratio = pos_ratio
             else:
                 amt_avg = amount_panel.iloc[max(0,i-20):i].mean().dropna()
-                if getattr(config, "pool_style", "amount") == "momentum":
+                if getattr(config, "pool_style", "amount") == "pit800":
+                    # T3 (2026-09-08): A0退化臂池=PIT成员全800(∩面板),
+                    # 等权由 new_w 逻辑自然产生; 与臂端同过滤/同lot/同成本
+                    pool = [c for c in (pit_members or {}).get(date_str, [])
+                            if c in panel.columns]
+                elif getattr(config, "pool_style", "amount") == "momentum":
                     # 评审P1-4: 成交额排名=拥挤度因子。流动性池内按动量排序,
                     # 保留流动性前提的同时选"真正在涨"的票而非"最热"的票。
                     # mom_skip_days>0: 12-1逻辑, 跳过最近N日规避短期反转污染
