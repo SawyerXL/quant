@@ -10,6 +10,11 @@
   上线前必须在 pTrade 仿真盘与 Linux 信号逐日对账（目标组合/仓位档/换手清单），
   对不上 = 移植失败，禁止直接实盘。见 docs/ptrade_migration_plan.md 对账规程。
 
+验证路线（国金仿真/回测暂未开放, 2026-09-01）:
+  ① DRY_RUN=True 观察模式: 只算不下单, 逐日对账 vs Linux 信号(零风险)
+  ② 对账 PASS 后: DRY_RUN=False + CAPITAL_CAP=20000 小资金实盘, 再对账 ≥2 调仓周期
+  ③ 全部通过 → 三批替换(见方案 doc Phase 2)
+
 与 Linux 版的结构性差异（数据源差异，非逻辑差异，均已备案）:
   1. 数据源: pTrade get_history/get_snapshot 替代本地 parquet + 新浪
      - K线 fq='dypre'(动态前复权) 对齐本地前复权口径
@@ -22,19 +27,20 @@
   5. 策略资金 = 账户净资产 − 忽略仓市值（Linux 版固定 40 万基数）
 
 风控红线（execution/risk.py 同款，策略内实现）:
-  - 单笔订单 ≤ 5 万 | 涨停禁买/跌停禁卖 | 单票 ≤ 5%（等权 1/60≈1.7% 天然满足）
-  - 行业集中度 ≤ 30%（内置行业映射；超限只告警，等权60只结构下极少触达）
+  - 单笔订单 ≤ 10 万 | 涨停禁买/跌停禁卖 | 单票 ≤ 5%（等权 1/60≈1.7% 天然满足）
+  - 行业集中度告警已关闭（行业映射因文件体积上限移除，2026-09-03；恢复方式见 _industry_check）
   - 回撤 25% → B方案：停新开仓+告警，持仓按 MA10 自然退出，恢复需人工确认
 
-仿真上线前验证清单（pTrade 环境实测，缺一不可）:
-  [ ] get_history money/close 多标的返回 DataFrame(列为代码)
-  [ ] fq='dypre' 可用，除权日收盘价连续
-  [ ] INDEX_CODE(000906.XBHS) 能取到指数日线 → 拿不到按纪律停摆，不许静默换
-  [ ] get_index_stocks('000906.XBHS') 或 300+905 能取到 ~800 成分
-  [ ] get_snapshot 返回 last_px/up_px/down_px 字段
-  [ ] write_file/read_file 可用（持久化 g 状态，跨策略重启）
-  [ ] send_message 可用（熔断告警通道；不可用则仅平台日志）
-  [ ] get_trade_days 返回当月交易日
+仿真上线前验证清单（pTrade 环境实测 + 官方API文档核对，2026-09-02）:
+  [x] get_trade_days 可用（v1 实测）
+  [x] order/order_target_value/get_orders/cancel_order 存在（v1 实测）
+  [x] 持久化: 平台原生 pickle 持久化 g（每次事件后自动保存+重启自动恢复），无需 write_file
+  [x] 告警: 仅平台日志 + set_email_info（策略报错终止时发邮件，可选，QQ邮箱）
+  [x] run_daily 签名为 (context, func, time)（文档确认，已修正）
+  [x] python3.11 下 get_history 多标的返回长表['code', field]（已按 pivot 适配）
+  [x] 000906.SS 指数K线可用(210根, 最新5166.93 与本地parquet逐位一致) — v4 实测 2026-09-02
+  [x] get_index_stocks 成分股 800只可用; dypre 可用; get_snapshot 涨跌停字段可用 — v4 实测
+  [x] 多标的 get_history 长表['code',field] 已确认并适配 pivot
 """
 
 import json
@@ -49,9 +55,9 @@ MA10_EXIT_DAYS  = 4          # 权威口径 v2.3；⚠️ Linux 信号脚本仍�
 MA200_PERIOD    = 200
 MAX_TURNOVER    = 0.50       # 单次调仓最多替换 50% 持仓
 MAX_SINGLE_ORDER_VALUE = 100_000   # 2026-09-02 对齐 settings.py(10万防错单红线)
-MAX_ACCOUNT_DRAWDOWN   = 0.25
+MAX_ACCOUNT_DRAWDOWN   = 0.15   # 2026-09-02 约束引擎网格定案红线 15%(B方案); 回测日志实锤此前25%错配
 MAX_INDUSTRY_SHARE     = 0.30
-INDEX_CODE      = '000906.XBHS'   # 中证800：五档择时唯一输入
+INDEX_CODE      = '000906.SS'     # 中证800：五档择时唯一输入。2026-09-02 探测实测: .SS 有K线, .XBHS 空数据; 成分股两种后缀均可
 USE_INDEX_FALLBACK = False        # 仿真调试可开（降级 000300.XBHS 顶替）；实盘必须 False——换指数=参数改动
 CHUNK_SIZE      = 400             # get_history 分批大小，仿真测性能后可调
 
@@ -61,6 +67,20 @@ IGNORE_CODES = {'400286', '603392', '588000'}
 
 # 策略资金上限(元)：None = 账户净资产−忽略仓市值 全部归策略；设值则封顶
 CAPITAL_CAP = None
+
+# 观察模式(国金仿真/回测暂未开放, 2026-09-01):
+#   True  = 完整计算 + 日志SIGNAL + 逐日对账, 但不下任何单(零风险验证数据/逻辑)
+#   False = 真实下单。切换条件: 对账连续≥4周 PASS 且 CAPITAL_CAP 已设为小资金起步值
+DRY_RUN = True
+
+# 熔断恢复开关: B方案要求"恢复需人工确认"。g 由平台持久化(重启后 halt 仍为 True),
+# 人工确认 = 将本开关改 True 保存并重启策略(当日14:40生效), 确认后改回 False。
+HALT_RESET = False
+
+# 池子预算基数(元): 与 Linux 信号端 TRACK_A_CAPITAL 一致(40万)。
+# 池子的"买得起过滤"永远用这个基数 → pTrade 与 Linux 选股同口径, 池子不随账户资金漂移;
+# 账户资金(仿真20万/实盘账户)只影响实际下单股数。
+POOL_CAPITAL_BASE = 400_000
 
 # ══════════════════════════════════════════════════════════════════
 # 基础工具
@@ -77,22 +97,29 @@ def _chunk(codes, size=CHUNK_SIZE):
     return [codes[i:i + size] for i in range(0, len(codes), size)]
 
 def _try_history(n, field, codes, fq=None, include=False):
-    """get_history 包装：分批 + 全异常兜底（停牌/接口限制都不能炸掉整个策略）"""
+    """get_history 包装：分批 + 全异常兜底（停牌/接口限制都不能炸掉整个策略）
+    python3.11 下多标的返回长表（列=['code', field]），在此统一 pivot 成宽表（列为代码）。"""
     frames = []
     for chunk in _chunk(codes):
         try:
             df = get_history(n, '1d', field, [_pt(c) for c in chunk],
                              fq=fq, include=include)
             if df is not None and not df.empty:
+                if 'code' in df.columns:
+                    df = df.pivot(columns='code', values=field)
                 frames.append(df)
         except Exception as e:
             log.warning(f'get_history({field}) 分块失败: {e}')
     return pd.concat(frames, axis=1) if frames else None
 
 def _snapshot(codes):
-    """get_snapshot 批量拉快照 → {6位代码: {last_px, up_px, down_px, ...}}"""
+    """get_snapshot 批量拉快照 → {6位代码: {last_px, up_px, down_px, ...}}
+    回测环境不支持该接口: 首次空返回后置标志, 当日后续调用直接短路(省去平台告警刷屏)"""
+    codes = list(codes)
+    if not codes or getattr(g, 'snap_unavailable', False):
+        return {}
     out = {}
-    for chunk in _chunk(list(codes), 500):
+    for chunk in _chunk(codes, 500):
         try:
             snap = get_snapshot([_pt(c) for c in chunk])
         except Exception as e:
@@ -101,6 +128,29 @@ def _snapshot(codes):
         for pt, v in (snap or {}).items():
             if isinstance(v, dict) and v.get('last_px'):
                 out[_plain(pt)] = v
+    if not out:
+        g.snap_unavailable = True
+    return out
+
+def _build_fallback(codes):
+    """快照不可用(回测)时, 用 dypre 收盘价+涨跌停价构造定价字典(卖出门控/限价需要)。
+    熔断/熊市分支不加载池子数据, 持仓卖出必须走这个兜底, 否则回测里卖出全部失效。"""
+    close_df = _try_history(5, 'close', codes, fq='dypre')
+    if close_df is None:
+        return {}
+    hi_df = _try_history(5, 'high_limit', codes)
+    lo_df = _try_history(5, 'low_limit', codes)
+    hi = {_plain(c): float(hi_df[c].iloc[-1]) for c in hi_df.columns
+          if pd.notna(hi_df[c].iloc[-1])} if hi_df is not None else {}
+    lo = {_plain(c): float(lo_df[c].iloc[-1]) for c in lo_df.columns
+          if pd.notna(lo_df[c].iloc[-1])} if lo_df is not None else {}
+    out = {}
+    for c in close_df.columns:
+        if pd.notna(close_df[c].iloc[-1]):
+            out[_plain(c)] = {'last_px': float(close_df[c].iloc[-1]),
+                              'up_px': hi.get(_plain(c)),
+                              'down_px': lo.get(_plain(c)),
+                              'fallback': True}
     return out
 
 def _notify(msg):
@@ -112,12 +162,17 @@ def _notify(msg):
         pass
 
 def _month_calendar(today):
-    """当月交易日列表（get_trade_days），失败返回空 → 当日停摆"""
-    ym = today[:7]
-    y, m = int(ym[:4]), int(ym[5:7])
+    """当月交易日列表（get_trade_days），失败返回空 → 当日停摆。
+    注意: 返回 numpy.ndarray 不能做真值判断(or 会抛 ambiguous)；月末日按日历计算(平台会校验日期)。"""
+    import datetime
+    y, m = int(today[:4]), int(today[5:7])
+    nxt = datetime.date(y + 1, 1, 1) if m == 12 else datetime.date(y, m + 1, 1)
+    last_day = (nxt - datetime.timedelta(days=1)).day
     try:
-        arr = get_trade_days(f'{y:04d}-{m:02d}-01', f'{y:04d}-{m:02d}-31')
-        return [str(d)[:10] for d in (arr or [])]
+        arr = get_trade_days(f'{y:04d}-{m:02d}-01', f'{y:04d}-{m:02d}-{last_day:02d}')
+        if arr is None:
+            return []
+        return [str(d)[:10] for d in arr]
     except Exception as e:
         log.error(f'get_trade_days 失败: {e}')
         return []
@@ -211,7 +266,8 @@ def _select_top_turnover(amt_df, close_df, prices, capital, n):
     return picked[:n]
 
 def _calc_shares(holdings, prices, total_capital):
-    """等权计算股数（整手取整），价格用真实可成交价"""
+    """等权计算股数（整手取整）。买不起一手的剔除后按剩余只数重新摊分,
+    消除"池子过滤(40万口径)与账户资金(20万)两套基数错配"造成的资金闲置(2026-09-03归因)"""
     shares = {}
     n = len(holdings) or 1
     for code in holdings:
@@ -221,6 +277,12 @@ def _calc_shares(holdings, prices, total_capital):
             shares[code] = int(total_capital / n / p / lot) * lot
         else:
             shares[code] = 0
+    pos = [c for c in holdings if shares.get(c)]
+    if pos and len(pos) < n:
+        for code in pos:
+            p = prices.get(code)
+            lot = 200 if code.startswith('688') else 100
+            shares[code] = int(total_capital / len(pos) / p / lot) * lot
     return shares
 
 def _check_ma10(held_codes, g):
@@ -253,7 +315,7 @@ def _managed_positions(context):
     return out
 
 def _strategy_capital(context, snap):
-    """策略资金 = 账户净资产 − 忽略仓市值；CAPITAL_CAP 可封顶"""
+    """策略资金 = 账户净资产 − 忽略仓市值；CAPITAL_CAP 可封顶（只约束下单规模）"""
     total = context.portfolio.portfolio_value
     ignored_val = 0.0
     for pt, pos in (context.portfolio.positions or {}).items():
@@ -264,52 +326,72 @@ def _strategy_capital(context, snap):
     cap = total - ignored_val
     return min(cap, CAPITAL_CAP) if CAPITAL_CAP else cap
 
+def _account_nav(context, snap):
+    """账户真实净值(策略口径): 净资产 − 忽略仓市值。不封顶——CAPITAL_CAP 只约束下单规模,
+    净值计量必须用真实数字, 否则回撤熔断和绩效全失真(2026-09-03 回测实锤: 净值被卡在20万整)。"""
+    total = context.portfolio.portfolio_value
+    ignored_val = 0.0
+    for pt, pos in (context.portfolio.positions or {}).items():
+        if _plain(pt) in IGNORE_CODES:
+            amt = getattr(pos, 'amount', 0) or 0
+            px = (snap.get(_plain(pt)) or {}).get('last_px') or getattr(pos, 'last_sale_price', 0) or 0
+            ignored_val += amt * px
+    return total - ignored_val
+
 def _industry_check(selected):
-    """行业集中度 >30% 告警（等权60只 + CSI800 结构下极少触达；超限人工定夺）"""
-    if not selected:
-        return None
-    cnt = {}
-    for c in selected:
-        ind = INDUSTRY_MAP.get(c, '其他')
-        cnt[ind] = cnt.get(ind, 0) + 1
-    if max(cnt.values()) / len(selected) > MAX_INDUSTRY_SHARE:
-        top = sorted(cnt.items(), key=lambda kv: -kv[1])[:3]
-        log.error(f'[行业集中度] 超30%红线: {top}')
-        return top
+    """行业集中度告警已关闭(2026-09-03): 20KB 行业映射使文件超过客户端粘贴上限, 已移除。
+    等权60只+CSI800结构下极少触达30%红线; 如需恢复, 用本地数据重新生成映射贴回。"""
     return None
 
 # ══════════════════════════════════════════════════════════════════
 # 下单（风控红线内嵌）
 # ══════════════════════════════════════════════════════════════════
 
-def _sell_all(code):
+def _sell_all(code, amt, price):
+    """显式按当前持仓量卖出。不用 order_target_value：交易场景持仓同步有6秒时滞，
+    循环里连续调 target 类接口会重复下单（官方文档明确警告）。"""
+    if not price or price <= 0 or amt <= 0:
+        return False
     try:
-        order_target_value(_pt(code), 0)
+        # 限价归一到 tick 整数倍(前复权兜底价可能带多位小数, 柜台会废单)
+        order(_pt(code), -int(amt), limit_price=round(price, 2))
         return True
     except Exception as e:
         log.error(f'卖出失败 {code}: {e}')
+        return False
+
+def _sell_shares(code, shares, price):
+    """按指定股数减仓(权重调整用)。全清仓走 _sell_all。"""
+    if not price or price <= 0 or shares <= 0:
+        return False
+    try:
+        order(_pt(code), -int(shares), limit_price=round(price, 2))
+        return True
+    except Exception as e:
+        log.error(f'减仓失败 {code}: {e}')
         return False
 
 def _buy(code, shares, price):
     if not price or price <= 0 or shares <= 0:
         return False
     if shares * price > MAX_SINGLE_ORDER_VALUE:
-        log.error(f'{code} 单笔 {shares * price:,.0f} 超5万红线, 跳过')
+        log.error(f'{code} 单笔 {shares * price:,.0f} 超10万红线, 跳过')
         return False
     try:
-        order(_pt(code), int(shares), limit_price=price)
+        # 限价归一到 tick 整数倍(前复权兜底价可能带多位小数, 柜台会废单)
+        order(_pt(code), int(shares), limit_price=round(price, 2))
         return True
     except Exception as e:
         log.error(f'买入失败 {code}: {e}')
         return False
 
 def _cancel_unfilled(context):
-    """撤掉未成交的旧委托，防止次日重复下单"""
+    """撤掉未成交的旧委托，防止次日重复下单。Order 对象字段是 id，状态 str: 8=已成 9=废单。"""
     try:
         for o in (get_orders() or []):
             if str(getattr(o, 'status', '8')) not in ('8', '9'):
                 try:
-                    cancel_order(getattr(o, 'order_id', ''))
+                    cancel_order(getattr(o, 'id', ''))
                 except Exception:
                     pass
     except Exception:
@@ -326,22 +408,35 @@ def initialize(context):
     g.nav_high = None
     g.halt = False             # 回撤25%熔断B方案：停新开仓，持仓按MA10自然退出
     _restore_state()
-    run_daily(retry_orders, '09:35')
-    run_daily(daily_main, '14:40')
-    run_daily(eod, '15:10')
+    # 回测成本口径(仅回测生效, 实盘按柜台实际费率): 2026-09-03 谈判结果=万1 但不免5(最低5元/笔)
+    # 单笔3千多的组合下最低费起决定作用, 回测必须用真实口径才能反映真实经济性
+    try:
+        set_commission(commission_ratio=0.0001, min_commission=5, type="STOCK")
+    except Exception:
+        pass
+    # 官方签名: run_daily(context, func, time)，第一个参数必须是 context（2026-09-02 文档修正）
+    run_daily(context, retry_orders, '9:35')
+    run_daily(context, daily_main, '14:40')
+    run_daily(context, eod, '15:10')
+    # 可选: 策略报错终止时邮件提醒(需QQ邮箱+SMTP授权码, 咨询券商是否支持)
+    # set_email_info('你的QQ邮箱@qq.com', 'QQ邮箱SMTP授权码', 'PTrade主策略告警')
     log.info(f'[ptrade主策略v1] N={N_HOLDINGS} MA10={MA10_EXIT_DAYS}d vol20≤{MAX_VOL20}% '
-             f'指数={INDEX_CODE} 忽略仓={sorted(IGNORE_CODES)}')
+             f'指数={INDEX_CODE} 忽略仓={sorted(IGNORE_CODES)} DRY_RUN={DRY_RUN}')
 
 def daily_main(context):
     today = str(context.blotter.current_dt.date())[:10]
     cal = _month_calendar(today)
     if not cal or today not in cal:
         return
-    log.info(f'==== {today} 主策略运行 ====')
+    if HALT_RESET and g.halt:
+        g.halt = False
+        log.error('[熔断] 人工确认恢复, HALT_RESET 生效, 重新开仓; 请将 HALT_RESET 改回 False')
 
     managed = _managed_positions(context)
     held = sorted(managed)
     snap = _snapshot(held)
+    if not snap and held:
+        snap = _build_fallback(held)   # 回测: 快照不可用, 持仓定价兜底(熔断/熊市卖出需要)
     ratio = _index_position_ratio()
 
     # ── 每日 MA10 出清检查（熔断B方案下也照常执行：持仓按MA10自然退出）──
@@ -350,7 +445,10 @@ def daily_main(context):
         g.days_below.pop(c, None)
 
     rebal = _is_rebalance_day(today, cal)
+    if DRY_RUN or rebal or exits:
+        log.info(f'==== {today} 主策略运行 ====')
     sells, buys_plan, selected = set(exits), {}, held
+    trim_plan, add_plan = {}, {}   # 持仓 diff 重加权: 减仓/加仓(对齐 QMT 执行器)
     pool_snap = {}
     note = ''
 
@@ -359,6 +457,7 @@ def daily_main(context):
         _notify(f'[ptrade主策略] {today} 000906指数K线取不到 → 停摆待人工检查')
     elif g.halt:
         note = '熔断B方案生效: 停新开仓, 仅MA10自然退出; 恢复需人工确认'
+        selected = [c for c in held if c not in exits]
     elif ratio <= 0.30:
         # 熊市档: 清仓观望。现金升级国债久期待用户拍板后实现(TODO 决策点3.5)
         sells |= set(held)
@@ -371,66 +470,115 @@ def daily_main(context):
         close_df = _try_history(45, 'close', universe, fq='dypre')
         # 全池快照: 买得起过滤+真实价股数计算都要用
         pool_snap = _snapshot(universe)
-        if amt_df is None or close_df is None or not pool_snap:
+        if amt_df is None or close_df is None:
             _notify(f'[ptrade主策略] {today} 池子数据加载失败 → 当日停摆')
             note = '池子数据加载失败, 当日停摆'
         else:
-            cap = _strategy_capital(context, pool_snap)
-            effective_cap = cap * ratio
-            if exits:
-                # MA10出清自动补买: 从TOP候补(1.5×N)中选, 跳过已持有（与 Linux 版同款）
-                candidates = _select_top_turnover(
-                    amt_df, close_df, pool_snap, effective_cap, int(N_HOLDINGS * 1.5))
-                repl = []
-                for c in candidates:
-                    if c not in held and c not in exits and c not in repl:
-                        repl.append(c)
-                    if len(repl) >= len(exits):
-                        break
-                held_after = [c for c in held if c not in exits] + repl
-                g.days_below = {k: v for k, v in g.days_below.items() if k in held_after}
-                log.info(f'[MA10出清] {exits} → 补买 {repl}')
+            # 快照缺失(回测模块无实时行情/接口故障)时用 dypre 收盘价兜底, 保证回测也能走通。
+            # 键必须是6位代码(close_df 的列是 pt 格式, 与选股函数的查询键不一致)。
+            # 附带涨跌停价: 回测按当日收盘撮合, 限价挂到涨跌停才能保证成交(见 fallback 标记)
+            if not pool_snap:
+                hi_df = _try_history(5, 'high_limit', universe)
+                lo_df = _try_history(5, 'low_limit', universe)
+                hi = {_plain(c): float(hi_df[c].iloc[-1]) for c in hi_df.columns
+                      if pd.notna(hi_df[c].iloc[-1])} if hi_df is not None else {}
+                lo = {_plain(c): float(lo_df[c].iloc[-1]) for c in lo_df.columns
+                      if pd.notna(lo_df[c].iloc[-1])} if lo_df is not None else {}
+                pool_snap = {}
+                for c in close_df.columns:
+                    if pd.notna(close_df[c].iloc[-1]):
+                        pool_snap[_plain(c)] = {
+                            'last_px': float(close_df[c].iloc[-1]),
+                            'up_px': hi.get(_plain(c)),
+                            'down_px': lo.get(_plain(c)),
+                            'fallback': True}
+            if not pool_snap:
+                _notify(f'[ptrade主策略] {today} 价格数据缺失 → 当日停摆')
+                note = '价格数据缺失, 当日停摆'
             else:
-                held_after = list(held)
-
-            if rebal:
-                # ── 调仓日: 全量重算（对照 Linux 版 run() 调仓分支）──
-                selected = _select_top_turnover(amt_df, close_df, pool_snap,
-                                                effective_cap, N_HOLDINGS)
-                new_set, prev_set = set(selected), set(held_after)
-                buy_list = [c for c in selected if c not in prev_set]
-                sell_list = [c for c in held_after if c not in new_set]
-
-                # 换手控制: 单次最多替换50%
-                turnover = (len(buy_list) + len(sell_list)) / (2 * N_HOLDINGS)
-                if turnover > MAX_TURNOVER:
-                    max_replace = int(N_HOLDINGS * MAX_TURNOVER)
-                    old_to_replace = [c for c in held_after if c not in new_set]
-                    sell_list = old_to_replace[:max_replace]
-                    keep_old = set(held_after) - set(sell_list)
-                    buy_list = [c for c in selected if c not in keep_old][:max_replace]
-                    selected = list(keep_old) + buy_list
-                    selected = selected[:N_HOLDINGS]
-                    log.info(f'换手{turnover:.0%}超上限 → 分批: 卖{len(sell_list)} 买{len(buy_list)}')
-
-                sells |= set(sell_list)
-                shares = _calc_shares(selected, pool_snap, effective_cap)
-                buys_plan = {c: shares[c] for c in buy_list if shares.get(c)}
-                g.days_below = {k: v for k, v in g.days_below.items() if k in selected}
-                _industry_check(selected)
-            else:
-                # 非调仓日仅MA10补买: 用补买候选的股数
+                # 选股/股数计算要纯数字价格; 涨跌停门控要字典(up_px/down_px) → 分开
+                prices_map = {k: v.get('last_px') for k, v in pool_snap.items()
+                              if v and v.get('last_px')}
+                cap = POOL_CAPITAL_BASE if DRY_RUN else _strategy_capital(context, pool_snap)
+                effective_cap = cap * ratio
+                pool_budget = POOL_CAPITAL_BASE * ratio
                 if exits:
-                    shares = _calc_shares(held_after, pool_snap, effective_cap)
-                    buys_plan = {c: shares.get(c, 0) for c in held_after
-                                 if c not in held and shares.get(c)}
-                selected = held_after
+                    # MA10出清自动补买: 从TOP候补(1.5×N)中选, 跳过已持有（与 Linux 版同款）
+                    candidates = _select_top_turnover(
+                        amt_df, close_df, prices_map, pool_budget, int(N_HOLDINGS * 1.5))
+                    repl = []
+                    for c in candidates:
+                        if c not in held and c not in exits and c not in repl:
+                            repl.append(c)
+                        if len(repl) >= len(exits):
+                            break
+                    held_after = [c for c in held if c not in exits] + repl
+                    g.days_below = {k: v for k, v in g.days_below.items() if k in held_after}
+                    log.info(f'[MA10出清] {exits} → 补买 {repl}')
+                else:
+                    held_after = list(held)
+
+                if rebal:
+                    # ── 调仓日: 全量重算（对照 Linux 版 run() 调仓分支）──
+                    selected = _select_top_turnover(amt_df, close_df, prices_map,
+                                                    pool_budget, N_HOLDINGS)
+                    new_set, prev_set = set(selected), set(held_after)
+                    # MA10 当日出清的不当天买回(同日卖买纯烧成本, 重入等下次调仓)
+                    buy_list = [c for c in selected if c not in prev_set and c not in set(exits)]
+                    sell_list = [c for c in held_after if c not in new_set]
+
+                    # 换手控制: 单次最多替换50%
+                    turnover = (len(buy_list) + len(sell_list)) / (2 * N_HOLDINGS)
+                    if turnover > MAX_TURNOVER:
+                        max_replace = int(N_HOLDINGS * MAX_TURNOVER)
+                        old_to_replace = [c for c in held_after if c not in new_set]
+                        sell_list = old_to_replace[:max_replace]
+                        keep_old = set(held_after) - set(sell_list)
+                        buy_list = [c for c in selected if c not in keep_old
+                                    and c not in set(exits)][:max_replace]
+                        selected = list(keep_old) + buy_list
+                        selected = selected[:N_HOLDINGS]
+                        log.info(f'换手{turnover:.0%}超上限 → 分批: 卖{len(sell_list)} 买{len(buy_list)}')
+
+                    sells |= set(sell_list)
+                    shares = _calc_shares(selected, prices_map, effective_cap)
+                    buys_plan = {c: shares[c] for c in buy_list if shares.get(c)}
+                    # 持仓 diff 重加权: 存量仓位调整到目标股数(消除资金闲置的完整修复,
+                    # 也修复"调仓日MA10补买候选从不下单"的遗漏——不在managed的按0股算)
+                    for c in selected:
+                        if c in buy_list:
+                            continue
+                        cur = getattr(managed.get(c), 'amount', 0) or 0
+                        tgt = shares.get(c, 0)
+                        if tgt > 0 and cur > tgt + 100:
+                            trim_plan[c] = cur - tgt
+                        elif tgt > cur + 100:
+                            add_plan[c] = tgt - cur
+                    if trim_plan or add_plan:
+                        log.info(f'[调仓] 权重调整: 减{len(trim_plan)}只 加{len(add_plan)}只')
+                    g.days_below = {k: v for k, v in g.days_below.items() if k in selected}
+                    _industry_check(selected)
+                else:
+                    # 非调仓日仅MA10补买: 用补买候选的股数
+                    if exits:
+                        shares = _calc_shares(held_after, prices_map, effective_cap)
+                        buys_plan = {c: shares.get(c, 0) for c in held_after
+                                     if c not in held and shares.get(c)}
+                    selected = held_after
 
     # ── 执行: 先卖后买 ──
+    if DRY_RUN:
+        log.warning('[DRY_RUN] 跳过下单: 卖%s 减%s 买%s' % (
+            sorted(sells), sorted(trim_plan), list(buys_plan)))
+        sells, trim_plan, buys_plan, add_plan = [], {}, {}, {}
     for code in sorted(sells):
-        if code not in managed:
+        pos = managed.get(code)
+        if pos is None:
             continue
-        sd = snap.get(code)
+        amt = getattr(pos, 'amount', 0) or 0
+        if amt <= 0:
+            continue
+        sd = snap.get(code) or pool_snap.get(code)
         if not sd or not sd.get('last_px'):
             g.pending_sells.append(code)          # 无行情(停牌?) → 次日再试
             continue
@@ -438,10 +586,31 @@ def daily_main(context):
             g.pending_sells.append(code)          # 跌停禁卖
             log.warning(f'{code} 跌停禁卖, 延至次日')
             continue
-        if _sell_all(code):
+        # 回测兜底: 限价挂跌停价, 保证收盘撮合可成交; 实盘用真实快照价
+        px = sd.get('down_px') if sd.get('fallback') and sd.get('down_px') else sd['last_px']
+        if _sell_all(code, amt, px):
             g.days_below.pop(code, None)
 
-    for code, sh in sorted(buys_plan.items()):
+    # 减仓(权重调整): 只挂一次, 不进入次日重试(下个调仓日会重新对齐)
+    for code, sh in sorted(trim_plan.items()):
+        pos = managed.get(code)
+        if pos is None:
+            continue
+        amt = getattr(pos, 'amount', 0) or 0
+        if amt <= 0:
+            continue
+        sd = snap.get(code) or pool_snap.get(code)
+        if not sd or not sd.get('last_px'):
+            continue
+        if sd.get('down_px') and sd['last_px'] <= sd['down_px']:
+            log.warning(f'{code} 跌停禁卖(减仓跳过)')
+            continue
+        px = sd.get('down_px') if sd.get('fallback') and sd.get('down_px') else sd['last_px']
+        _sell_shares(code, min(sh, amt), px)
+
+    exec_buys = dict(buys_plan)
+    exec_buys.update(add_plan)
+    for code, sh in sorted(exec_buys.items()):
         sd = pool_snap.get(code) or snap.get(code)
         if not sd or not sd.get('last_px'):
             g.pending_buys[code] = sh              # 无行情 → 次日再试
@@ -450,29 +619,42 @@ def daily_main(context):
             g.pending_buys[code] = sh              # 涨停禁买
             log.warning(f'{code} 涨停禁买, 延至次日')
             continue
-        if _buy(code, sh, sd['last_px']):
+        # 回测兜底: 限价挂涨停价, 保证收盘撮合可成交; 实盘用真实快照价
+        px = sd.get('up_px') if sd.get('fallback') and sd.get('up_px') else sd['last_px']
+        if _buy(code, sh, px):
             g.pending_buys.pop(code, None)
 
     g.pending_sells = sorted(set(g.pending_sells))
-    # 对账用标准行（与 Linux 信号 signal_a_latest.json 逐字段比对）
-    log.info('SIGNAL|%s|ratio=%.2f|rebal=%s|halt=%s|selected=%s|sell=%s|buy=%s|note=%s',
-             today, ratio or 0, rebal, g.halt,
-             ','.join(selected), ','.join(sorted(sells)),
-             ','.join(sorted(buys_plan)), note)
-    _notify(f'[ptrade主策略] {today} 仓位{ratio or 0:.0%} 持仓{len(selected)}只 '
-            f'卖{len(sells)} 买{len(buys_plan)} {note}')
+    # 对账用标准行（与 Linux 信号 signal_a_latest.json 逐字段比对）。
+    # 回测日志瘦身: 安静日不输出日频日志(防日志超客户端显示上限, 2026-09-03);
+    # DRY_RUN 观察期始终输出(逐日对账需要每天有 SIGNAL 行)
+    if DRY_RUN or rebal or exits or sells or buys_plan or (ratio is not None and ratio <= 0.30):
+        log.info('SIGNAL|%s|ratio=%.2f|rebal=%s|halt=%s|dryrun=%s|selected=%s|sell=%s|buy=%s|note=%s' % (
+            today, ratio or 0, rebal, g.halt, DRY_RUN,
+            ','.join(selected), ','.join(sorted(sells)),
+            ','.join(sorted(buys_plan)), note))
+        # 日常摘要用 info 级别; log.error 只留给停摆/熔断等真异常(避免日志天天"报错")
+        log.info(f'[ptrade主策略] {today} 仓位{ratio or 0:.0%} 持仓{len(selected)}只 '
+                 f'卖{len(sells)} 买{len(buys_plan)} {note}')
     _persist_state()
 
 def retry_orders(context):
     """次日09:35重试昨日未成交（跌停禁卖/涨停禁买/废单），撤旧单防重复"""
+    if DRY_RUN:
+        g.pending_buys, g.pending_sells = {}, []
+        return
     _cancel_unfilled(context)
     managed = _managed_positions(context)
     snap = _snapshot(list(managed) + list(g.pending_buys))
 
     still_sell = []
     for code in g.pending_sells:
-        if code not in managed:
+        pos = managed.get(code)
+        if pos is None:
             continue                               # 昨日已成交
+        amt = getattr(pos, 'amount', 0) or 0
+        if amt <= 0:
+            continue
         sd = snap.get(code)
         if not sd or not sd.get('last_px'):
             still_sell.append(code)
@@ -480,7 +662,7 @@ def retry_orders(context):
         if sd.get('down_px') and sd['last_px'] <= sd['down_px']:
             still_sell.append(code)                # 仍跌停
             continue
-        if not _sell_all(code):
+        if not _sell_all(code, amt, sd['last_px']):
             still_sell.append(code)
     g.pending_sells = still_sell
 
@@ -506,7 +688,7 @@ def eod(context):
     """收盘后: 撤未成交、更新净值、回撤熔断检查、持久化"""
     _cancel_unfilled(context)
     snap = _snapshot(list(_managed_positions(context)))
-    nav = _strategy_capital(context, snap)
+    nav = _account_nav(context, snap)
     if g.nav_high is None or nav > g.nav_high:
         g.nav_high = nav
     dd = 1 - nav / g.nav_high if g.nav_high else 0.0
@@ -519,28 +701,15 @@ def eod(context):
     _persist_state()
 
 # ══════════════════════════════════════════════════════════════════
-# 状态持久化（跨策略重启；write_file/read_file 存在性待仿真验证）
+# 状态持久化（2026-09-02 官方文档确认：平台原生 pickle 持久化 g，
+# 每次事件后自动保存；重启时先跑 initialize 再用持久化值覆盖 → 无需自建文件持久化）
 # ══════════════════════════════════════════════════════════════════
 
 def _persist_state():
-    try:
-        write_file('ptrade_state.json', json.dumps({
-            'days_below': g.days_below, 'nav_high': g.nav_high, 'halt': g.halt,
-            'pending_buys': g.pending_buys, 'pending_sells': g.pending_sells,
-        }, ensure_ascii=False))
-    except Exception:
-        pass
+    pass
 
 def _restore_state():
-    try:
-        d = json.loads(read_file('ptrade_state.json') or '{}')
-        g.days_below = {str(k): int(v) for k, v in d.get('days_below', {}).items()}
-        g.nav_high = d.get('nav_high')
-        g.halt = bool(d.get('halt'))
-        g.pending_buys = {str(k): int(v) for k, v in d.get('pending_buys', {}).items()}
-        g.pending_sells = [str(c) for c in d.get('pending_sells', [])]
-    except Exception:
-        pass
+    pass
 
 CSI800_LIST = [
     '000001', '000002', '000009', '000021', '000027', '000032', '000034', '000039', '000050', '000060',
@@ -625,140 +794,4 @@ CSI800_LIST = [
     '688702', '688708', '688709', '688728', '688772', '688777', '688778', '688819', '688981', '689009',
 ]
 
-INDUSTRY_MAP = {
-    '000001': '银行', '000002': '房地产', '000009': '电力设备', '000021': '电子', '000027': '公用事业', '000032': '建筑装饰',
-    '000034': '计算机', '000039': '其他', '000050': '其他', '000060': '有色金属', '000062': '电子', '000063': '通信',
-    '000088': '交通运输', '000100': '电子', '000155': '公用事业', '000157': '其他', '000166': '非银金融', '000301': '石油石化',
-    '000333': '家用电器', '000338': '其他', '000400': '其他', '000408': '基础化工', '000415': '非银金融', '000423': '其他',
-    '000425': '其他', '000429': '交通运输', '000513': '其他', '000519': '国防军工', '000528': '其他', '000537': '公用事业',
-    '000538': '医药生物', '000539': '公用事业', '000559': '其他', '000568': '食品饮料', '000582': '交通运输', '000591': '公用事业',
-    '000596': '食品饮料', '000598': '环保', '000617': '非银金融', '000623': '医药生物', '000625': '汽车', '000629': '钢铁',
-    '000630': '有色金属', '000651': '家用电器', '000657': '有色金属', '000661': '其他', '000683': '基础化工', '000703': '石油石化',
-    '000708': '钢铁', '000709': '钢铁', '000723': '煤炭', '000725': '其他', '000728': '非银金融', '000729': '食品饮料',
-    '000733': '国防军工', '000737': '有色金属', '000738': '国防军工', '000739': '医药生物', '000750': '非银金融', '000768': '国防军工',
-    '000776': '非银金融', '000783': '非银金融', '000785': '商贸零售', '000786': '建筑材料', '000792': '基础化工', '000800': '其他',
-    '000807': '有色金属', '000825': '钢铁', '000830': '基础化工', '000831': '有色金属', '000858': '食品饮料', '000878': '有色金属',
-    '000883': '公用事业', '000887': '汽车', '000893': '基础化工', '000895': '食品饮料', '000898': '钢铁', '000921': '家用电器',
-    '000932': '钢铁', '000937': '煤炭', '000938': '其他', '000951': '其他', '000959': '钢铁', '000960': '有色金属',
-    '000963': '其他', '000967': '环保', '000975': '有色金属', '000977': '其他', '000983': '煤炭', '000987': '非银金融',
-    '000988': '机械设备', '000997': '其他', '000999': '医药生物', '001203': '钢铁', '001221': '轻工制造', '001280': '有色金属',
-    '001286': '公用事业', '001309': '电子', '001386': '轻工制造', '001389': '电子', '001391': '交通运输', '001696': '机械设备',
-    '001965': '交通运输', '001979': '房地产', '002001': '基础化工', '002007': '医药生物', '002008': '机械设备', '002025': '国防军工',
-    '002027': '传媒', '002028': '其他', '002032': '家用电器', '002044': '医药生物', '002049': '其他', '002050': '家用电器',
-    '002056': '电力设备', '002064': '基础化工', '002065': '其他', '002074': '其他', '002078': '轻工制造', '002085': '其他',
-    '002120': '交通运输', '002126': '其他', '002130': '电子', '002131': '机械设备', '002138': '电子', '002142': '银行',
-    '002152': '其他', '002153': '其他', '002155': '有色金属', '002157': '农林牧渔', '002179': '国防军工', '002185': '电子',
-    '002195': '其他', '002202': '其他', '002203': '有色金属', '002223': '医药生物', '002230': '其他', '002236': '其他',
-    '002241': '电子', '002244': '房地产', '002252': '医药生物', '002261': '计算机', '002262': '医药生物', '002265': '汽车',
-    '002266': '环保', '002271': '建筑材料', '002273': '电子', '002281': '通信', '002299': '农林牧渔', '002304': '食品饮料',
-    '002311': '农林牧渔', '002312': '其他', '002318': '钢铁', '002335': '其他', '002340': '电力设备', '002352': '交通运输',
-    '002353': '其他', '002371': '电子', '002384': '电子', '002402': '电子', '002407': '基础化工', '002409': '电子',
-    '002410': '计算机', '002414': '国防军工', '002415': '计算机', '002422': '医药生物', '002423': '非银金融', '002429': '家用电器',
-    '002430': '基础化工', '002432': '医药生物', '002436': '电子', '002444': '其他', '002460': '有色金属', '002461': '食品饮料',
-    '002463': '电子', '002465': '国防军工', '002466': '有色金属', '002472': '汽车', '002475': '电子', '002487': '电力设备',
-    '002493': '石油石化', '002500': '非银金融', '002508': '家用电器', '002517': '传媒', '002532': '有色金属', '002558': '传媒',
-    '002568': '食品饮料', '002583': '通信', '002594': '汽车', '002600': '电子', '002601': '基础化工', '002602': '传媒',
-    '002603': '医药生物', '002608': '公用事业', '002624': '传媒', '002625': '国防军工', '002648': '基础化工', '002670': '非银金融',
-    '002673': '非银金融', '002683': '基础化工', '002709': '电力设备', '002714': '农林牧渔', '002736': '非银金融', '002738': '有色金属',
-    '002739': '传媒', '002756': '有色金属', '002773': '医药生物', '002797': '非银金融', '002812': '电力设备', '002821': '医药生物',
-    '002831': '轻工制造', '002837': '机械设备', '002841': '电子', '002850': '电力设备', '002851': '电力设备', '002916': '电子',
-    '002920': '计算机', '002926': '非银金融', '002938': '电子', '002939': '非银金融', '002945': '非银金融', '002966': '银行',
-    '002984': '汽车', '003021': '电力设备', '003022': '电力设备', '003031': '通信', '003035': '公用事业', '003816': '公用事业',
-    '300001': '电力设备', '300002': '传媒', '300003': '医药生物', '300012': '社会服务', '300014': '电力设备', '300015': '医药生物',
-    '300017': '计算机', '300024': '机械设备', '300033': '其他', '300037': '电力设备', '300054': '电子', '300058': '传媒',
-    '300059': '非银金融', '300073': '电力设备', '300100': '汽车', '300115': '电子', '300122': '医药生物', '300124': '机械设备',
-    '300136': '电子', '300140': '环保', '300142': '医药生物', '300144': '社会服务', '300146': '食品饮料', '300207': '电力设备',
-    '300223': '电子', '300251': '传媒', '300274': '电力设备', '300285': '电子', '300308': '通信', '300316': '电力设备',
-    '300339': '计算机', '300346': '电子', '300373': '电子', '300383': '通信', '300390': '电力设备', '300394': '通信',
-    '300395': '国防军工', '300408': '电子', '300413': '传媒', '300418': '传媒', '300432': '电力设备', '300433': '电子',
-    '300442': '通信', '300450': '电力设备', '300454': '计算机', '300458': '电子', '300474': '国防军工', '300475': '电子',
-    '300476': '电子', '300487': '基础化工', '300496': '计算机', '300498': '农林牧渔', '300502': '通信', '300548': '通信',
-    '300558': '医药生物', '300567': '机械设备', '300570': '通信', '300604': '电子', '300620': '通信', '300623': '电子',
-    '300627': '通信', '300628': '通信', '300661': '电子', '300666': '电子', '300676': '医药生物', '300677': '医药生物',
-    '300679': '电子', '300699': '国防军工', '300718': '机械设备', '300724': '电力设备', '300735': '电子', '300748': '有色金属',
-    '300750': '电力设备', '300751': '电力设备', '300757': '机械设备', '300759': '医药生物', '300760': '医药生物', '300763': '电力设备',
-    '300803': '计算机', '300832': '医药生物', '300857': '电子', '300866': '电子', '300888': '美容护理', '300896': '美容护理',
-    '300919': '电力设备', '300953': '电力设备', '300957': '美容护理', '300972': '商贸零售', '300999': '农林牧渔', '301165': '通信',
-    '301200': '机械设备', '301236': '计算机', '301269': '计算机', '301301': '医药生物', '301308': '电子', '301358': '电力设备',
-    '301377': '机械设备', '301498': '农林牧渔', '301526': '建筑材料', '301536': '电子', '301606': '电子', '301611': '电子',
-    '302132': '国防军工', '600000': '银行', '600004': '交通运输', '600008': '环保', '600009': '交通运输', '600010': '钢铁',
-    '600011': '公用事业', '600015': '银行', '600016': '银行', '600018': '交通运输', '600019': '钢铁', '600021': '公用事业',
-    '600023': '公用事业', '600025': '公用事业', '600026': '交通运输', '600027': '公用事业', '600028': '石油石化', '600029': '交通运输',
-    '600030': '非银金融', '600031': '机械设备', '600032': '公用事业', '600036': '银行', '600038': '国防军工', '600039': '建筑装饰',
-    '600048': '房地产', '600050': '通信', '600060': '家用电器', '600061': '非银金融', '600062': '其他', '600066': '汽车',
-    '600085': '其他', '600089': '电力设备', '600095': '非银金融', '600098': '公用事业', '600100': '计算机', '600104': '汽车',
-    '600105': '通信', '600109': '非银金融', '600111': '有色金属', '600115': '交通运输', '600118': '国防军工', '600126': '钢铁',
-    '600131': '其他', '600132': '食品饮料', '600141': '基础化工', '600143': '基础化工', '600150': '国防军工', '600153': '交通运输',
-    '600157': '公用事业', '600160': '基础化工', '600161': '医药生物', '600166': '汽车', '600170': '建筑装饰', '600171': '电子',
-    '600176': '建筑材料', '600177': '纺织服饰', '600183': '电子', '600188': '煤炭', '600196': '医药生物', '600208': '房地产',
-    '600219': '有色金属', '600221': '交通运输', '600233': '交通运输', '600256': '石油石化', '600276': '医药生物', '600282': '钢铁',
-    '600292': '公用事业', '600295': '钢铁', '600298': '食品饮料', '600299': '基础化工', '600309': '基础化工', '600312': '电力设备',
-    '600316': '国防军工', '600329': '医药生物', '600332': '医药生物', '600339': '石油石化', '600346': '石油石化', '600348': '煤炭',
-    '600350': '交通运输', '600352': '基础化工', '600362': '有色金属', '600363': '电子', '600369': '非银金融', '600372': '国防军工',
-    '600377': '交通运输', '600378': '基础化工', '600380': '医药生物', '600390': '非银金融', '600392': '有色金属', '600398': '纺织服饰',
-    '600406': '电力设备', '600415': '商贸零售', '600426': '基础化工', '600435': '国防军工', '600436': '医药生物', '600438': '电力设备',
-    '600460': '电子', '600482': '电力设备', '600483': '公用事业', '600486': '基础化工', '600489': '有色金属', '600497': '有色金属',
-    '600498': '通信', '600499': '机械设备', '600511': '医药生物', '600515': '房地产', '600516': '钢铁', '600517': '非银金融',
-    '600519': '食品饮料', '600521': '医药生物', '600522': '通信', '600535': '医药生物', '600536': '计算机', '600546': '煤炭',
-    '600547': '有色金属', '600549': '有色金属', '600562': '国防军工', '600563': '电子', '600566': '医药生物', '600570': '计算机',
-    '600578': '公用事业', '600582': '机械设备', '600583': '石油石化', '600584': '电子', '600585': '建筑材料', '600588': '计算机',
-    '600595': '有色金属', '600598': '农林牧渔', '600600': '食品饮料', '600601': '电子', '600602': '计算机', '600606': '房地产',
-    '600637': '传媒', '600642': '公用事业', '600655': '商贸零售', '600660': '其他', '600663': '房地产', '600674': '公用事业',
-    '600685': '国防军工', '600688': '石油石化', '600690': '家用电器', '600699': '汽车', '600704': '交通运输', '600707': '电子',
-    '600711': '有色金属', '600737': '农林牧渔', '600741': '汽车', '600754': '社会服务', '600760': '国防军工', '600763': '医药生物',
-    '600764': '国防军工', '600765': '国防军工', '600795': '公用事业', '600801': '建筑材料', '600803': '公用事业', '600808': '钢铁',
-    '600809': '食品饮料', '600816': '非银金融', '600820': '建筑装饰', '600845': '计算机', '600848': '房地产', '600862': '国防军工',
-    '600863': '公用事业', '600871': '石油石化', '600873': '基础化工', '600875': '电力设备', '600879': '国防军工', '600884': '电力设备',
-    '600885': '电力设备', '600886': '公用事业', '600887': '食品饮料', '600893': '国防军工', '600900': '公用事业', '600901': '非银金融',
-    '600905': '公用事业', '600906': '非银金融', '600909': '非银金融', '600918': '非银金融', '600919': '银行', '600926': '银行',
-    '600927': '非银金融', '600930': '公用事业', '600938': '石油石化', '600941': '通信', '600958': '非银金融', '600967': '国防军工',
-    '600968': '石油石化', '600970': '建筑装饰', '600977': '传媒', '600985': '煤炭', '600988': '有色金属', '600989': '基础化工',
-    '600995': '公用事业', '600998': '医药生物', '600999': '非银金融', '601000': '交通运输', '601001': '煤炭', '601006': '交通运输',
-    '601009': '银行', '601012': '电力设备', '601016': '公用事业', '601018': '交通运输', '601019': '传媒', '601021': '交通运输',
-    '601058': '汽车', '601059': '非银金融', '601066': '非银金融', '601077': '银行', '601088': '煤炭', '601098': '传媒',
-    '601099': '非银金融', '601100': '机械设备', '601106': '机械设备', '601108': '非银金融', '601111': '交通运输', '601112': '建筑材料',
-    '601117': '建筑装饰', '601118': '农林牧渔', '601127': '汽车', '601128': '银行', '601136': '非银金融', '601138': '电子',
-    '601139': '公用事业', '601155': '房地产', '601156': '交通运输', '601162': '非银金融', '601166': '银行', '601169': '银行',
-    '601179': '电力设备', '601186': '建筑装饰', '601198': '非银金融', '601211': '非银金融', '601212': '有色金属', '601216': '基础化工',
-    '601225': '煤炭', '601228': '交通运输', '601229': '银行', '601233': '石油石化', '601236': '非银金融', '601238': '汽车',
-    '601288': '银行', '601298': '交通运输', '601318': '非银金融', '601319': '非银金融', '601328': '银行', '601336': '非银金融',
-    '601360': '计算机', '601377': '非银金融', '601390': '建筑装饰', '601398': '银行', '601399': '机械设备', '601456': '非银金融',
-    '601555': '非银金融', '601567': '电力设备', '601577': '银行', '601598': '交通运输', '601600': '有色金属', '601601': '非银金融',
-    '601607': '医药生物', '601608': '机械设备', '601611': '建筑装饰', '601615': '电力设备', '601618': '建筑装饰', '601628': '非银金融',
-    '601633': '汽车', '601658': '银行', '601665': '银行', '601666': '煤炭', '601668': '建筑装饰', '601669': '建筑装饰',
-    '601688': '非银金融', '601689': '汽车', '601696': '非银金融', '601698': '国防军工', '601699': '煤炭', '601717': '机械设备',
-    '601727': '电力设备', '601728': '通信', '601766': '机械设备', '601788': '非银金融', '601799': '汽车', '601800': '建筑装饰',
-    '601808': '石油石化', '601816': '交通运输', '601818': '银行', '601825': '银行', '601838': '银行', '601857': '石油石化',
-    '601865': '电力设备', '601866': '交通运输', '601868': '建筑装饰', '601869': '通信', '601872': '交通运输', '601877': '电力设备',
-    '601878': '非银金融', '601880': '交通运输', '601881': '非银金融', '601888': '商贸零售', '601898': '煤炭', '601899': '有色金属',
-    '601901': '非银金融', '601916': '银行', '601919': '交通运输', '601928': '传媒', '601939': '银行', '601958': '有色金属',
-    '601966': '汽车', '601985': '公用事业', '601988': '银行', '601990': '非银金融', '601991': '公用事业', '601995': '非银金融',
-    '601997': '银行', '601998': '银行', '603000': '传媒', '603019': '计算机', '603049': '汽车', '603077': '基础化工',
-    '603087': '医药生物', '603092': '电力设备', '603119': '汽车', '603129': '汽车', '603156': '食品饮料', '603160': '电子',
-    '603175': '电子', '603179': '汽车', '603225': '基础化工', '603233': '医药生物', '603256': '建筑材料', '603259': '医药生物',
-    '603260': '基础化工', '603288': '食品饮料', '603290': '电子', '603296': '电子', '603298': '机械设备', '603308': '机械设备',
-    '603338': '机械设备', '603341': '电子', '603345': '食品饮料', '603369': '食品饮料', '603379': '基础化工', '603392': '医药生物',
-    '603444': '传媒', '603486': '家用电器', '603501': '电子', '603529': '汽车', '603565': '交通运输', '603568': '环保',
-    '603589': '食品饮料', '603596': '汽车', '603605': '美容护理', '603606': '电力设备', '603650': '基础化工', '603658': '医药生物',
-    '603659': '电力设备', '603688': '基础化工', '603699': '机械设备', '603728': '电力设备', '603737': '建筑材料', '603766': '汽车',
-    '603786': '汽车', '603799': '有色金属', '603806': '电力设备', '603816': '轻工制造', '603833': '轻工制造', '603858': '医药生物',
-    '603885': '交通运输', '603893': '电子', '603899': '轻工制造', '603920': '电子', '603939': '医药生物', '603979': '有色金属',
-    '603986': '电子', '603993': '有色金属', '605117': '其他', '605358': '电子', '605499': '食品饮料', '605589': '基础化工',
-    '688002': '电子', '688008': '电子', '688009': '机械设备', '688012': '电子', '688017': '机械设备', '688018': '电子',
-    '688019': '电子', '688027': '通信', '688036': '电子', '688037': '电子', '688041': '电子', '688047': '电子',
-    '688052': '电子', '688065': '基础化工', '688072': '电子', '688082': '电子', '688099': '电子', '688111': '计算机',
-    '688114': '其他', '688120': '电子', '688122': '国防军工', '688126': '其他', '688166': '医药生物', '688169': '家用电器',
-    '688172': '电子', '688180': '医药生物', '688183': '其他', '688187': '其他', '688188': '计算机', '688192': '医药生物',
-    '688200': '电子', '688213': '电子', '688220': '电子', '688223': '其他', '688234': '其他', '688235': '其他',
-    '688248': '电力设备', '688256': '电子', '688266': '医药生物', '688271': '医药生物', '688278': '医药生物', '688281': '国防军工',
-    '688295': '基础化工', '688297': '国防军工', '688301': '医药生物', '688303': '电力设备', '688313': '通信', '688318': '计算机',
-    '688322': '电子', '688331': '其他', '688336': '医药生物', '688343': '计算机', '688347': '电子', '688349': '其他',
-    '688361': '电子', '688363': '美容护理', '688375': '国防军工', '688385': '电子', '688387': '通信', '688396': '电子',
-    '688411': '电力设备', '688425': '机械设备', '688469': '电子', '688472': '其他', '688475': '计算机', '688498': '电子',
-    '688506': '医药生物', '688520': '医药生物', '688521': '电子', '688538': '电子', '688561': '计算机', '688563': '国防军工',
-    '688568': '计算机', '688578': '医药生物', '688582': '电子', '688599': '电力设备', '688608': '其他', '688615': '计算机',
-    '688617': '其他', '688629': '国防军工', '688676': '电力设备', '688692': '计算机', '688702': '其他', '688708': '国防军工',
-    '688709': '电子', '688728': '其他', '688772': '其他', '688777': '其他', '688778': '电力设备', '688819': '电力设备',
-    '688981': '电子', '689009': '其他',
-}
-
+# END_MARKER_9F3K
