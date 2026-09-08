@@ -1,20 +1,44 @@
 {
   "permissions": {
     "allow": [
-      "Bash(source .venv/bin/activate && *)",
-      "Bash(git commit *)",
-      "Bash(git push *)",
+      "Bash(python3 scripts/*)",
+      "Bash(python3 -c *)",
       "Bash(git add *)",
-      "Bash(git pull *)",
+      "Bash(git commit *)",
+      "Bash(git diff *)",
       "Bash(git status *)",
       "Bash(git log *)",
-      "Bash(echo YES | ssh *)",
-      "Bash(ssh *)",
-      "Bash(scp *)",
-      "Bash(pip *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
       "Bash(ls *)",
       "Bash(cat *)",
-      "Bash(curl *)"
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(mkdir *)",
+      "Bash(mv *)",
+      "Bash(curl *)",
+      "Bash(pip *)",
+      "Bash(source .venv/bin/activate && *)",
+      "Edit(scripts/**)",
+      "Edit(backtest/**)",
+      "Edit(docs/**)",
+      "Edit(logs/**)",
+      "Write(logs/**)",
+      "Write(docs/**)"
+    ],
+    "deny": [
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Bash(rsync *)",
+      "Bash(crontab *)",
+      "Bash(rm *)",
+      "Edit(execution/**)",
+      "Edit(config/settings.py)",
+      "Edit(**/risk.py)",
+      "Edit(**/stop_monitor.py)",
+      "Edit(**/cash_sweep.py)",
+      "Bash(*qmt*)",
+      "Bash(*order*)"
     ]
   }
 }

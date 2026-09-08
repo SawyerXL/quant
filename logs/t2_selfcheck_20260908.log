@@ -1,0 +1,12 @@
+/root/quant/data/storage.py:155: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+/root/quant/data/storage.py:155: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+面板: (1951, 5346), 首日2018-11-27, 窗口首日前的bar数: 24
+窗口首个调仓日(预期): 2019-01-15
+净值首次偏离现金收益的日期: 2019-01-02
+自检(a): ❌ 不一致
+自检(b): 窗口首日前面板bar数=24 (≥20根可算vol20/MA10/MA200) → ✅
+  601318: 窗口首调仓日vol20=1.36% (数据范围 2018-12-17~2019-01-15, 全部≤调仓日, 含10根窗口前)
+  600030: 窗口首调仓日vol20=2.20% (数据范围 2018-12-24~2019-01-15, 全部≤调仓日, 含1根窗口前)
+  600519: 窗口首调仓日vol20=2.11% (数据范围 2018-12-17~2019-01-15, 全部≤调仓日, 含10根窗口前)
