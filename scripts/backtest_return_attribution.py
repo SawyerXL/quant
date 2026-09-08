@@ -231,7 +231,10 @@ def main():
         ap = pd.DataFrame(amounts).sort_index()
         ic = load_meta("csi800_index").set_index("date")["close"].sort_index()
         ic.index = pd.to_datetime(ic.index)
-        sh = load_daily("000001", "2014-06-01", END)
+        # 日历从预加载起点开始(不早于2014-06-01也行, 但必须覆盖LOAD_START,
+        # 否则面板∩日历会把OOS预加载段(2013-11起)全删→min_bars退回2015-06,
+        # 2026-09-08 v3首轮实锤: OOS A2 -8.8%→-17.6%的根因)
+        sh = load_daily("000001", LOAD_START, END)
         cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
         # 面板索引∩交易日历: 剔除假期行(603012等新浪源假期行会进面板索引,
         # 造成全市场NaN日→稀释年化~0.3pp且污染停牌检测; 2026-09-08 T4发现)
