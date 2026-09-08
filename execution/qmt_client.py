@@ -21,12 +21,16 @@ except ImportError:
 def _to_xt_code(code: str) -> str:
     """将6位股票代码转为 xtquant 格式（加交易所后缀）。"""
     code = str(code).zfill(6)
-    if code.startswith(("60", "68", "90")):
-        return code + ".SH"   # 沪市主板/科创板
-    elif code.startswith("92"):
-        return code + ".BJ"   # 北交所
+    if "." in code:
+        return code  # 已带后缀, 防止重复追加
+    if code.startswith("92"):
+        return code + ".BJ"   # 北交所(先于"9"判断, 920xxx也会被9匹配)
+    if code.startswith(("5", "6", "9")):
+        return code + ".SH"   # 沪基金/ETF/LOF(5)/A股(6)/B股(900)
+    elif code.startswith(("110", "113")):
+        return code + ".SH"   # 沪转债(110/113); 111/112/115~118是深企债→.SZ
     else:
-        return code + ".SZ"   # 深市主板/创业板
+        return code + ".SZ"   # 深市主板/创业板/深转债(123/127/128)/深基金(15/16)
 
 
 def _tick_price(code: str, price: float) -> float:
