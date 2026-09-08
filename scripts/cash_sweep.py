@@ -28,6 +28,27 @@ MIN_AMOUNT = 20_000          # 2万以下不折腾
 STOCK_CAPITAL = 1_000_000    # 方案A: 股票track名义100万
 
 
+def _live_ref():
+    """无持仓时取 511360 实时价(新浪), 失败回退昨收估算。
+
+    2026-09-08 补: 硬编码113.9在市场上行时限价×1.002挂不住——
+    9/7 下单价 114.128 与实时价脱节是当日废单的诱因之一(T+1资金
+    未到账是主因, 已由资金前置检查拦截)。
+    """
+    try:
+        import requests
+        r = requests.get(
+            "http://hq.sinajs.cn/list=sh511360",
+            headers={"Referer": "https://finance.sina.com.cn"}, timeout=3)
+        parts = r.text.split('"')[1].split(",")
+        cur = float(parts[3]) if len(parts) > 3 and parts[3] else 0.0
+        if cur > 0:
+            return cur
+    except Exception:
+        pass
+    return 113.9
+
+
 def _get_tier():
     """当前档位(读最近一组信号的position_ratio, 两组一致)。"""
     for g in ("g0", "g1"):
@@ -84,8 +105,8 @@ def main(dry_run: bool):
 
     msg = f"[cash_sweep] tier={tier:.0%} 债券{bond_held:,.0f}→目标{target:,.0f}"
     if delta > 0:
-        # 买入短融ETF: 参考价=持仓现价或昨收估算
-        ref = bond_held / bond_shares if bond_shares else 113.9
+        # 买入短融ETF: 参考价=持仓现价, 无持仓取实时价(2026-09-08)
+        ref = bond_held / bond_shares if bond_shares else _live_ref()
         qty = int(delta / ref / 100) * 100   # ETF一手100份
         if qty <= 0:
             return
@@ -122,7 +143,7 @@ def main(dry_run: bool):
         if dry_run:
             logger.info(f"{msg} [DRY] 拟卖{bond_shares}份")
             return
-        ref = (bond_held / bond_shares if bond_shares else 113.9)
+        ref = (bond_held / bond_shares if bond_shares else _live_ref())
         oid = c.place_order(BOND_ETF, "sell", bond_shares, ref * 0.998)
         logger.info(f"{msg} 卖出{bond_shares}份 → {oid}")
         send_alert(f"{msg}\n卖出 {BOND_ETF} {bond_shares}份")
