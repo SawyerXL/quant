@@ -251,7 +251,8 @@ def _fill_recent_gaps(calendar, today: str, src):
     holes = []
     for code in codes:
         try:
-            d = load_daily(code, lo, today)
+            # 只读date列: 5500票全扫只为查缺口, 不需要价格字段(2026-09-08)
+            d = load_daily(code, lo, today, columns=["date"])
         except Exception:
             continue
         have = set(pd.to_datetime(d["date"]).astype(str).str[:10]) if not d.empty else set()
@@ -269,7 +270,7 @@ def _fill_recent_gaps(calendar, today: str, src):
             df = src.get_daily(code, miss[0], miss[-1])
             if df is not None and not df.empty:
                 save_daily(code, df)
-                after = load_daily(code, lo, today)
+                after = load_daily(code, lo, today, columns=["date"])
                 have = set(pd.to_datetime(after["date"]).astype(str).str[:10])
                 still = [x for x in miss if x not in have]
                 fixed += len(miss) - len(still)
@@ -356,34 +357,17 @@ def update_today():
             if df.empty:
                 failed.append(code)
             else:
-                # ── 脏数据过滤：新收盘价vs最近有效收盘价，跳变>50%拒绝 ──
-                if "close" in df.columns:
-                    new_close = pd.to_numeric(df["close"], errors="coerce").iloc[-1]
-                    if not pd.isna(new_close) and new_close > 0:
-                        try:
-                            # 不能传 None：pd.Timestamp(None)=NaT → range(nan) 抛TypeError，
-                            # 被下面的 except 吞掉 → 这道脏数据防线一直是死的（2026-08-25 修）
-                            old = load_daily(code, "2005-01-01", today)  # 全部历史
-                            if not old.empty and "close" in old.columns:
-                                old_close = pd.to_numeric(old["close"], errors="coerce").dropna()
-                                if len(old_close) > 0:
-                                    last_valid = old_close.iloc[-1]
-                                    if last_valid > 0:
-                                        jump = abs(new_close / last_valid - 1)
-                                        if jump > 0.5:  # 跳变>50% = 脏数据
-                                            logger.warning(f"{code}: 脏数据拒绝 (新¥{new_close:.2f} vs 旧¥{last_valid:.2f}, 跳变{jump:.0%})")
-                                            dirty_rejected += 1
-                                            continue
-                        except Exception:
-                            pass  # 首次入库不检查
-                save_daily(code, df)
+                # 脏过滤已内置于 save_daily(价格身份断言+相对前收跳变>50%拒绝, 同50%阈值)。
+                # 旧实现每票再 load_daily 一次全历史做同款检查 —— 5500票×多年parquet
+                # 的重复整文件读是17:00任务IO放大的主因, 2026-09-08 移除, 只收计数
+                dirty_rejected += save_daily(code, df)
         except Exception as e:
             logger.debug(f"{code}: 更新失败 — {e}")
             failed.append(code)
         if (i + 1) % 500 == 0:
             logger.info(f"进度: {i+1}/{len(codes)}")
     if dirty_rejected:
-        logger.warning(f"脏数据拒绝: {dirty_rejected}只")
+        logger.warning(f"脏数据拒绝: {dirty_rejected}行")
 
     # 3.5. 更新指数日线（用stock_zh_index_daily, 避开个股代码冲突）+ 顺带补指数空洞
     _update_index_daily(today, calendar)

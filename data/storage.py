@@ -37,15 +37,20 @@ def _intraday_path(code: str, freq: str, year: int) -> Path:
 
 
 # ---------- 写入 ----------
-def save_daily(code: str, df: pd.DataFrame) -> None:
-    """按年分片写入日线数据。"""
+def save_daily(code: str, df: pd.DataFrame) -> int:
+    """按年分片写入日线数据。返回被拒绝的行数(价格身份断言+相对跳变检查)。
+
+    2026-09-08: 改为返回拒绝行数, 让 update_today 不再单独读全历史做脏检查
+    (此前每票 3 次整文件读, 5500 票 = 一天 6 万+ 次文件操作)。
+    """
     if df.empty:
-        return
+        return 0
     # 清洗：'-' / '暂无数据' 等非数值字段转 NaN，无效日期行丢弃
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df = df.dropna(subset=["date"])
     if df.empty:
-        return
+        return 0
+    rejected = 0
     # code 列统一为6位零填充字符串
     if "code" in df.columns:
         df["code"] = df["code"].astype(str).str.zfill(6)
@@ -67,6 +72,7 @@ def save_daily(code: str, df: pd.DataFrame) -> None:
             n = int(over.sum())
             logger.warning(f"{code}: 拒绝{n}行收盘价>1000(疑似指数点位污染) — 白名单外不入库")
             df = df[~over]
+            rejected += n
     # ── 相对跳变检查(2026-09-06 加): 收盘价 vs 前一根健康收盘跳变>50% 且日期
     # ≥1997(涨跌停制度后)拒绝。白名单式绝对断言会随时间失效(新高价股/拆股),
     # 相对检查零维护; 50%阈值与 update_today 脏过滤一致(30%会误拒合法的
@@ -82,7 +88,8 @@ def save_daily(code: str, df: pd.DataFrame) -> None:
             p = _daily_path(code, int(valid_dates.iloc[0].year))
             if p.exists():
                 try:
-                    ex = pd.read_parquet(p)
+                    # 只读close列: 日更路径每票省一次整文件读(2026-09-08)
+                    ex = pd.read_parquet(p, columns=["close"])
                     if not ex.empty:
                         store_last = float(pd.to_numeric(ex["close"], errors="coerce").iloc[-1])
                 except Exception:
@@ -101,6 +108,7 @@ def save_daily(code: str, df: pd.DataFrame) -> None:
         if drop_idx:
             logger.warning(f"{code}: 拒绝{len(drop_idx)}行相对前收跳变>50%(疑似数据错配)")
             df = df.drop(index=drop_idx)
+            rejected += len(drop_idx)
     for year, grp in df.groupby(df["date"].dt.year):
         path = _daily_path(code, year)
         if path.exists():
@@ -110,6 +118,7 @@ def save_daily(code: str, df: pd.DataFrame) -> None:
             existing["date"] = pd.to_datetime(existing["date"])
             grp = pd.concat([existing, grp]).drop_duplicates("date", keep="last").sort_values("date")
         grp.to_parquet(path, index=False)
+    return rejected
 
 
 def save_financial(code: str, df: pd.DataFrame) -> None:
@@ -139,15 +148,25 @@ def save_intraday(code: str, freq: str, df: pd.DataFrame) -> None:
 
 
 # ---------- 读取 ----------
-def load_daily(code: str, start: str, end: str) -> pd.DataFrame:
-    """读取本地 Parquet 日线数据，跨年自动合并。"""
+def load_daily(code: str, start: str, end: str, columns: list | None = None) -> pd.DataFrame:
+    """读取本地 Parquet 日线数据，跨年自动合并。
+
+    columns 只读指定列(date 自动补入): 补洞检查等只需要日期, 传
+    columns=["date"] 省掉整文件解压(2026-09-08, 5500票全扫的IO放大修复)。
+    """
     start_dt = pd.Timestamp(start)
     end_dt   = pd.Timestamp(end)
+    if columns is not None:
+        cols = list(columns)
+        if "date" not in cols:
+            cols.append("date")
+    else:
+        cols = None
     frames = []
     for year in range(start_dt.year, end_dt.year + 1):
         path = _daily_path(code, year)
         if path.exists():
-            df = pd.read_parquet(path)
+            df = pd.read_parquet(path, columns=cols)
             df["date"] = pd.to_datetime(df["date"])
             frames.append(df)
     if not frames:
