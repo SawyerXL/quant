@@ -77,12 +77,14 @@ DRY_RUN = False
 # 人工确认 = 将本开关改 True 保存并重启策略(当日14:40生效), 确认后改回 False。
 HALT_RESET = False
 
-# 回测专用: 模拟人工确认的自动恢复。触发熔断后 N 个交易日内自动解除并重置高水位
-# (对齐 Linux 引擎 halt_recover_min_days=10 语义; 引擎还有"自低点反弹5%"腿,
-#  但回测里空仓净值不会反弹, 人工确认也不等反弹 — 固定 N 日更贴实盘协议)。
+# 回测专用: 模拟人工确认的自动恢复 = 触发后 N 个交易日 + 净值连续 5 日未创新低
+# (两腿: N=10 对齐 Linux 引擎 halt_recover_min_days; "5日无新低"=引擎"自低点反弹5%"
+#  的意图版 — 人工确认在出血停止后发生, 不是固定 N 日盲目重入)。
+# 2026-09-08 run2 教训: 固定 N 日=棘轮机器, 2021-2025 熊市里反复 -15% 锁损,
+# 回撤加深到 -39%; 加无新低门后接飞刀周期坍塌。
 # 0=关(实盘/仿真盘必须 0, 恢复走人工 HALT_RESET); 回测口径=10。
-# 2026-09-08 教训: 无此开关时回测熔断一次锁死到期末, 整个回测变成单期测试。
 HALT_AUTO_RESET_DAYS = 10
+HALT_STABLE_DAYS = 5        # 熔断低点后连续无新低天数(与上一条配套)
 
 # 池子预算基数(元): 与 Linux 信号端 TRACK_A_CAPITAL 一致(40万)。
 # 池子的"买得起过滤"永远用这个基数 → pTrade 与 Linux 选股同口径, 池子不随账户资金漂移;
@@ -415,6 +417,8 @@ def initialize(context):
     g.nav_high = None
     g.halt = False             # 回撤15%熔断B方案：停新开仓，持仓按MA10自然退出
     g.halt_days = 0            # 熔断持续交易日计数(回测自动恢复用)
+    g.halt_low = None          # 熔断期间最低净值
+    g.halt_stable_days = 0     # 自熔断低点以来连续无新低天数
     _restore_state()
     # 回测成本口径(仅回测生效, 实盘按柜台实际费率): 2026-09-03 谈判结果=万1 但不免5(最低5元/笔)
     # 单笔3千多的组合下最低费起决定作用, 回测必须用真实口径才能反映真实经济性
@@ -439,13 +443,6 @@ def daily_main(context):
     if HALT_RESET and g.halt:
         g.halt = False
         log.error('[熔断] 人工确认恢复, HALT_RESET 生效, 重新开仓; 请将 HALT_RESET 改回 False')
-    elif HALT_AUTO_RESET_DAYS and g.halt:
-        g.halt_days += 1
-        if g.halt_days >= HALT_AUTO_RESET_DAYS:
-            g.halt = False
-            g.halt_days = 0
-            g.nav_high = None   # 解除即重置高水位(引擎 halt_peak=cumul_nav 同款), 防次日秒触发
-            log.error(f'[熔断] 回测模拟人工确认: 触发{HALT_AUTO_RESET_DAYS}日自动恢复, 高水位重置')
 
     managed = _managed_positions(context)
     held = sorted(managed)
@@ -700,7 +697,7 @@ def retry_orders(context):
     _persist_state()
 
 def eod(context):
-    """收盘后: 撤未成交、更新净值、回撤熔断检查、持久化"""
+    """收盘后: 撤未成交、更新净值、回撤熔断检查、回测自动恢复、持久化"""
     _cancel_unfilled(context)
     snap = _snapshot(list(_managed_positions(context)))
     nav = _account_nav(context, snap)
@@ -709,8 +706,25 @@ def eod(context):
     dd = 1 - nav / g.nav_high if g.nav_high else 0.0
     if dd >= MAX_ACCOUNT_DRAWDOWN and not g.halt:
         g.halt = True
+        g.halt_low = nav
+        g.halt_stable_days = 0
         _notify(f'[熔断B方案] 回撤 {dd:.1%} ≥ {MAX_ACCOUNT_DRAWDOWN:.0%}: '
                 f'停止新开仓, 持仓按MA10自然退出, 恢复需人工确认')
+    elif HALT_AUTO_RESET_DAYS and g.halt:
+        g.halt_days += 1
+        if nav < g.halt_low:
+            g.halt_low = nav
+            g.halt_stable_days = 0
+        else:
+            g.halt_stable_days += 1
+        if g.halt_days >= HALT_AUTO_RESET_DAYS and g.halt_stable_days >= HALT_STABLE_DAYS:
+            g.halt = False
+            g.halt_days = 0
+            g.halt_low = None
+            g.halt_stable_days = 0
+            g.nav_high = None   # 解除即重置高水位(引擎 halt_peak=cumul_nav 同款), 防次日秒触发
+            log.error(f'[熔断] 回测模拟人工确认: 触发{HALT_AUTO_RESET_DAYS}日+'
+                      f'净值{HALT_STABLE_DAYS}日无新低 → 自动恢复, 高水位重置')
     log.info(f'[EOD] nav={nav:,.0f} 高水位={g.nav_high:,.0f} 回撤={dd:.1%} halt={g.halt} '
              f'待卖={g.pending_sells} 待买={list(g.pending_buys)}')
     _persist_state()
