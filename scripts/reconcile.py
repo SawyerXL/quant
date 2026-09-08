@@ -30,8 +30,42 @@ SIGNAL_A    = Path("data_store/meta/signal_a_latest.json")
 SIGNAL_B    = Path("data_store/meta/signal_b_latest.json")
 QMT_POS_FILE = Path("logs/qmt_positions_latest.json")
 
+# track_a 持仓范围 = 股票(6/0/3开头); CB与511360是独立腿, 不在对账范围
+CB_PREFIXES = ("110", "111", "113", "118", "123", "127", "128")
+
 
 def load_signal(track: str) -> dict:
+    """分组口径(2026-09-08): 摊平部署后 track_a 执行端读 g0/g1 合并
+    (holdings并集/shares求和, 与 fetch_group_signals 同语义), 旧单文件
+    signal_a_latest 已停写——9/7 曾因读旧文件(9/1)误判 stale 跳过对账。"""
+    if track == "a":
+        merged = None
+        for g in ("g0", "g1"):
+            p = Path(f"data_store/meta/signal_a_{g}.json")
+            if not p.exists():
+                continue
+            try:
+                sig = json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if merged is None:
+                merged = {**sig,
+                          "holdings": sorted(set(sig.get("holdings", []))),
+                          "shares": {str(k): int(v) for k, v in
+                                     (sig.get("shares") or {}).items()},
+                          "sell": sorted(set(sig.get("sell", []))),
+                          "buy": sorted(set(sig.get("buy", []))),
+                          "prices": dict(sig.get("prices") or {})}
+                continue
+            merged["holdings"] = sorted(set(merged["holdings"])
+                                        | set(sig.get("holdings", [])))
+            for c, s in (sig.get("shares") or {}).items():
+                merged["shares"][str(c)] = merged["shares"].get(str(c), 0) + int(s)
+            merged["sell"] = sorted(set(merged["sell"]) | set(sig.get("sell", [])))
+            merged["buy"] = sorted(set(merged["buy"]) | set(sig.get("buy", [])))
+            merged["prices"].update(sig.get("prices") or {})
+        if merged is not None:
+            return merged
     f = SIGNAL_A if track == "a" else SIGNAL_B
     if not f.exists():
         logger.error(f"信号文件不存在: {f}")
@@ -108,6 +142,10 @@ def reconcile(track: str = "a") -> dict:
 
     target_holdings = set(sig.get("holdings", []))
     target_shares   = sig.get("shares", {})
+    # 范围过滤: CB/短债ETF是独立腿持仓, 不是track_a目标——不滤会在
+    # 熊市清仓后把6只CB误报为"多余持仓"(2026-09-08)
+    actual_pos = {c: v for c, v in actual_pos.items()
+                  if not c.startswith(CB_PREFIXES) and c != "511360"}
     actual_holdings = set(actual_pos.keys())
 
     missing = sorted(target_holdings - actual_holdings)   # 信号要持仓，但QMT没有
@@ -195,10 +233,14 @@ def main():
     args = parser.parse_args()
 
     result = reconcile(args.track)
+    # 2026-09-08: 去掉emoji print(Windows GBK控制台UnicodeEncodeError,
+    # 9/7曾在对账决策后崩溃)——结论改走logger, print只留纯ASCII
     if result.get("ok"):
-        print("\n✅ 对账通过，持仓与信号一致")
+        logger.info("对账通过: 持仓与信号一致")
+        print("\n[RECON] OK - positions match signal")
     else:
-        print(f"\n⚠️  对账发现差异，请检查日志")
+        logger.warning("对账发现差异, 请检查日志")
+        print("\n[RECON] DIFF FOUND - check log")
     return 0 if result.get("ok") else 1
 
 
