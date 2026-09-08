@@ -19,6 +19,7 @@
       "Bash(curl *)",
       "Bash(pip *)",
       "Bash(source .venv/bin/activate && *)",
+      "Bash(ssh *)",
       "Edit(scripts/**)",
       "Edit(backtest/**)",
       "Edit(docs/**)",
@@ -27,12 +28,10 @@
       "Write(docs/**)"
     ],
     "deny": [
-      "Bash(ssh *)",
       "Bash(scp *)",
       "Bash(rsync *)",
       "Bash(crontab *)",
       "Bash(rm *)",
-      "Edit(execution/**)",
       "Edit(config/settings.py)",
       "Edit(**/risk.py)",
       "Edit(**/stop_monitor.py)",
