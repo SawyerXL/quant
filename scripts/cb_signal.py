@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import pandas as pd
 from loguru import logger
 
-logger.add("logs/cb_signal_{time:YYYY-MM-DD}.log", rotation="1 day", retention="60 days")
+logger.add("logs/cb_signal_{time:YYYY-MM-DD}.log", rotation="1 day", retention="365 days")
 
 from data.storage import load_meta
 from monitoring.alerts import send_alert

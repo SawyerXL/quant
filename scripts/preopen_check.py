@@ -18,7 +18,7 @@ import pandas as pd
 from datetime import date, datetime
 from loguru import logger
 
-logger.add("logs/preopen_{time:YYYY-MM-DD}.log", rotation="1 day", retention="30 days")
+logger.add("logs/preopen_{time:YYYY-MM-DD}.log", rotation="1 day", retention="365 days")
 
 MA10_DAYS = 4          # 连破MA10天数触发线
 CB_CODES = {"110", "111", "113", "118", "123", "127", "128"}   # 转债前缀

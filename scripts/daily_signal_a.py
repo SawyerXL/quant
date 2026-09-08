@@ -44,7 +44,7 @@ from run_backtest_a import MA_PERIOD, load_panels
 from data.storage import load_meta
 from monitoring.alerts import send_alert
 
-logger.add("logs/signal_a_{time:YYYY-MM-DD}.log", rotation="1 day", retention="60 days")
+logger.add("logs/signal_a_{time:YYYY-MM-DD}.log", rotation="1 day", retention="365 days")
 
 TRACK_A_CAPITAL  = 1_000_000
 N_HOLDINGS       = 30

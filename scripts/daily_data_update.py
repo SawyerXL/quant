@@ -21,7 +21,7 @@ from data.storage import save_daily, save_meta, load_meta, load_daily
 from data.cleaner import validate_data_completeness
 from monitoring.alerts import send_alert
 
-logger.add("logs/data_update_{time:YYYY-MM-DD}.log", rotation="1 day", retention="30 days")
+logger.add("logs/data_update_{time:YYYY-MM-DD}.log", rotation="1 day", retention="365 days")
 
 
 def _update_stock_meta_full():

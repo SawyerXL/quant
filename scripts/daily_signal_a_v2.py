@@ -24,7 +24,7 @@ from run_backtest_a import load_panels
 from data.storage import load_meta, load_daily
 from monitoring.alerts import send_alert
 
-logger.add("logs/signal_a_v2_{time:YYYY-MM-DD}.log", rotation="1 day", retention="60 days")
+logger.add("logs/signal_a_v2_{time:YYYY-MM-DD}.log", rotation="1 day", retention="365 days")
 
 TRACK_A_CAPITAL = 1_000_000  # 2026-09-02 摊平口径定案: 股票100万(2组×50万, 过渡期单日历按全量生成; 摊平日历部署后按组50万拆分) + CB60万
 N_HOLDINGS      = 30

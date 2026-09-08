@@ -43,9 +43,21 @@ SEGMENTS = {"main": WINDOWS["main"],
             "main_2019_2021": ("2019-01-01", "2021-12-31")}
 ARMS = [
     ("S0_800+五档",            {**A0_OV}),
-    ("S0_800+五档+MA10",       {**A0_OV, "enable_ma10_exit": True}),
+    # 2026-09-08 晚 bug 修正: 引擎 Step2(MA10退出)被 enable_stops 门控,
+    # A0_OV 的 enable_stops=False 会让 MA10 静默失效(T8新臂同bug)——
+    # MA10 臂必须 enable_stops=True + 两个止损腿显式关(否则测到的是
+    # MA10+止损混合); TP 已由 A0_OV 关闭。exit_ma10_sells 记录触发量,
+    # 为 0 时结果标"未验证"而非"无效果"(用户 2026-09-08 定)。
+    ("S0_800+五档+MA10",       {**A0_OV, "enable_stops": True,
+                                "enable_absolute_stop": False,
+                                "enable_trailing_stop": False,
+                                "enable_ma10_exit": True}),
     ("S0_800+五档+拥挤",       {**A0_OV, "max_vol20": 5.0}),
-    ("S0_800+五档+MA10+拥挤",  {**A0_OV, "enable_ma10_exit": True, "max_vol20": 5.0}),
+    ("S0_800+五档+MA10+拥挤",  {**A0_OV, "enable_stops": True,
+                                "enable_absolute_stop": False,
+                                "enable_trailing_stop": False,
+                                "enable_ma10_exit": True,
+                                "max_vol20": 5.0}),
 ]
 
 
@@ -108,7 +120,7 @@ def main():
 
         for comm in COMMISSIONS:
             for arm_name, ov in ARMS:
-                anns, rets, tos = [], [], []
+                anns, rets, tos, ma10_w = [], [], [], []
                 for dates in paths:
                     cfg = BacktestConfig(**{**DEFAULT_CONFIG.to_dict(), **BASE,
                                             **ov, "commission": comm})
@@ -119,19 +131,23 @@ def main():
                     anns.append(float(cm["年化_float"]))
                     rets.append(nav.pct_change().dropna())
                     tos.append(info["total_commission"] / comm / years)
+                    ma10_w.append(float(info.get("exit_ma10_sells", 0.0)))
                 j = pd.concat(rets, axis=1).dropna()
                 ens = (1 + j.mean(axis=1)).cumprod()
                 ecm = calc_metrics(ens)
+                ma10_flag = "✓触发" if np.mean(ma10_w) > 0 else "⚠️未验证"
                 print(f"{arm_name} 成本{comm*100:.2f}%: 路径均值"
                       f"{np.mean(anns)*100:+.2f}% 摊平{ecm['年化_float']*100:+.2f}% "
                       f"夏普{ecm['夏普_float']:.2f} 回撤{ecm['回撤_float']*100:.2f}% "
-                      f"换手{np.mean(tos)*100:.0f}%/年", flush=True)
+                      f"换手{np.mean(tos)*100:.0f}%/年 "
+                      f"MA10退出权重和{np.mean(ma10_w):.2f}{ma10_flag}", flush=True)
                 rows.append({"segment": seg_name, "cost": comm, "arm": arm_name,
                              "path_mean": round(float(np.mean(anns)), 6),
                              "ens_ann": round(float(ecm["年化_float"]), 6),
                              "sharpe": round(float(ecm["夏普_float"]), 4),
                              "dd": round(float(ecm["回撤_float"]), 6),
-                             "turnover": round(float(np.mean(tos)), 4)})
+                             "turnover": round(float(np.mean(tos)), 4),
+                             "exit_ma10_sells": round(float(np.mean(ma10_w)), 4)})
         df = pd.DataFrame(rows)
         df.to_csv("logs/s0_isolation_results.csv", index=False, encoding="utf-8-sig")
     print("\n结果落盘: logs/s0_isolation_results.csv")

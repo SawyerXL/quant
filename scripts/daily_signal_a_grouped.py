@@ -35,7 +35,7 @@ from data.storage import load_meta
 from monitoring.alerts import send_alert
 
 logger.add("logs/signal_a_grouped_{time:YYYY-MM-DD}.log",
-           rotation="1 day", retention="60 days")
+           rotation="1 day", retention="365 days")
 
 GROUPS = {"g0": 2, "g1": 7}          # 组偏移(交易日), 摊平定案{2,7}
 GROUP_CAPITAL = 500_000              # 每组50万(方案A: 股票100万=2组)

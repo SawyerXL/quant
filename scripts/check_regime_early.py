@@ -24,7 +24,7 @@ import numpy as np
 from datetime import date
 from loguru import logger
 
-logger.add("logs/regime_early.log", rotation="1 week", retention="90 days")
+logger.add("logs/regime_early.log", rotation="1 week", retention="365 days")
 
 
 def check() -> dict:
