@@ -34,6 +34,7 @@ logger.add("logs/execute_{time:YYYY-MM-DD}.log", rotation="1 day", retention="30
 LINUX_SERVER  = os.getenv("LINUX_SERVER", "106.15.61.81")  # 2026-09-02: 旧IP47.116.166.139已弃用
 LINUX_USER    = os.getenv("LINUX_USER",   "root")
 SSH_KEY       = os.getenv("SSH_KEY", "")
+LINUX_PORT    = os.getenv("LINUX_PORT", "12201")  # 2026-09-05 SSH从22迁移到12201, 执行链scp必须带端口(9/7执行日暴露)
 SIGNAL_DIR    = "data_store/meta"
 EXEC_RESULT_DIR = ROOT / "logs"
 FILL_WAIT_SECS  = 300  # 委托后等待成交确认的秒数 (原45s太短, 填单还没撮合就取数→fill_rate=0%)
@@ -41,7 +42,7 @@ FILL_WAIT_SECS  = 300  # 委托后等待成交确认的秒数 (原45s太短, 填
 
 def push_result_to_linux(result_file: Path) -> bool:
     """将执行结果 JSON 推回 Linux，供健康检查使用。"""
-    ssh_opts = ["-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
+    ssh_opts = ["-P", LINUX_PORT, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
     if SSH_KEY:
         ssh_opts += ["-i", SSH_KEY]
     remote_path = f"{LINUX_USER}@{LINUX_SERVER}:/root/quant/logs/{result_file.name}"
@@ -71,7 +72,7 @@ def fetch_group_signals() -> dict | None:
         remote_file = f"{SIGNAL_DIR}/signal_a_{g}.json"
         local_file = ROOT / f"data_store/meta/signal_a_{g}.json"
         local_file.parent.mkdir(parents=True, exist_ok=True)
-        ssh_opts = ["-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
+        ssh_opts = ["-P", LINUX_PORT, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
         if SSH_KEY:
             ssh_opts += ["-i", SSH_KEY]
         cmd = ["scp"] + ssh_opts + [
@@ -123,7 +124,7 @@ def fetch_signal_from_linux(track: str = "a") -> dict | None:
     local_file  = ROOT / f"data_store/meta/signal_{track}_latest.json"
     local_file.parent.mkdir(parents=True, exist_ok=True)
 
-    ssh_opts = ["-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
+    ssh_opts = ["-P", LINUX_PORT, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
     if SSH_KEY:
         ssh_opts += ["-i", SSH_KEY]
 
