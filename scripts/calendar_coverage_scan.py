@@ -65,10 +65,19 @@ def main():
                     gap = 1
                 prev = pd.Timestamp(m)
             max_gap = max(max_gap, gap)
-        if missing or args.full:
+        # 2026-09-09 normalize: 读路径价格身份断言(个股键 close>1000=
+        # 指数点位混入, 000001 读回 3942 点事故的读侧防线)——写入侧
+        # 守卫挡不住已入库的历史污染
+        max_close = float(pd.to_numeric(d["close"], errors="coerce").max())
+        price_bad = (max_close > 1000
+                     and c not in {"600519"})  # 白名单=真千元股
+        if missing or price_bad or args.full:
             rows.append({"code": c, "recent_missing": len(missing),
                          "max_gap": max_gap,
-                         "note": "" if missing else "近端完整"})
+                         "max_close_2026": round(max_close, 2),
+                         "price_bad": price_bad,
+                         "note": "价格身份异常" if price_bad else
+                                 ("" if missing else "近端完整")})
         if i % 1000 == 0:
             print(f"  进度 {i}/{len(codes)}", flush=True)
 

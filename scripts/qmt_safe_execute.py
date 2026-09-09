@@ -28,7 +28,11 @@ def rt_price(code):
 def sync_signal_from_linux():
     """从Linux同步最新信号文件 (端口2222)"""
     import subprocess
-    linux_host = os.getenv("LINUX_SERVER", "47.116.166.139")
+    linux_host = os.getenv("LINUX_SERVER")
+if not linux_host:
+    # 2026-09-09: 删除旧IP硬编码回退(6/29全靠手动根因模式)——
+    # 环境缺失即报错, 禁止静默指向退役服务器
+    raise RuntimeError("LINUX_SERVER 未设置, 拒绝执行")
     ssh_key = os.getenv("SSH_KEY", "")
 
     cmd = ["scp", "-P", "2222", "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
