@@ -58,7 +58,10 @@ class MCPSource(DataSource):
             return []
         import json
         raw = json.loads(content[0].get("text", "{}"))
-        if raw.get("code") != "0":
+        # 2026-09-09 bug修复: MCP 返回的 code 是整数 0(成功), 旧代码与
+        # 字符串 "0" 比较永远不相等 → 所有成功响应被当异常丢弃,
+        # get_daily 从未真正工作过(日更日志里持续的"返回异常"警告即此)
+        if str(raw.get("code")) != "0":
             logger.warning(f"MCP 返回异常: {raw}")
             return []
         return raw.get("results", [])
