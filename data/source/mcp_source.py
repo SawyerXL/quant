@@ -267,8 +267,17 @@ class MCPSource(DataSource):
         for col in ["股票代码", "证券代码", "code"]:
             if col in df.columns:
                 codes = df[col].dropna().tolist()
-                # 去掉交易所后缀（如 000001.SZ → 000001）
-                return [str(c).split(".")[0] for c in codes if c]
+                # 去掉交易所后缀（如 000001.SZ → 000001）;
+                # 2026-09-09 normalize: 拒绝 399xxx 指数代码混入个股宇宙
+                # (baostock PIT 成员表混入 376 指数代码的前科防重演)
+                out = []
+                for c in codes:
+                    b = str(c).split(".")[0].zfill(6)
+                    if b.startswith("399"):
+                        logger.warning(f"MCP个股列表混入指数代码 {c}, 已过滤")
+                        continue
+                    out.append(b)
+                return out
         return []
 
     # ------------------------------------------------------------------
