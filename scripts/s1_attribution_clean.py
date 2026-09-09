@@ -36,7 +36,7 @@ from backtest_return_attribution import (WINDOWS, BASE, A0_OV, load_blacklist,
 
 START, END = WINDOWS["main"]
 PATHS = 10
-COMMISSION = 0.0013
+COMMISSION = float(__import__("sys").argv[1]) if len(__import__("sys").argv) > 1 else 0.0013
 
 # 组件全关覆盖(纯池/纯择时臂): 在 A0_OV 的"全关"基础上只保留 pool30
 COMPONENTS_OFF = {"enable_stops": False, "enable_ma10_exit": False,
@@ -127,15 +127,18 @@ def main():
         j = pd.concat(rets, axis=1).dropna()
         ens = (1 + j.mean(axis=1)).cumprod()
         ecm = calc_metrics(ens)
+        vol_ann = float(j.mean(axis=1).std() * np.sqrt(252))
         flag = "✓" if np.mean(ma10_w) > 0 else "⚠️未验证"
         print(f"{arm_name}: 路径均值{np.mean(anns)*100:+.2f}% "
               f"摊平{ecm['年化_float']*100:+.2f}% 夏普{ecm['夏普_float']:.2f} "
               f"回撤{ecm['回撤_float']*100:.2f}% 换手{np.mean(tos)*100:.0f}%/年 "
               f"MA10退出{np.mean(ma10_w):.2f}{flag}", flush=True)
-        rows.append({"arm": arm_name, "path_mean": round(float(np.mean(anns)), 6),
+        rows.append({"arm": arm_name, "cost": COMMISSION,
+                     "path_mean": round(float(np.mean(anns)), 6),
                      "ens_ann": round(float(ecm["年化_float"]), 6),
                      "sharpe": round(float(ecm["夏普_float"]), 4),
                      "dd": round(float(ecm["回撤_float"]), 6),
+                     "vol_ann": round(vol_ann, 4),
                      "turnover": round(float(np.mean(tos)), 4),
                      "exit_ma10_sells": round(float(np.mean(ma10_w)), 4)})
         df = pd.DataFrame(rows)
