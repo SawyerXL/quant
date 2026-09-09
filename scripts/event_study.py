@@ -44,7 +44,7 @@ EVENTS = [
 
 
 def main():
-    d = load_daily("000001", "1990-01-01", "2026-08-26").sort_values("date")
+    d = load_daily("SH000001", "1990-01-01", "2026-08-26").sort_values("date")
     d["date"] = pd.to_datetime(d["date"])
     d = d.set_index("date")
     d["open"] = pd.to_numeric(d["open"], errors="coerce")

@@ -25,7 +25,7 @@ START, END = "2012-01-01", "2026-08-25"
 
 
 def build():
-    d = load_daily("000001", START, END).sort_values("date")
+    d = load_daily("SH000001", START, END).sort_values("date")
     d["date"] = pd.to_datetime(d["date"])
     d = d.set_index("date")
     cl = pd.to_numeric(d["close"], errors="coerce")

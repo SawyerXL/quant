@@ -55,7 +55,7 @@ def collect_spans():
     ap = pd.DataFrame(amounts).sort_index()
     ic = load_meta("csi800_index").set_index("date")["close"].sort_index()
     ic.index = pd.to_datetime(ic.index)
-    sh = load_daily("000001", "2014-06-01", END)
+    sh = load_daily("SH000001", "2014-06-01", END)
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
     base = [d for d in make_rebal_dates(cal, "biweekly") if START <= d <= END]
     idx = {d: i for i, d in enumerate(cal)}
@@ -114,7 +114,7 @@ def fetch_dividends(codes, start_year, end_year):
 def main():
     spans, nav = collect_spans()
     # 交易日历(用于持有期计算: 进日~出日间的交易日数)
-    sh = load_daily("000001", "2014-06-01", END)
+    sh = load_daily("SH000001", "2014-06-01", END)
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
     spans["tdays"] = spans.apply(
         lambda r: max(1, len([d for d in cal

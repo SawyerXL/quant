@@ -22,7 +22,7 @@ from data.storage import load_daily
 
 
 def load_sh():
-    d = load_daily("000001", "2012-01-01", "2026-08-25").sort_values("date")
+    d = load_daily("SH000001", "2012-01-01", "2026-08-25").sort_values("date")
     d["date"] = pd.to_datetime(d["date"])
     d = d.set_index("date")
     cl = pd.to_numeric(d["close"], errors="coerce")
@@ -69,7 +69,7 @@ def load_factors():
     except Exception as e:
         print(f"  USDCNY 拉取失败: {e}")
     # 上证自身(对照): 前20日波动率 + 前20日涨幅 —— 已知有效, 作基准
-    sh = load_daily("000001", "2012-01-01", "2026-08-25").sort_values("date")
+    sh = load_daily("SH000001", "2012-01-01", "2026-08-25").sort_values("date")
     sh["date"] = pd.to_datetime(sh["date"])
     sh = sh.set_index("date")
     cl = pd.to_numeric(sh["close"], errors="coerce")

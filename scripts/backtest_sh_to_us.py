@@ -28,7 +28,7 @@ def tstat(x, y):
 
 
 def main():
-    d = load_daily("000001", "2012-01-01", "2026-08-26").sort_values("date")
+    d = load_daily("SH000001", "2012-01-01", "2026-08-26").sort_values("date")
     d["date"] = pd.to_datetime(d["date"])
     d = d.set_index("date")
     sh = pd.Series(pd.to_numeric(d["close"], errors="coerce").pct_change() * 100).dropna()

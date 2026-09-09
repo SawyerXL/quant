@@ -57,7 +57,7 @@ def main():
     ic = idx.set_index("date")["close"].sort_index()
     ic.index = pd.to_datetime(ic.index)
 
-    sh = load_daily("000001", "2014-06-01", END)
+    sh = load_daily("SH000001", "2014-06-01", END)
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
 
     variants = [

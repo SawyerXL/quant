@@ -26,7 +26,7 @@ from data.storage import load_daily
 
 
 def main():
-    d = load_daily("000001", "1991-01-01", "2026-09-04")
+    d = load_daily("SH000001", "1991-01-01", "2026-09-04")
     d = d.sort_values("date")
     cl = pd.to_numeric(d["close"], errors="coerce")
     dates = pd.to_datetime(d["date"])

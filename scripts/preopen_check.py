@@ -73,7 +73,7 @@ def main():
                 stale.append(f"{c} {r['name']}: 最新{latest} < {last_td}")
         except Exception as e:
             stale.append(f"{c}: 读取失败 {str(e)[:40]}")
-    sh = load_daily("000001", "2026-01-01", today)
+    sh = load_daily("SH000001", "2026-01-01", today)
     if sh.empty or str(pd.to_datetime(sh["date"]).max())[:10] < last_td:
         stale.append("上证指数: 未更新")
     if stale:

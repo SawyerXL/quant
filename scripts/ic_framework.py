@@ -52,7 +52,7 @@ def main():
     ap = pd.DataFrame(amounts).sort_index()
     print(f"面板 {panel.shape[0]}天×{panel.shape[1]}只", flush=True)
 
-    sh = load_daily("000001", "2014-06-01", END)
+    sh = load_daily("SH000001", "2014-06-01", END)
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
     rebal = [d for d in make_rebal_dates(cal, "biweekly") if START <= d <= END]
     dates = panel.index

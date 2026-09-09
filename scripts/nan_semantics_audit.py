@@ -49,7 +49,7 @@ def build_panel():
         except Exception:
             pass
     panel = pd.DataFrame(prices).sort_index()
-    sh = load_daily("000001", LOAD_START, END)
+    sh = load_daily("SH000001", LOAD_START, END)
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
     panel = panel[panel.index.isin(pd.to_datetime(cal))]
     return panel

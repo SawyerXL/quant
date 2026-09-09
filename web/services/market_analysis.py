@@ -305,7 +305,7 @@ def _get_key_levels() -> dict:
         # Load 上证指数 (code 000001) across recent years
         dfs = []
         for y in [2024, 2025, 2026]:
-            df = load_daily('000001', f'{y}-01-01', f'{y}-12-31')
+            df = load_daily('SH000001', f'{y}-01-01', f'{y}-12-31')
             if not df.empty: dfs.append(df)
         if not dfs:
             return {"error": "上证数据不可用"}

@@ -37,7 +37,7 @@ def main():
     codes = [str(c).zfill(6) for c in meta["code"].tolist()
              if str(c).zfill(6) not in blacklist]
     # 日历: 用上证日线(数据源自身, 无假期行污染; 与引擎面板口径一致)
-    sh = load_daily("000001", "2026-01-01", "2099-01-01")
+    sh = load_daily("SH000001", "2026-01-01", "2099-01-01")
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
     print(f"扫描对象: {len(codes)}只 | 交易日历: {len(cal)}天")
 

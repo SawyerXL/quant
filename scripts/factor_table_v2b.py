@@ -10,7 +10,7 @@ from data.storage import load_daily
 
 
 def load_sh():
-    d = load_daily("000001", "2012-01-01", "2026-08-25").sort_values("date")
+    d = load_daily("SH000001", "2012-01-01", "2026-08-25").sort_values("date")
     d["date"] = pd.to_datetime(d["date"])
     d = d.set_index("date")
     cl = pd.to_numeric(d["close"], errors="coerce")

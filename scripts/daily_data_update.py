@@ -96,10 +96,13 @@ def _update_stock_meta_full():
 # 2026-09-06 上移到 data.storage 单一来源(save_daily 价格断言也要用)
 from data.storage import INDEX_CODES
 INDEX_SYMBOLS = [
-    ("000001", "sh000001"),   # 上证指数
-    ("000688", "sh000688"),   # 科创50
-    ("000905", "sh000905"),   # 中证500
-    ("000906", "sh000906"),   # 中证800
+    # 2026-09-09 normalize修复: 指数存储键改 SH 前缀命名空间(SH000001),
+    # 与个股裸键(000001=平安银行)物理隔离——000001 段既是上证指数族
+    # 也是深主板股票段, 裸键共库是 8/25 指数被个股价覆盖事故的根因
+    ("SH000001", "sh000001"),   # 上证指数
+    ("SH000688", "sh000688"),   # 科创50
+    ("SH000905", "sh000905"),   # 中证500
+    ("SH000906", "sh000906"),   # 中证800
 ]
 GAP_LOOKBACK = 30       # 自动补洞只看最近30个交易日，更早的用 backfill_daily_data.py
 GAP_MAX_REPAIR = 400    # 单次修复上限，源故障时不空转
@@ -246,7 +249,9 @@ def _fill_recent_gaps(calendar, today: str, src):
         info = load_meta("stock_info")
     if info.empty:
         return
-    codes = [c for c in info["code"].tolist() if c not in INDEX_CODES]
+    # 2026-09-09 normalize修复: 不再排除 000001/000688/000905/000906
+    # (真股票, 指数已迁至 SH 前缀键无覆盖风险)
+    codes = [c for c in info["code"].tolist()]
 
     holes = []
     for code in codes:
@@ -347,8 +352,9 @@ def update_today():
         send_alert("数据更新失败：stock_info 为空，请检查", level="error")
         return
 
-    # 指数代码走独立通道，见模块级 INDEX_CODES 注释
-    codes = [c for c in stock_info["code"].tolist() if c not in INDEX_CODES]
+    # 指数已走 SH 前缀键独立通道(2026-09-09 normalize修复),
+    # 000001 等歧义码按个股源拉取个股数据
+    codes = [c for c in stock_info["code"].tolist()]
     failed = []
     dirty_rejected = 0
     for i, code in enumerate(codes):

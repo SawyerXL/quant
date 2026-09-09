@@ -49,7 +49,7 @@ def idx_close():
 
 
 def cal():
-    sh = load_daily("000001", "2014-06-01", "2026-08-28")
+    sh = load_daily("SH000001", "2014-06-01", "2026-08-28")
     return sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
 
 

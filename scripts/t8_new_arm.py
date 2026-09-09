@@ -66,7 +66,7 @@ def build_panels(START, END):
     ap = pd.DataFrame(amounts).sort_index()
     # 日历必须从 LOAD_START 起, 否则面板∩日历删掉OOS预加载段
     # (v3首轮教训: OOS臂端暖机退回2015-06)
-    sh = load_daily("000001", LOAD_START, END)
+    sh = load_daily("SH000001", LOAD_START, END)
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
     panel = panel[panel.index.isin(pd.to_datetime(cal))]
     ap = ap[ap.index.isin(pd.to_datetime(cal))]

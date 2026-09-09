@@ -88,7 +88,7 @@ def study_fed():
     fed = fed.sort_values("日期")
     fed["chg"] = fed["今值"].diff()
 
-    sh = load_daily("000001", "2014-01-01", "2026-08-28").sort_values("date")
+    sh = load_daily("SH000001", "2014-01-01", "2026-08-28").sort_values("date")
     sh["date"] = pd.to_datetime(sh["date"])
     sh = sh.set_index("date")
     cl = pd.to_numeric(sh["close"], errors="coerce")

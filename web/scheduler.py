@@ -196,12 +196,12 @@ def _update_daily_data():
         for _, row in df.iterrows():
             d = row['date']
             if d < '2026-08-01': continue
-            existing = load_daily('000001', d, d)
+            existing = load_daily('SH000001', d, d)
             if existing.empty:
                 new_row = pd.DataFrame([{'date': d, 'open': row['open'], 'high': row['high'],
                     'low': row['low'], 'close': row['close'], 'volume': row['volume'],
                     'amount': row.get('amount', 0), 'pct_chg': row.get('pct_chg', 0)}])
-                save_daily('000001', new_row)
+                save_daily('SH000001', new_row)
                 saved += 1
 
         if saved:
@@ -217,7 +217,7 @@ def _update_daily_data():
 
         dfs = []
         for y in [2024, 2025, 2026]:
-            df = load_daily('000001', f'{y}-01-01', f'{y}-12-31')
+            df = load_daily('SH000001', f'{y}-01-01', f'{y}-12-31')
             if not df.empty: dfs.append(df)
         sh = pd.concat(dfs)
         sh['date'] = pd.to_datetime(sh['date'])

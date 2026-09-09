@@ -50,7 +50,7 @@ def run_window(lo, hi, cal):
 
 
 def main():
-    sh = load_daily("000001", "2014-06-01", "2026-08-28")
+    sh = load_daily("SH000001", "2014-06-01", "2026-08-28")
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
 
     windows = [("全期2019-2026.8", "2019-01-01", "2026-08-28"),

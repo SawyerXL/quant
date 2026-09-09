@@ -59,7 +59,7 @@ def common():
     ic = load_meta("csi800_index").set_index("date")["close"].sort_index()
     ic.index = pd.to_datetime(ic.index)
     # 日历从 LOAD_START 起(v3 OOS 教训: 日历短于预加载起点会删预加载段)
-    sh = load_daily("000001", LOAD_START, END)
+    sh = load_daily("SH000001", LOAD_START, END)
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
     # 面板∩交易日历: 剔除603012等带来的假期行(全市场NaN日)
     panel = panel[panel.index.isin(pd.to_datetime(cal))]

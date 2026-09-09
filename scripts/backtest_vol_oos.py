@@ -28,7 +28,7 @@ START, END = "2015-01-01", "2018-12-31"
 
 def main():
     # 日历: trade_calendar meta 2019前缺失 → 上证全史日期
-    sh = load_daily("000001", "2014-06-01", END)
+    sh = load_daily("SH000001", "2014-06-01", END)
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
 
     meta = load_meta("stock_info_full")

@@ -71,7 +71,7 @@ def check_benchmark(start="2024-01-01", end="2024-12-31") -> dict:
     用平安银行(000001)2024年数据做基准验证：
     2024-01-02 开盘 ≈ 11.x，2024-12-31 收盘 ≈ 10.x（前复权）
     """
-    df = load_daily("000001", start, end)
+    df = load_daily("SH000001", start, end)
     if df.empty:
         return {"status": "FAIL", "reason": "000001 数据缺失"}
     df = df.sort_values("date")

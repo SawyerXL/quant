@@ -68,7 +68,7 @@ def run_one(panel, ap, rebal, idx_c, commission, **overrides):
 
 
 def main():
-    sh = load_daily("000001", "2014-06-01", "2026-08-28")
+    sh = load_daily("SH000001", "2014-06-01", "2026-08-28")
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
     windows = [("全期2019-26.8", "2019-01-01", "2026-08-28"),
                ("OOS2015-18", "2015-01-01", "2018-12-31")]

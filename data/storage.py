@@ -63,16 +63,32 @@ def save_daily(code: str, df: pd.DataFrame) -> int:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
             except Exception:
                 df.drop(columns=[col], inplace=True)  # 转换失败的辅助列直接丢弃
-    # ── 价格身份断言(2026-09-06, 000001读回3942点教训): A股无四位数股价,
-    # 超千元且非指数/白名单=身份污染(指数点位混入个股库), 直接拒绝该行入库
+    # ── 价格身份断言(2026-09-06 起, 2026-09-09 normalize 改造为命名空间感知):
+    # 指数键(SH/SZ/BJ前缀)允许指数点位级收盘, 但拒绝个股价级(<100)混入;
+    # 个股裸键拒绝 >1000(指数点位混入个股库, 000001 读回 3942 点教训),
+    # 白名单(茅台类真千元股)除外。旧 INDEX_CODES 例外已废除——
+    # 歧义码(000001等)的指数与个股从此物理隔离在两个键空间。
+    is_index_key = str(code).startswith(("SH", "SZ", "BJ"))
+    bare = str(code).zfill(6)
+    if not is_index_key and bare.startswith("399"):
+        raise ValueError(f"399xxx 指数代码 {code} 用裸键进入个股存储(须用 SZ 前缀键)")
     if "close" in df.columns:
-        over = pd.to_numeric(df["close"], errors="coerce") > 1000
-        allowed = code in INDEX_CODES or code in PRICE_WHITELIST
-        if over.any() and not allowed:
-            n = int(over.sum())
-            logger.warning(f"{code}: 拒绝{n}行收盘价>1000(疑似指数点位污染) — 白名单外不入库")
-            df = df[~over]
-            rejected += n
+        closes = pd.to_numeric(df["close"], errors="coerce")
+        if is_index_key:
+            under = closes < 100
+            if under.any():
+                n = int(under.sum())
+                logger.warning(f"{code}: 拒绝{n}行收盘<100(疑似个股价格混入指数文件)")
+                df = df[~under]
+                rejected += n
+        else:
+            over = closes > 1000
+            allowed = bare in PRICE_WHITELIST
+            if over.any() and not allowed:
+                n = int(over.sum())
+                logger.warning(f"{code}: 拒绝{n}行收盘价>1000(疑似指数点位污染) — 白名单外不入库")
+                df = df[~over]
+                rejected += n
     # ── 相对跳变检查(2026-09-06 加): 收盘价 vs 前一根健康收盘跳变>50% 且日期
     # ≥1997(涨跌停制度后)拒绝。白名单式绝对断言会随时间失效(新高价股/拆股),
     # 相对检查零维护; 50%阈值与 update_today 脏过滤一致(30%会误拒合法的
