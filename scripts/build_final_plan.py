@@ -28,6 +28,9 @@ def main():
     restore_items = restore["items"]
 
     gray_codes = set(gray_res.keys())
+    # 灰带票中 MCP 无解析(空/error)的回落 v6 规则——否则两头落空,
+    # 未归一元票霸占排名(002467 前科)
+    gray_unresolved = {c for c, r in gray_res.items() if not r or "_error" in r}
     # 超薄文件(中位<1000万元, 永进不了top60池)与北交所同列缓处理,
     # 500x阈值在僵尸股上会误伤单日活跃日(002832型)
     bse = ("920", "430", "83", "87")
@@ -44,7 +47,8 @@ def main():
     fixes = {}
     for p in v6_plan:
         code = p["file"].split("/")[-1].replace(".parquet", "")
-        if code in gray_codes or p["file"] in deferred:
+        if (code in gray_codes and code not in gray_unresolved) \
+                or p["file"] in deferred:
             continue
         if p["fix_days"]:
             fixes[p["file"]] = p["fix_days"]

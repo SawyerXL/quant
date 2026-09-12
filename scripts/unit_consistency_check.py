@@ -131,7 +131,33 @@ def main():
     v2 = check_temporal(sample, dates, args.ratio)
     print(f"断言②时序连续性(抽样200只): {'✓' if not v2 else '✗'} "
           + (f"{len(v2)}处跳变, 示例{v2[:5]}" if v2 else ""))
-    if v1 or v2:
+    # 断言③(2026-09-12 加): 退化文件监控——amount 中位数<1000 的文件
+    # 应全部已在隔离清单; 新出现的=源端持续产生伪零额(根因未查清,
+    # 静默增长比污染本身危险)
+    from pathlib import Path as _P
+    uq_path = _P(__file__).parent.parent / "data_store" / "meta" / "unit_quarantine.json"
+    uq_codes = set()
+    if uq_path.exists():
+        try:
+            uq_codes = {str(x["code"]).zfill(6)
+                        for x in json.load(open(uq_path))}
+        except Exception:
+            pass
+    new_deg = []
+    for f in sorted((DAILY_DIR / "2026").glob("*.parquet")):
+        if f.stem.startswith(("SH", "SZ")):
+            continue
+        if f.stem in uq_codes:
+            continue
+        try:
+            d = pd.read_parquet(f, columns=["amount"])
+            med = float(pd.to_numeric(d["amount"], errors="coerce").median())
+            if med < 1000:
+                new_deg.append((f.stem, round(med, 1)))
+        except Exception:
+            continue
+    print(f"断言③退化文件监控: {'✓ 无新增' if not new_deg else '✗ ' + str(new_deg[:5])}")
+    if v1 or v2 or new_deg:
         print("⚠️ 单位一致性违规")
         sys.exit(1)
     print("单位一致性通过")
