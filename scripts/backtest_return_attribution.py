@@ -61,16 +61,24 @@ ARMS = [
 
 
 def load_blacklist() -> set:
-    """qfq跳变未修复/新浪无覆盖/北交所真实大波动的代码, 回测池须排除
-    (data_store/meta/price_blacklist.json, 2026-09-07 第三级审计产出)。"""
+    """回测池排除集合 = 价格黑名单(56只, 2026-09-07 审计) ∪ 单位隔离
+    清单(2026-09-12 归一缓处理: 北交所+amount退化文件, 353只)。
+    隔离类数据的口径未定(不归一), 排除优先于参与——看起来正常但
+    口径未知比错误口径更危险。"""
     import json
-    p = Path("data_store/meta/price_blacklist.json")
-    if p.exists():
-        try:
-            return set(json.loads(p.read_text(encoding="utf-8")).get("codes", []))
-        except Exception:
-            pass
-    return set()
+    codes = set()
+    for name in ["price_blacklist.json", "unit_quarantine.json"]:
+        p = Path("data_store/meta") / name
+        if p.exists():
+            try:
+                d = json.loads(p.read_text(encoding="utf-8"))
+                if isinstance(d, list):
+                    codes |= {str(x["code"]).zfill(6) for x in d}
+                else:
+                    codes |= {str(c).zfill(6) for c in d.get("codes", [])}
+            except Exception:
+                pass
+    return codes
 
 
 def load_pit_memberships() -> list:

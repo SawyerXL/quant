@@ -10,12 +10,14 @@
 """
 import sys, argparse
 from pathlib import Path
+from pathlib import Path as _P
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent))
 
 import numpy as np
 import pandas as pd
+import json
 
 from data.storage import load_daily, load_meta
 from backtest_return_attribution import load_blacklist
@@ -50,8 +52,23 @@ def check_cross_section(dates):
     return viol
 
 
-def check_temporal(sample_codes, recent_days):
-    """断言②: 抽样逐股相邻有效日比值 <100"""
+def check_temporal(sample_codes, recent_days, ratio=100.0):
+    """断言②: 抽样逐股相邻有效日比值 < 阈值。
+
+    盲区声明(2026-09-12, 闸门第七项): 本断言无法区分 100~2000× 带内的
+    "真实市场事件"(妖股退潮 108× 等) 与 "次阈值单位混写"(920689 类
+    874× 元日)——100 阈值是保守代理值, 对真实事件的误报由白名单
+    (logs/unit_jump_whitelist.json, 逐条文档化理由)显式放行, 不放行
+    任何未登记条目。阈值放宽(2000×)已被回归测试否决: 混合态备份上
+    100~2000 带含 4 处单位类跳变(605299@06-16 切换日 1183× 等),
+    放宽会漏报单位污染。"""
+    global RATIO
+    RATIO = ratio
+    wl_path = Path(__file__).parent.parent / "logs" / "unit_jump_whitelist.json"
+    whitelist = set()
+    if wl_path.exists():
+        for e in json.load(open(wl_path)).get("documented_events", []):
+            whitelist.add((e["code"], e["date"]))
     viol = []
     for c in sample_codes:
         d = load_daily(c, "2026-01-01", "2026-12-31")
@@ -60,13 +77,16 @@ def check_temporal(sample_codes, recent_days):
         d = d.sort_values("date")
         a = pd.to_numeric(d["amount"], errors="coerce")
         prev = None
-        for v in a.tolist():
+        prev_date = None
+        for i, v in enumerate(a.tolist()):
             if v is None or v <= 0:
                 continue
             if prev is not None:
-                ratio = max(v, prev) / min(v, prev)
-                if ratio >= 100:
-                    viol.append((c, ratio))
+                r = max(v, prev) / min(v, prev)
+                if r >= RATIO:
+                    dt = str(d["date"].iloc[i])[:10]
+                    if (c, dt) not in whitelist:
+                        viol.append((c, r))
             prev = v
     return viol
 
@@ -74,6 +94,8 @@ def check_temporal(sample_codes, recent_days):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=5)
+    ap.add_argument("--ratio", type=float, default=100.0,
+                    help="时序跳变阈值(2026-09-12 规格讨论: 100为过紧代理值, 2000候选)")
     args = ap.parse_args()
     # 最近 N 个交易日(上证指数日历)
     sh = load_daily("SH000001", "2026-01-01", "2026-12-31")
@@ -86,8 +108,13 @@ def main():
           + (f"{v1}" if v1 else ""))
     meta = load_meta("stock_info_full")
     bl = load_blacklist()
-    codes = [str(c).zfill(6) for c in meta["code"].tolist()
-             if str(c).zfill(6) not in bl]
+    if "code" in meta.columns:
+        codes = [str(c).zfill(6) for c in meta["code"].tolist()
+                 if str(c).zfill(6) not in bl]
+    else:
+        # 备份目录无 meta 时从 daily 文件名取宇宙(回归测试场景)
+        codes = sorted({f.stem for f in (DAILY_DIR / "2026").glob("*.parquet")
+                        if not f.stem.startswith(("SH", "SZ"))})
     import random
     random.seed(11)
     sample = []
@@ -101,7 +128,7 @@ def main():
         if med < 1000:
             continue  # 退化文件除外
         sample.append(c)
-    v2 = check_temporal(sample, dates)
+    v2 = check_temporal(sample, dates, args.ratio)
     print(f"断言②时序连续性(抽样200只): {'✓' if not v2 else '✗'} "
           + (f"{len(v2)}处跳变, 示例{v2[:5]}" if v2 else ""))
     if v1 or v2:

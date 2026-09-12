@@ -39,9 +39,10 @@ class AkshareSource(DataSource):
             })
             df["date"] = df["date"].astype(str)
             df["code"] = code
-            # 2026-09-02 单位归一: 东财成交量单位=手, 全库统一存"股"
-            # (新浪=股)。此前两源交错写导致volume列100倍混用污染所有量比类指标
-            df["volume"] = pd.to_numeric(df["volume"], errors="coerce") * 100
+            # 库契约=万股/万元(2026-09-12 与 amount 一起归一, 归一后重部署):
+            # 东财成交量=手 → ×100=股 → ÷1e4=万股; 成交额=元 → ÷1e4=万元
+            df["volume"] = pd.to_numeric(df["volume"], errors="coerce") * 100 / 1e4
+            df["amount"] = pd.to_numeric(df["amount"], errors="coerce") / 1e4
             return df[self._COLS].sort_values("date")
         except Exception as e:
             logger.warning(f"get_daily(东财) {code} failed: {e} -> 转新浪")
@@ -67,7 +68,11 @@ class AkshareSource(DataSource):
             # 新浪不返回涨跌幅，用收盘价自算以保持契约
             df["pct_chg"] = (df["close"].astype(float).pct_change() * 100).round(4)
             df = df[df["date"] >= start].reset_index(drop=True)
-            # 新浪volume单位=股, 与归一后的东财一致, 无需转换
+            # 库契约=万股/万元(2026-09-12 归一后重部署): 新浪 volume=股→
+            # ÷1e4=万股, amount=元→÷1e4=万元。此前 amount 从未归一,
+            # 是 2026-06 起全库单位分层(元/万元各半)的根源
+            df["volume"] = pd.to_numeric(df["volume"], errors="coerce") / 1e4
+            df["amount"] = pd.to_numeric(df["amount"], errors="coerce") / 1e4
             return df[self._COLS].sort_values("date")
         except Exception as e:
             logger.warning(f"get_daily(新浪) {code} failed: {e}")
@@ -86,8 +91,10 @@ class AkshareSource(DataSource):
                 "今开": "open", "最高": "high", "最低": "low",
             })
             df["date"] = date
-            # 2026-09-02 单位归一: 东财spot成交量=手 → ×100存"股"
-            df["volume"] = pd.to_numeric(df["volume"], errors="coerce") * 100
+            # 库契约=万股/万元(2026-09-12 归一后重部署): spot 成交量=手→
+            # 万股(÷100), 成交额=元→万元(÷1e4)
+            df["volume"] = pd.to_numeric(df["volume"], errors="coerce") / 100
+            df["amount"] = pd.to_numeric(df["amount"], errors="coerce") / 1e4
             return df[["date", "code", "name", "open", "high", "low",
                         "close", "volume", "amount", "pct_chg"]]
         except Exception as e:
