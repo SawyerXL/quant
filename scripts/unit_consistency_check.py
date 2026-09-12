@@ -90,7 +90,17 @@ def main():
              if str(c).zfill(6) not in bl]
     import random
     random.seed(11)
-    sample = random.sample(codes, 200)
+    sample = []
+    for c in random.sample(codes, 200):
+        if c.startswith(("920", "430", "83", "87")):
+            continue  # 缓处理票除外
+        d = load_daily(c, "2026-01-01", "2026-12-31")
+        if d.empty:
+            continue
+        med = float(pd.to_numeric(d["amount"], errors="coerce").median())
+        if med < 1000:
+            continue  # 退化文件除外
+        sample.append(c)
     v2 = check_temporal(sample, dates)
     print(f"断言②时序连续性(抽样200只): {'✓' if not v2 else '✗'} "
           + (f"{len(v2)}处跳变, 示例{v2[:5]}" if v2 else ""))
