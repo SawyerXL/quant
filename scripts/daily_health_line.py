@@ -65,9 +65,42 @@ def main():
         audit = "pass" if "单位一致性通过" in uclog.read_text(
             encoding="utf-8", errors="ignore") else "?"
 
+    # 结论依赖追踪心跳(2026-09-13 晚): try/except 吞异常会让"追踪器死了"
+    # 与"没有结论受影响"同形——心跳缺失/err 必须告警, 不等静默积累
+    dep = {"dep_scan": "missing"}
+    try:
+        from conclusion_deps import health as cdeps_health
+        dep = cdeps_health()
+    except Exception as e:
+        dep = {"dep_scan": "err", "last_error": f"conclusion_deps 导入失败: {e}"}
+
+    # 单变量 harness 运行状态(2026-09-13 晚): 状态=error 才告警
+    # (never_run 属正常——harness 按需运行不在日更链)
+    sv = {"status": "never_run"}
+    svp = Path("logs/single_var_harness_state.json")
+    if svp.exists():
+        try:
+            sv = json.loads(svp.read_text(encoding="utf-8"))
+        except Exception as e:
+            sv = {"status": "error", "error": f"harness 状态不可读: {e}"}
+
+    alerts = []
+    if dep.get("dep_scan") != "ok":
+        alerts.append(f"结论依赖追踪器异常: {dep.get('dep_scan')} "
+                      f"{dep.get('last_error') or ''}")
+    if sv.get("status") == "error":
+        alerts.append(f"harness 上次运行失败: {sv.get('error', '')}")
+    for msg in alerts:
+        try:
+            from monitoring.alerts import send_alert
+            send_alert(msg, level="warning")
+        except Exception:
+            pass
+
     line = {"ts": now, "latest_bar": latest_bar,
             "last_data_update": last_update, "tunnel": tunnel,
-            "audit": audit, "positions_snapshot": snap_time}
+            "audit": audit, "positions_snapshot": snap_time,
+            "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")
     print(json.dumps(line, ensure_ascii=False))

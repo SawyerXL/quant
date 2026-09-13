@@ -270,6 +270,7 @@ def _fill_recent_gaps(calendar, today: str, src):
 
     logger.warning(f"空洞检查: {len(holes)}只有缺口，修复前{min(len(holes), GAP_MAX_REPAIR)}只")
     fixed = 0
+    repaired = []   # [(code, [实际补回的日期])], 供结论依赖自动化记录改写范围
     for code, miss in holes[:GAP_MAX_REPAIR]:
         try:
             df = src.get_daily(code, miss[0], miss[-1])
@@ -284,6 +285,9 @@ def _fill_recent_gaps(calendar, today: str, src):
         except Exception as e:
             logger.debug(f"  {code} 补洞失败: {e}")
             still = miss
+        filled_now = [x for x in miss if x not in still]
+        if filled_now:
+            repaired.append((code, filled_now))
         # 拉不到的记次数：停牌/未上市会永远拉不到，重试GAP_SKIP_MAX次后放弃
         for x in still:
             skip[f"{code}:{x}"] = skip.get(f"{code}:{x}", 0) + 1
@@ -294,6 +298,7 @@ def _fill_recent_gaps(calendar, today: str, src):
     except Exception as e:
         logger.debug(f"  gap_skip写入失败: {e}")
     logger.info(f"空洞修复: 补回{fixed}个bar，跳过表{len(skip)}条")
+    return repaired
 
 
 def _sync_csi800_index_meta():
@@ -382,7 +387,26 @@ def update_today():
     _update_etf_daily(today)
 
     # 3.6. 自动补洞: 只抓当天的更新会在历史里留永久空洞, 缺口不报错只让指标算错
-    _fill_recent_gaps(calendar, today, src)
+    repairs = _fill_recent_gaps(calendar, today, src) or []
+
+    # 3.65. 结论依赖自动化(2026-09-14): 记录本次写库修改范围, 与
+    # logs/conclusion_dependencies.json 交集非空→结论自动标"需复核"。
+    # save_daily 按 date keep=last 覆写, 故当日 bar 也记 rewrite 而非 append。
+    # try/except: 监控件永不打断主链
+    try:
+        sys.path.insert(0, str(Path(__file__).parent))
+        from conclusion_deps import record_scope
+        record_scope("daily_data_update", codes, today, today, "rewrite",
+                     note="全市场当日bar(save_daily覆写语义)")
+        record_scope("daily_data_update", ["INDEX"], today, today, "rewrite",
+                     note="指数/ETF当日bar")
+        if repairs:
+            r_codes = sorted({c for c, _ in repairs})
+            r_days = sorted({d for _, dl in repairs for d in dl})
+            record_scope("daily_data_update", r_codes, r_days[0], r_days[-1],
+                         "rewrite", note=f"补洞{len(r_codes)}只{len(r_days)}日")
+    except Exception as e:
+        logger.debug(f"写库范围记录失败(不阻断): {e}")
 
     # 3.6. 同步 csi800_index meta(策略MA200择时用的基准, 否则会冻结)
     _sync_csi800_index_meta()

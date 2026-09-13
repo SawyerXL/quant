@@ -1,0 +1,85 @@
+{
+  "registered_at": "2026-09-13",
+  "scope_units": "stocks: ALL=全市场(黑名单内票除外) | INDEX=择时基准指数(000906→csi800_index) | MEMBERS=CSI800成分快照表; 区间为闭区间, end=null=开放至今",
+  "conclusions": [
+    {
+      "id": "pool30_vs_800_draw",
+      "title": "0.30%档 现网vs800等权+现金 统计平局(−0.63pp三切点, 判读矩阵第二档, |差|<0.15σ)",
+      "status": "待干净库复核",
+      "deps": [
+        {"stocks": ["ALL"], "start": "2019-01-01", "end": "2026-08-28", "note": "全市场成交额排名(pool30成员选择)"},
+        {"stocks": ["INDEX"], "start": "2019-01-01", "end": "2026-08-28", "note": "五档择时输入"},
+        {"stocks": ["MEMBERS"], "start": "2019-01-01", "end": "2026-08-28", "note": "800等权基准成员"}
+      ]
+    },
+    {
+      "id": "pool_contribution_neg",
+      "title": "池贡献 −6.22/−7.31pp(数值待确认)",
+      "status": "数值待确认",
+      "deps": [
+        {"stocks": ["ALL"], "start": "2019-01-01", "end": "2026-08-28", "note": "pool30成员选择"},
+        {"stocks": ["MEMBERS"], "start": "2019-01-01", "end": "2026-08-28", "note": "A0基准成员"}
+      ]
+    },
+    {
+      "id": "s68_four_arms",
+      "title": "§6.8 四臂表(反转过一次, 二次复核)",
+      "status": "数值待确认",
+      "deps": [
+        {"stocks": ["ALL"], "start": "2019-01-01", "end": "2026-08-28", "note": "pool30排名+全栈组件"},
+        {"stocks": ["INDEX"], "start": "2019-01-01", "end": "2026-08-28", "note": "五档择时输入"},
+        {"stocks": ["MEMBERS"], "start": "2019-01-01", "end": "2026-08-28", "note": "A0基准成员"}
+      ]
+    },
+    {
+      "id": "timing_effect",
+      "title": "择时效应 +2.41/+2.87/+4.38pp(三元组绑定, 数值待确认)",
+      "status": "数值待确认",
+      "deps": [
+        {"stocks": ["ALL"], "start": "2019-01-01", "end": "2026-08-28", "note": "pool30排名"},
+        {"stocks": ["INDEX"], "start": "2019-01-01", "end": "2026-08-28", "note": "五档择时输入"}
+      ]
+    },
+    {
+      "id": "component_effect",
+      "title": "组件效应 +3.75/+1.31pp(数值待确认)",
+      "status": "数值待确认",
+      "deps": [
+        {"stocks": ["ALL"], "start": "2019-01-01", "end": "2026-08-28", "note": "pool30排名+组件"},
+        {"stocks": ["INDEX"], "start": "2019-01-01", "end": "2026-08-28", "note": "五档择时输入"}
+      ]
+    },
+    {
+      "id": "pool30_negative_alpha",
+      "title": "成交额TOP30池负alpha(−4.3pp主窗/−8.1pp OOS)",
+      "status": "数值待确认",
+      "deps": [
+        {"stocks": ["ALL"], "start": "2015-01-01", "end": "2026-08-28", "note": "全市场成交额排名(含OOS窗口)"}
+      ]
+    },
+    {
+      "id": "lookahead_constant",
+      "title": "前视偏差常数 +8.69pp/年(可复用常数)",
+      "status": "安全(不依赖成交额)",
+      "deps": [
+        {"stocks": ["MEMBERS"], "start": "2015-01-01", "end": "2026-08-28", "note": "PIT成员快照 vs 当前快照"}
+      ]
+    },
+    {
+      "id": "a0_800_negative",
+      "title": "§0 800池负数(不选股一侧, 唯一可信数字之一)",
+      "status": "安全(不依赖成交额)",
+      "deps": [
+        {"stocks": ["MEMBERS"], "start": "2019-01-01", "end": "2026-08-28", "note": "800等权基准"}
+      ]
+    },
+    {
+      "id": "residual_upper_bound",
+      "title": "成交额侧残留率95%上界 0.85%(352单元0命中)",
+      "status": "安全(对当前库状态有效; 库被写后需复验)",
+      "deps": [
+        {"stocks": ["ALL"], "start": "2019-01-01", "end": "2026-08-28", "note": "残留率描述的是库本身"}
+      ]
+    }
+  ]
+}
