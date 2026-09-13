@@ -149,8 +149,8 @@ def main():
         df = pd.DataFrame(rows)
         df.to_csv("logs/s1_attribution_clean.csv", index=False,
                   encoding="utf-8-sig")
-        # 2026-09-13 截断法: 持久化摊平净值曲线(污染段截断检验用)
-        ens.to_csv("logs/s1_attribution_clean_curve.csv")
+        # 2026-09-13 截断法: 持久化各臂摊平净值曲线(污染段截断检验用)
+        ens.to_csv(f"logs/s1_curve_{arm_name}.csv")
     print("\n干净分解: 池=A1c−A0 | 择时=A2c−A1c | 组件=A3−A2c")
     print("落盘: logs/s1_attribution_clean.csv")
 

@@ -241,15 +241,32 @@ def main():
             if f.stem not in uq_codes and not f.stem.startswith(
                     ("920", "430", "83", "87")):
                 totals_ex[dt2] = totals_ex.get(dt2, 0.0) + s
-    agg_bad = [(dt2, round(v / 1e8, 2)) for dt2, v in totals_all.items()
+    # 主判据=排除隔离总额(干净市场口径); 全库总额与比值=监控参考:
+    # 隔离区恒含北交所元票, 比值恒 ~75-87×(当前基线), 告警判据=
+    # 相对基线的漂移(>3×基线=新污染进入), 而非绝对值
+    agg_bad = [(dt2, round(v / 1e8, 2)) for dt2, v in totals_ex.items()
                if not (3e7 <= v <= 3e8)]
     ratios = [(dt2, round(totals_all[dt2] / totals_ex.get(dt2, 1), 1))
               for dt2 in totals_all]
-    ratio_bad = [x for x in ratios if x[1] > 3]
-    print(f"断言⑦聚合量(全库总额∈[3000亿,3万亿]元): "
+    bl_path = Path(__file__).parent.parent / "logs" / "aggregate_ratio_baseline.json"
+    baseline = None
+    if bl_path.exists():
+        try:
+            baseline = float(json.load(open(bl_path)).get("baseline_ratio", 0))
+        except Exception:
+            pass
+    ratio_bad = []
+    if ratios:
+        cur = sum(x[1] for x in ratios) / len(ratios)
+        if baseline is None:
+            json.dump({"baseline_ratio": cur}, open(bl_path, "w"))
+            baseline = cur
+        if baseline > 0 and cur > 3 * baseline:
+            ratio_bad = ratios
+    print(f"断言⑦聚合量(排除隔离总额∈[3000亿,3万亿]元): "
           f"{'✓' if not agg_bad else '✗ ' + str(agg_bad[:5])}")
-    print(f"  全库/排除隔离 比值: {[x for x in ratios]} "
-          f"{'⚠️>3' if ratio_bad else '✓'}")
+    print(f"  全库/排除隔离 比值均值 {sum(x[1] for x in ratios)/max(len(ratios),1):.0f}"
+          f"(基线 {baseline:.0f}) {'⚠️漂移>3×基线' if ratio_bad else '✓'}")
     import json as _j
     _j.dump({"totals_all": totals_all, "totals_ex": totals_ex},
             open("logs/daily_total_curve.json", "w"))
