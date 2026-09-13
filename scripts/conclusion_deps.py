@@ -205,13 +205,24 @@ def check(since=None, workdir=None):
     return state
 
 
+# 首次安装宽限(2026-09-13晚用户裁定): 心跳缺失在合法运行之前不该告警——
+# 至 T+1 首次日更(周一 17:00 日更的 record_scope 生成心跳)前状态=bootstrap
+# 不告警; 宽限到期仍缺失 → missing 告警。宽限期本身写进健康行, 不隐式。
+BOOTSTRAP_UNTIL = "2026-09-14 18:00"
+
+
 def health(workdir=None):
-    """dep_scan 字段供 daily_health_line 嵌入。缺失/err = 告警
-    (心跳文件不存在 = 管线未接或从未成功过一次记录)。"""
+    """dep_scan 字段供 daily_health_line 嵌入。bootstrap/ok 不告警,
+    missing/err 告警(心跳文件不存在 = 管线未接或从未成功过一次记录)。"""
     p = _paths(workdir)["heartbeat"]
     if not p.exists():
+        now = datetime.now().strftime("%Y-%m-%d %H:%M")
+        if now < BOOTSTRAP_UNTIL:
+            return {"dep_scan": "bootstrap",
+                    "bootstrap_until": BOOTSTRAP_UNTIL,
+                    "ranges": 0, "flagged": 0, "last_error": None}
         return {"dep_scan": "missing", "ranges": 0, "flagged": 0,
-                "last_error": "心跳文件不存在"}
+                "last_error": "心跳文件不存在(宽限已到期)"}
     try:
         s = json.loads(p.read_text(encoding="utf-8"))
     except Exception as e:

@@ -44,7 +44,10 @@ def cmd_list():
 
 
 def cmd_sweep(dry_run: bool = False):
-    """升级清扫: open 状态超过阈值天数的 P0 重发告警(带未确认天数前缀)。"""
+    """升级清扫: open 状态超过阈值天数的 P0 重发告警(带未确认天数前缀)。
+    2026-09-13晚补: 健康行新鲜度检查在此落地(overnight doc 声称已接但代码
+    从未实现——批准未落地的漂移项)。"""
+    _check_health_line(dry_run)
     state = p0_list()
     if not state:
         logger.info("无 P0, 清扫无事")
@@ -61,6 +64,38 @@ def cmd_sweep(dry_run: bool = False):
                 send_alert(msg, level="error")
             n += 1
     logger.info(f"升级重发 {n} 条 P0" if n else f"无超阈值 P0({len(state)} 条 open)")
+
+
+# 健康行首次落盘时点(18:40 cron 首跑日+余量)。此前文件缺失=bootstrap 不告警
+# ——合法运行之前的缺失不该训练"忽略告警"(2026-09-13晚用户裁定)
+HEALTH_LINE_BOOTSTRAP_UNTIL = "2026-09-14 19:00"
+
+
+def _check_health_line(dry_run: bool = False):
+    """dead-man 极性反转的核心检查: 健康行每日 18:40 落盘(含周末),
+    >26h 未更新 = 机器或 cron 整体静默死亡 → P0。"""
+    import json
+    hp = ROOT / "logs" / "daily_health_line.json"
+    now_s = datetime.now().strftime("%Y-%m-%d %H:%M")
+    if not hp.exists():
+        if now_s < HEALTH_LINE_BOOTSTRAP_UNTIL:
+            logger.info("健康行文件未生成(首跑宽限期内, 不告警)")
+            return
+        if not dry_run:
+            send_alert("[P0] 健康行从未落盘(daily_health_line.json 不存在, "
+                       "18:40 cron 未安装或从未运行)", level="error")
+        return
+    try:
+        ts = json.loads(hp.read_text(encoding="utf-8")).get("ts", "")
+        age_h = (datetime.now() - datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+                 ).total_seconds() / 3600
+    except Exception:
+        age_h = 999.0
+    if age_h > 26:
+        if not dry_run:
+            send_alert(f"[P0] 健康行 {age_h:.0f}h 未更新(>26h), "
+                       f"机器或 cron 静默死亡", level="error")
+        logger.warning(f"健康行 {age_h:.0f}h 未更新{'[dry-run]' if dry_run else ''}")
 
 
 def main():

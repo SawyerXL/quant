@@ -84,12 +84,22 @@ def main():
         except Exception as e:
             sv = {"status": "error", "error": f"harness 状态不可读: {e}"}
 
+    # bar 新鲜度: 交易日历感知(2026-09-13晚用户裁定)——分母=上一交易日,
+    # 不是 26 小时。周末/节假日不产生告警
+    tds = sorted({str(d)[:10] for d in sh["date"]}) if not sh.empty else []
+    last_td = max((d for d in tds if d <= now[:10]), default="?")
+    bar_fresh = latest_bar >= last_td if last_td != "?" else True
+
     alerts = []
-    if dep.get("dep_scan") != "ok":
+    # bootstrap 是合法运行前的宽限态, 不告警; missing/err 才告警
+    if dep.get("dep_scan") in ("missing", "err"):
         alerts.append(f"结论依赖追踪器异常: {dep.get('dep_scan')} "
                       f"{dep.get('last_error') or ''}")
     if sv.get("status") == "error":
         alerts.append(f"harness 上次运行失败: {sv.get('error', '')}")
+    if now[:10] in tds and not bar_fresh:
+        alerts.append(f"最新bar({latest_bar})落后于今日交易日{now[:10]}, "
+                      f"日更未完成或失败")
     for msg in alerts:
         try:
             from monitoring.alerts import send_alert
@@ -98,6 +108,7 @@ def main():
             pass
 
     line = {"ts": now, "latest_bar": latest_bar,
+            "last_trading_day": last_td, "bar_fresh": bar_fresh,
             "last_data_update": last_update, "tunnel": tunnel,
             "audit": audit, "positions_snapshot": snap_time,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}

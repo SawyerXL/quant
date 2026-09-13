@@ -499,14 +499,21 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                         new_w[c] = w
 
                 # 逆波动率加权(2026-09-05 IC立项V1): 保持总权重=档位,
-                # 内部按1/vol20重分配(T-1严格); 单票上限由lot/max_position_pct兜底
+                # 内部按1/vol20重分配(T-1严格); 单票上限由lot/max_position_pct兜底。
+                # 2026-09-13晚用户裁定两处硬化(方法锁§7修订, 仅inv_vol分支,
+                # 无现网臂使用此分支):
+                #   ① vol下限 0.5%→5%(年化)——A股个股年化<5%基本不存在,
+                #      0.5%是未经检验的常数(与5.7pp同型);
+                #   ② 权重上限 3×等权——断裂日NaN被跳过→有效样本减少→vol低估
+                #      →权重放大, "数据质量最差的票拿最大权重"必须封死。
+                # 样本不足(<10)的票无vol条目, 取均值权重1.0=保守减配, 维持。
                 if getattr(config, "weight_scheme", "equal") == "inv_vol" and new_w:
                     vols = {}
                     for c in new_w:
                         rr = panel[c].iloc[max(0, i-21):i].pct_change().dropna()
                         if len(rr) >= 10:
                             v = float(rr.iloc[-20:].std() * np.sqrt(252))
-                            vols[c] = 1.0 / max(v, 0.005)
+                            vols[c] = min(1.0 / max(v, 0.05), 3.0)
                     if vols:
                         tot = sum(vols.values())
                         w_sum = sum(new_w.values())
