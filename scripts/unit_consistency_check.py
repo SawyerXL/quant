@@ -217,11 +217,15 @@ def main():
     # 断言⑦(2026-09-13): 全市场聚合量——不依赖单票正确性/分布形状/
     # 阈值调参, 几十只元口径票就会让总和越界(9/7 若有此断言单位混写
     # 当天即暴露; 2026-09-13 的 110万亿分母正是被隔离区元票撑爆)
-    totals = {}
+    # 断言⑦(2026-09-13): 全市场聚合量——**全库口径**(含隔离区):
+    # 隔离区会吸收它自己造成的证据(幂等盲区同型), 排除口径的断言
+    # 看不见"几十只票被判异常进隔离→总额恢复"这一路径。
+    # 主判据 = 全库总额 ∈ [3000亿, 3万亿]元; 参考 = 排除隔离后总额;
+    # 两者比值 > 3 即告警(2026-09-13 当日实测 53 倍——110万亿 vs 2.06万亿)
+    totals_all = {}
+    totals_ex = {}
     for f in sorted((DAILY_DIR / "2026").glob("*.parquet")):
         if f.stem.startswith(("SH", "SZ")):
-            continue
-        if f.stem in uq_codes or f.stem.startswith(("920", "430", "83", "87")):
             continue
         try:
             d = pd.read_parquet(f, columns=["date", "amount"])
@@ -230,18 +234,27 @@ def main():
         d = d[d["date"].astype(str).str[:10].isin(dates)]
         if d.empty:
             continue
-        a = pd.to_numeric(d["amount"], errors="coerce")
         for dt2, grp in d.groupby(d["date"].astype(str).str[:10]):
-            totals[dt2] = totals.get(dt2, 0.0) + float(grp["amount"][
+            s = float(pd.to_numeric(grp["amount"], errors="coerce")[
                 pd.to_numeric(grp["amount"], errors="coerce") > 0].sum())
-    agg_bad = [(dt2, round(v / 1e8, 2)) for dt2, v in totals.items()
-               if not (3e7 <= v <= 3e8)]  # 万元: [3000亿, 3万亿]
-    print(f"断言⑦聚合量(逐日总额应∈[3000亿,3万亿]元): "
+            totals_all[dt2] = totals_all.get(dt2, 0.0) + s
+            if f.stem not in uq_codes and not f.stem.startswith(
+                    ("920", "430", "83", "87")):
+                totals_ex[dt2] = totals_ex.get(dt2, 0.0) + s
+    agg_bad = [(dt2, round(v / 1e8, 2)) for dt2, v in totals_all.items()
+               if not (3e7 <= v <= 3e8)]
+    ratios = [(dt2, round(totals_all[dt2] / totals_ex.get(dt2, 1), 1))
+              for dt2 in totals_all]
+    ratio_bad = [x for x in ratios if x[1] > 3]
+    print(f"断言⑦聚合量(全库总额∈[3000亿,3万亿]元): "
           f"{'✓' if not agg_bad else '✗ ' + str(agg_bad[:5])}")
-    # 逐日总额曲线落盘
+    print(f"  全库/排除隔离 比值: {[x for x in ratios]} "
+          f"{'⚠️>3' if ratio_bad else '✓'}")
     import json as _j
-    _j.dump(totals, open("logs/daily_total_curve.json", "w"))
-    if v1 or v2 or new_deg or tail_bad or not rel_ok or over or agg_bad:
+    _j.dump({"totals_all": totals_all, "totals_ex": totals_ex},
+            open("logs/daily_total_curve.json", "w"))
+    if v1 or v2 or new_deg or tail_bad or not rel_ok or over or agg_bad \
+            or ratio_bad:
         print("⚠️ 单位一致性违规")
         sys.exit(1)
     print("单位一致性通过")

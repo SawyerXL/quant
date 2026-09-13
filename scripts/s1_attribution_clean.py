@@ -69,6 +69,11 @@ def build_panels():
                 continue
             d["date"] = pd.to_datetime(d["date"])
             d = d.set_index("date").sort_index()
+            # 2026-09-13 价格断裂掩码: 库保原值+price_break_flag列,
+            # 消费端在面板构建时将断裂日 close→NaN(引擎 NaN 语义=
+            # 该日收益零贡献, MA10 dropna 降级)——回测跳过虚假单日收益
+            if "price_break_flag" in d.columns:
+                d.loc[d["price_break_flag"] == 1, "close"] = float("nan")
             cl = pd.to_numeric(d["close"], errors="coerce").dropna()
             amt = pd.to_numeric(d.get("amount", pd.Series(dtype=float)),
                                 errors="coerce")
