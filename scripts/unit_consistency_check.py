@@ -180,11 +180,10 @@ def main():
         if len(a) == 0:
             continue
         mx = float(a.max())
-        # 白名单(2026-09-13): 688825@07-27 1411亿为 MCP 确认的真实值
-        # (额/量=47.2≈close 49.0 自洽, 非污染)——真实世界 400 亿极值
-        # 先验在本世界不成立, 单条文档化放行, 上限维持 1000 亿
-        if mx > cap_abs and not (f.stem == "688825" and
-                                 str(d["date"][a.idxmax()])[:10] == "2026-07-27"):
+        # 688825@07-27(1411亿)保持 RED 待裁: 三项独立判别中 ①市场占比
+        # 0.13%<5% → 正常 ②分布距 p99.99(98.5亿) 14× → 疑似孤立点
+        # ③换手率/事件无数据——白名单不落地(用户 2026-09-13 纪律)
+        if mx > cap_abs:
             tail_bad.append((f.stem, round(mx, 0)))
         top1 = max(top1, mx)
         if f.stem not in uq_codes and str(d["date"].max())[:10] >= "2026-09-01":
@@ -215,7 +214,34 @@ def main():
         if thin:
             over.append((f.stem, thin))
     print(f"断言⑤过度归一方向: {'✓' if not over else '✗ ' + str(over[:5])}")
-    if v1 or v2 or new_deg or tail_bad or not rel_ok or over:
+    # 断言⑦(2026-09-13): 全市场聚合量——不依赖单票正确性/分布形状/
+    # 阈值调参, 几十只元口径票就会让总和越界(9/7 若有此断言单位混写
+    # 当天即暴露; 2026-09-13 的 110万亿分母正是被隔离区元票撑爆)
+    totals = {}
+    for f in sorted((DAILY_DIR / "2026").glob("*.parquet")):
+        if f.stem.startswith(("SH", "SZ")):
+            continue
+        if f.stem in uq_codes or f.stem.startswith(("920", "430", "83", "87")):
+            continue
+        try:
+            d = pd.read_parquet(f, columns=["date", "amount"])
+        except Exception:
+            continue
+        d = d[d["date"].astype(str).str[:10].isin(dates)]
+        if d.empty:
+            continue
+        a = pd.to_numeric(d["amount"], errors="coerce")
+        for dt2, grp in d.groupby(d["date"].astype(str).str[:10]):
+            totals[dt2] = totals.get(dt2, 0.0) + float(grp["amount"][
+                pd.to_numeric(grp["amount"], errors="coerce") > 0].sum())
+    agg_bad = [(dt2, round(v / 1e8, 2)) for dt2, v in totals.items()
+               if not (3e7 <= v <= 3e8)]  # 万元: [3000亿, 3万亿]
+    print(f"断言⑦聚合量(逐日总额应∈[3000亿,3万亿]元): "
+          f"{'✓' if not agg_bad else '✗ ' + str(agg_bad[:5])}")
+    # 逐日总额曲线落盘
+    import json as _j
+    _j.dump(totals, open("logs/daily_total_curve.json", "w"))
+    if v1 or v2 or new_deg or tail_bad or not rel_ok or over or agg_bad:
         print("⚠️ 单位一致性违规")
         sys.exit(1)
     print("单位一致性通过")
