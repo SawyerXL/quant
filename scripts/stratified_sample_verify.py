@@ -72,10 +72,11 @@ def main():
             mcp = pd.DataFrame()
         if mcp is None or len(mcp) == 0 or "amount" not in mcp.columns:
             continue
-        m = float(pd.to_numeric(mcp["amount"].iloc[-1], errors="coerce") or 0)
-        if not m:
+        m = pd.to_numeric(mcp["amount"].iloc[-1], errors="coerce")
+        if pd.isna(m) or not m or m <= 0:
             skipped_zero += 1
             continue
+        m = float(m)
         l = float(pd.to_numeric(lib["amount"].iloc[0], errors="coerce") or 0)
         checked += 1
         if not (0.5 <= l / m <= 2.0):

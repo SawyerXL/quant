@@ -79,6 +79,29 @@ def main():
     target = set(pool30)
     buys = sorted(target - cur)
     sells = sorted(cur - target)
+    # 条件断言(2026-09-13 用户): 尾部断言阈值(1000亿)离业务门槛(39.8亿)
+    # 差 25 倍——真实成交 40万~1000万元的小票在元口径下存库 40亿~1000亿
+    # 稳稳入池却不触发全局断言(全票全程元=时序无跳变/比值正常/截面
+    # 中位数不动——五道审计全盲)。守门守在使用处: 入池票的过去60日
+    # 成交额排名中位数 >500 者 → 必须 MCP 裁决才允许入池。
+    from data.source.mcp_source import MCPSource
+    from data.storage import load_daily as _ld
+    gate_flags = []
+    # 排名中位数(60日): 简化用每票 60 日均额的全市场排名
+    all60 = {}
+    for c2, a2, _v in rows:
+        all60[c2] = a2
+    ranked = sorted(all60, key=all60.get, reverse=True)
+    rank_of = {c2: i + 1 for i, c2 in enumerate(ranked)}
+    for c2 in pool30:
+        if rank_of.get(c2, 9999) > 500:
+            gate_flags.append(c2)
+    if gate_flags:
+        print(f"🟡 入池门禁: {len(gate_flags)} 只票 60日排名>500, 需 MCP 裁决:")
+        for c2 in gate_flags:
+            print(f"   {c2} (排名 {rank_of[c2]})")
+    else:
+        print("✅ 入池门禁: 全部 pool30 成员排名 ≤500")
     n = len(buys) + len(sells)
     regime_note = ""
     if sig_regime == "bear":
