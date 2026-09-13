@@ -24,7 +24,7 @@ from backtest_engine import make_rebal_dates
 from data.source.mcp_source import MCPSource
 
 N_SAMPLE = 200
-SEED = 20260913
+SEED = 20260913_2
 
 
 def main():
