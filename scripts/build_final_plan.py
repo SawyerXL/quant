@@ -37,13 +37,13 @@ def main():
     deferred = set()
     for p in v6_plan:
         code = p["file"].split("/")[-1].replace(".parquet", "")
-        # 北交所全号段(920/430/83/87)缓处理: MCP 无覆盖且不进任何池
+        # 北交所全号段缓处理: MCP 无覆盖且不进任何池
         if code.startswith(bse):
             deferred.add(p["file"])
-        elif p.get("med", 0) < 1000:
-            # 2026-09-12 晚: 退化文件(新上市票 amount 近零, 元主导规则在
-            # med≈0 上循环除坏)不分主导口径一律缓处理
-            deferred.add(p["file"])
+        # 2026-09-13 幂等盲区修复: quarantine 不再吸收幂等证据——仅
+        # 北交所可豁免, 其余(真薄量/源缺失)一律参与幂等判定,
+        # 计划生成器对它们报 fix 即视为幂等违规
+        # (med<1000 的缓处理删除——正是它让 57/95 过度归一无处可报)
     fixes = {}
     for p in v6_plan:
         code = p["file"].split("/")[-1].replace(".parquet", "")

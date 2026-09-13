@@ -180,7 +180,11 @@ def main():
         if len(a) == 0:
             continue
         mx = float(a.max())
-        if mx > cap_abs:
+        # 白名单(2026-09-13): 688825@07-27 1411亿为 MCP 确认的真实值
+        # (额/量=47.2≈close 49.0 自洽, 非污染)——真实世界 400 亿极值
+        # 先验在本世界不成立, 单条文档化放行, 上限维持 1000 亿
+        if mx > cap_abs and not (f.stem == "688825" and
+                                 str(d["date"][a.idxmax()])[:10] == "2026-07-27"):
             tail_bad.append((f.stem, round(mx, 0)))
         top1 = max(top1, mx)
         if f.stem not in uq_codes and str(d["date"].max())[:10] >= "2026-09-01":
