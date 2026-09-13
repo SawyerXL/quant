@@ -157,7 +157,39 @@ def main():
         except Exception:
             continue
     print(f"断言③退化文件监控: {'✓ 无新增' if not new_deg else '✗ ' + str(new_deg[:5])}")
-    if v1 or v2 or new_deg:
+
+    # 断言④(2026-09-12 加): 尾部上限——五道审计全检验"分布中心/内部
+    # 一致性", 而 pool30 只消费尾部(13只元幽灵1.68e8霸榜时中位数审计
+    # 全绿)。绝对物理上限: A股单票单日成交额极值~400亿, 1000亿留2.5倍
+    # 余量; 相对: top1/门槛 < 50(健康值~10倍内)
+    cap_abs = 1e7  # 万元 = 1000亿元
+    tail_bad = []
+    top1 = 0.0
+    thr60 = 0.0
+    for f in sorted((DAILY_DIR / "2026").glob("*.parquet")):
+        if f.stem.startswith(("SH", "SZ")):
+            continue
+        if f.stem in uq_codes or f.stem.startswith(("920", "430", "83", "87")):
+            continue  # 缓处理票不参与尾部审计
+        try:
+            d = pd.read_parquet(f, columns=["date", "amount"])
+        except Exception:
+            continue
+        a = pd.to_numeric(d["amount"], errors="coerce")
+        a = a[a > 0]
+        if len(a) == 0:
+            continue
+        mx = float(a.max())
+        if mx > cap_abs:
+            tail_bad.append((f.stem, round(mx, 0)))
+        top1 = max(top1, mx)
+        if f.stem not in uq_codes and str(d["date"].max())[:10] >= "2026-09-01":
+            thr60 = max(thr60, float(np.median(a.tail(20))) if len(a) >= 10 else 0.0)
+    rel_ok = (thr60 > 0 and top1 / thr60 < 50)
+    print(f"断言④尾部上限: 绝对 {'✓' if not tail_bad else '✗ ' + str(tail_bad[:5])}"
+          f" | 相对 top1={top1:.0f}/门槛60={thr60:.0f} 比 {top1/thr60 if thr60 else 0:.1f} "
+          f"{'✓' if rel_ok else '✗'}")
+    if v1 or v2 or new_deg or tail_bad or not rel_ok:
         print("⚠️ 单位一致性违规")
         sys.exit(1)
     print("单位一致性通过")
