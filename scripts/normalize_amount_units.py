@@ -36,9 +36,15 @@ def classify_v5(am, first_date):
     # 残留元日实测全部 ≥800× 中位, 1000 阈值漏判小票元日(920689类
     # 8.6e6 vs 中位9.9e3=874×), 500 取在两类之间
     if is_yuan:
-        fix_days = [i for i, v in enumerate(am) if v is not None and v > med / 500]
+        fix_days = [i for i, v in enumerate(am)
+                    if v is not None and v > med / 500 and v >= 5]
     else:
-        fix_days = [i for i, v in enumerate(am) if v is not None and v >= med * 500]
+        fix_days = [i for i, v in enumerate(am)
+                    if v is not None and v >= med * 500 and v >= 5]
+    # 2026-09-13 过度归一修复: 日期规则(首日≥06-16→元主导)让计划生成器
+    # 对已修文件反复再修(apply后med降入万元量级仍被日期规则判元)→
+    # 二次÷1e4 把 17 只新票除到 0.4~3.5 万元。加 v>=5 下限: 已薄日
+    # 不再除, 规则自限(真元日的额不可能 <5 元量级)
     return fix_days, med, is_yuan
 
 
@@ -69,10 +75,9 @@ def main():
                          "fix_days": fix_days})
     # 计划有效期锚(2026-09-12): 库内最新日期必须等于计划生成时记录值,
     # 日更后库变了计划即失效——"计划与现实脱节"与配置漂移同型
-    max_date = max((pd.read_parquet(f, columns=["date"])["date"].max()
+    max_date = max((str(pd.read_parquet(f, columns=["date"])["date"].max())[:10]
                     for f in DAILY_DIR.glob("2026/*.parquet")
-                    if not f.name.startswith(("SH", "SZ"))), default=None)
-    max_date = str(max_date)[:10] if max_date is not None else "?"
+                    if not f.name.startswith(("SH", "SZ"))), default="?")
     print(f"需归一文件数: {len(plan)}, 需修日总数: "
           f"{sum(len(p['fix_days']) for p in plan)}, 库最新日: {max_date}")
     json.dump({"library_max_date": max_date, "plan": plan},
@@ -86,10 +91,9 @@ def main():
 def apply_plan(payload):
     plan = payload["plan"]
     want_max = payload.get("library_max_date")
-    cur_max = max((pd.read_parquet(f, columns=["date"])["date"].max()
+    cur_max = max((str(pd.read_parquet(f, columns=["date"])["date"].max())[:10]
                    for f in DAILY_DIR.glob("2026/*.parquet")
-                   if not f.name.startswith(("SH", "SZ"))), default=None)
-    cur_max = str(cur_max)[:10] if cur_max is not None else "?"
+                   if not f.name.startswith(("SH", "SZ"))), default="?")
     assert cur_max == want_max, (
         f"计划失效: 库最新日 {cur_max} ≠ 计划生成时 {want_max}——"
         f"库已更新, 请重新生成计划")

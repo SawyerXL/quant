@@ -189,7 +189,29 @@ def main():
     print(f"断言④尾部上限: 绝对 {'✓' if not tail_bad else '✗ ' + str(tail_bad[:5])}"
           f" | 相对 top1={top1:.0f}/门槛60={thr60:.0f} 比 {top1/thr60 if thr60 else 0:.1f} "
           f"{'✓' if rel_ok else '✗'}")
-    if v1 or v2 or new_deg or tail_bad or not rel_ok:
+    # 断言⑤(2026-09-13 过度归一修复后): 有交易日成交额<5万元的票=异常
+    # (检测体系此前全部单向——只抓"归一不足", 过度归一方向无审计;
+    # 17只新票被日期规则二次除到0.4~3.5万元全靠 MCP 抽验才暴露)
+    over = []
+    for f in sorted((DAILY_DIR / "2026").glob("*.parquet")):
+        if f.stem.startswith(("SH", "SZ")):
+            continue
+        if f.stem in uq_codes or f.stem.startswith(("920", "430", "83", "87")):
+            continue
+        try:
+            d = pd.read_parquet(f, columns=["date", "amount", "close"])
+        except Exception:
+            continue
+        thin = 0
+        for _, r in d.iterrows():
+            a = pd.to_numeric(r["amount"], errors="coerce")
+            cl = pd.to_numeric(r["close"], errors="coerce")
+            if pd.notna(a) and 0 < a < 5 and pd.notna(cl) and cl > 0:
+                thin += 1
+        if thin:
+            over.append((f.stem, thin))
+    print(f"断言⑤过度归一方向: {'✓' if not over else '✗ ' + str(over[:5])}")
+    if v1 or v2 or new_deg or tail_bad or not rel_ok or over:
         print("⚠️ 单位一致性违规")
         sys.exit(1)
     print("单位一致性通过")
