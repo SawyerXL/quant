@@ -34,8 +34,10 @@ def main():
              if str(c).zfill(6) not in blacklist]
     sh = load_daily("SH000001", "2026-01-01", "2026-12-31")
     cal = sorted(sh["date"].astype(str).str[:10].tolist())
+    # 2026-09-13 用户要求补齐: 去掉 06-16 过滤, 10 日×20=200 单元
+    # (首层 80 单元的上界 3.7% 不足以宣告池干净, 200 单元→1.5%)
     rebal = [d for d in make_rebal_dates(cal, "biweekly")
-             if "2026-06-16" <= d <= "2026-09-11"]
+             if "2026-01-01" <= d <= "2026-09-11"]
     random.seed(SEED)
     dates = sorted(random.sample(rebal, min(10, len(rebal))))
     print(f"抽样调仓日: {dates}")
