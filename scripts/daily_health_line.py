@@ -90,6 +90,17 @@ def main():
     last_td = max((d for d in tds if d <= now[:10]), default="?")
     bar_fresh = latest_bar >= last_td if last_td != "?" else True
 
+    # CB 信号新鲜度(2026-09-14): "正确跳过执行"是最坏的表现形式——
+    # 跳过是事件不是正常状态, 任何跳过/降级/回退必须写健康行(闸门十二)
+    cb_date = "?"
+    cbp = Path("data_store/meta/signal_cb_latest.json")
+    if cbp.exists():
+        try:
+            cb_date = str(json.loads(cbp.read_text(encoding="utf-8"))
+                          .get("signal_date", "?"))[:10]
+        except Exception:
+            cb_date = "?"
+
     alerts = []
     # bootstrap 是合法运行前的宽限态, 不告警; missing/err 才告警
     if dep.get("dep_scan") in ("missing", "err"):
@@ -100,6 +111,13 @@ def main():
     if now[:10] in tds and not bar_fresh:
         alerts.append(f"最新bar({latest_bar})落后于今日交易日{now[:10]}, "
                       f"日更未完成或失败")
+    # CB 信号与上一交易日差 > 1 → 告警(执行链会静默跳过, 见闸门十二)
+    if cb_date != "?" and tds:
+        cb_pos = [i for i, d in enumerate(tds) if d == cb_date]
+        stale = not cb_pos or (len(tds) - 1 - cb_pos[0]) > 1
+        if stale:
+            alerts.append(f"CB信号停滞: signal_date={cb_date}, "
+                          f"上一交易日={last_td}")
     for msg in alerts:
         try:
             from monitoring.alerts import send_alert
@@ -111,6 +129,7 @@ def main():
             "last_trading_day": last_td, "bar_fresh": bar_fresh,
             "last_data_update": last_update, "tunnel": tunnel,
             "audit": audit, "positions_snapshot": snap_time,
+            "cb_signal_date": cb_date,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")
