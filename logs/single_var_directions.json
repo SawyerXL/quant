@@ -34,7 +34,7 @@
       "effect_sign": 1,
       "te_estimate_pct": 3.6,
       "plausible_effect_pp": [0.3, 1.0],
-      "note": "2026-09-13晚用户批准, 条件: NaN规则已锁(§7)+价格侧<1.25×盲区声明已入登记§6 D2; 开跑前月频实测TE重算MDE(实测MDE>可信上沿1pp则不跑, harness已编码)"
+      "note": "2026-09-13晚用户批准, 条件: NaN规则已锁(§7)+价格侧<1.25×盲区声明已入登记§6 D2; 开跑前月频实测TE重算MDE(实测MDE>可信上沿1pp则不跑, harness已编码); fallback中位数修订回滚待周二(logs/rollback_patch_20260913.md)"
     },
     {
       "id": "D3_rebalance_freq",
