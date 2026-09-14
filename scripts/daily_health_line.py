@@ -17,6 +17,7 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent))
 
+import pandas as pd
 from data.storage import load_daily
 
 OUT = Path("logs/daily_health_line.json")
@@ -101,6 +102,41 @@ def main():
         except Exception:
             cb_date = "?"
 
+    # CB 数据侧新鲜度(2026-09-14): 与信号侧分离——数据层停摆晚一个月才
+    # 被信号层"快照过期"报出(下游症状非上游原因); 每一层都要有自己的
+    # 新鲜度字段。注意 stage3 对已有文件只增不更(文件冻结在首次下载),
+    # 单看 max 会假健康 → 主判据=陈旧文件占比
+    cb_data_max = "?"
+    cb_stale_files = 0
+    cb_total_files = 0
+    try:
+        cb_daily_dir = Path("data_store/convertible_bonds/daily")
+        mx = ""
+        cutoff10 = (pd.Timestamp(now[:10]) - pd.Timedelta(days=10)).strftime("%Y-%m-%d")
+        for f in cb_daily_dir.glob("*.parquet"):
+            cb_total_files += 1
+            try:
+                d = pd.read_parquet(f, columns=["date"])
+                if not d.empty:
+                    v = str(d["date"].max())[:10]
+                    if v > mx:
+                        mx = v
+                    if v < cutoff10:
+                        cb_stale_files += 1
+            except Exception:
+                pass
+        cb_data_max = mx or "?"
+    except Exception:
+        pass
+    cb_unknown = 0
+    cbs = Path("logs/cb_data_state.json")
+    if cbs.exists():
+        try:
+            cb_unknown = int(json.loads(cbs.read_text(encoding="utf-8"))
+                             .get("unknown_daily_gaps", 0))
+        except Exception:
+            pass
+
     alerts = []
     # bootstrap 是合法运行前的宽限态, 不告警; missing/err 才告警
     if dep.get("dep_scan") in ("missing", "err"):
@@ -118,6 +154,12 @@ def main():
         if stale:
             alerts.append(f"CB信号停滞: signal_date={cb_date}, "
                           f"上一交易日={last_td}")
+    # CB 数据侧停滞(周更链; stage3 只增不更, 主判据=陈旧文件占比>10%)
+    if cb_total_files and cb_stale_files / cb_total_files > 0.10:
+        alerts.append(f"CB数据停滞: {cb_stale_files}/{cb_total_files} 只文件"
+                      f"陈旧(>10天), max={cb_data_max}")
+    if cb_unknown > 50:
+        alerts.append(f"CB日线缺口(未知)计数: {cb_unknown} 只(阈值50)")
     for msg in alerts:
         try:
             from monitoring.alerts import send_alert
@@ -129,7 +171,8 @@ def main():
             "last_trading_day": last_td, "bar_fresh": bar_fresh,
             "last_data_update": last_update, "tunnel": tunnel,
             "audit": audit, "positions_snapshot": snap_time,
-            "cb_signal_date": cb_date,
+            "cb_signal_date": cb_date, "cb_data_max_date": cb_data_max,
+            "cb_unknown_gaps": cb_unknown,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")

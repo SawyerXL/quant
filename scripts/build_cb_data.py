@@ -172,31 +172,53 @@ def build_redemption():
     except Exception as e:
         logger.warning(f"  bond_cb_redeem_jsl失败: {e}")
 
-    # 检查日线数据中最后交易日期,推断退市日
+    # 日线终止的三值判定(2026-09-14, 本周第五例"缺数据被读成事件"的修正):
+    # 存续 / 已退市 / 数据缺失(未知)——未知既不留在快照(防僵尸, 由快照
+    # 构建的价格行检查自然排除), 也不记为退出(防假删, 2026-09-14 影子
+    # 重建的 390 只"退出"多为停摆误判)。分段规则:
+    #   近端(today-60 ~ today-30): 用当前存续列表交叉——"现在是否存续"
+    #     是当下事实, 无前视问题(2021 年的缺口不能用 2026 的列表回答,
+    #     当前列表只能回答"现在"不能回答"那时")
+    #   历史(< today-60): 只用当时数据; 缺失 → 标未知, 不推断
     universe = load_meta("cb_universe")
+    unknown_count = 0
     if not universe.empty:
+        from datetime import date as _date, timedelta
+        _today = _date.today()
+        _cut30 = (_today - timedelta(days=30)).strftime("%Y-%m-%d")
+        _cut60 = (_today - timedelta(days=60)).strftime("%Y-%m-%d")
+        # 当前存续列表(仅用于近端交叉)
+        cur_codes = set(universe["code"].astype(str).tolist())
         for _, r in universe.iterrows():
-            code = r['code']
+            code = str(r['code'])
             fpath = DAILY_DIR / f"{code}.parquet"
             if fpath.exists():
                 df = pd.read_parquet(fpath)
                 if not df.empty:
                     last_date = str(df['date'].max())[:10]
-                    # 数据早于(今天-30天)结束 → 可能已退市(2026-09-14 修复:
-                    # 原硬编码 2025-12-31——2026 年退市的债会被判"仍存续",
-                    # 污染 2026 年 PIT 快照; 与 end 硬编码同族)
-                    from datetime import date as _date, timedelta
-                    _cutoff = (_date.today() - timedelta(days=30)).strftime("%Y-%m-%d")
-                    if last_date < _cutoff:
-                        # Check if already in redemptions
-                        if not any(rd['code'] == code for rd in redemptions):
-                            redemptions.append({
-                                'code': code,
-                                'name': r.get('name', ''),
-                                'redeem_date': last_date,
-                                'redeem_price': 0,
-                                'type': '已退市(日线终止)',
-                            })
+                    if last_date >= _cut30:
+                        continue  # 近期活跃 → 存续
+                    if any(rd['code'] == code for rd in redemptions):
+                        continue  # 强赎记录已覆盖
+                    if _cut60 <= last_date < _cut30:
+                        # 近端: 交叉当前存续列表
+                        if code in cur_codes:
+                            continue  # 仍在列表 → 数据停摆, 存续
+                        redemptions.append({
+                            'code': code, 'name': r.get('name', ''),
+                            'redeem_date': last_date, 'redeem_price': 0,
+                            'type': '已退市(近端,不在存续列表)'})
+                    else:
+                        # 历史段: 数据缺失 → 未知, 不推断退市
+                        unknown_count += 1
+    # 未知计数落盘(健康行消费, 超阈值=P0; 2026-09-14)
+    import json
+    try:
+        json.dump({"unknown_daily_gaps": unknown_count,
+                   "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
+                  open("logs/cb_data_state.json", "w"))
+    except Exception:
+        pass
 
     if redemptions:
         df_r = pd.DataFrame(redemptions)
@@ -316,6 +338,29 @@ def build_snapshots(start="2019-01-01", end=None, freq="MS", append=False,
             if fewer:
                 raise ValueError(f"单调性闸门: 月度覆盖减少 {fewer[:5]}, "
                                  f"拒绝写入(中段缺失)")
+        # 第四条: 相邻月成分 churn(2026-09-14)——三条单调闸门保护"库不得
+        # 变旧", 保护不了"新数据不得是坏的"(影子重建 01→09 近 100% churn
+        # 三条全放行)。CB 真实月度 churn<5%, >20% 拒写; 影子表只告警
+        # (影子是调查工件, 坏形态正是要落盘分析的)。
+        all_snaps["snap_date"] = pd.to_datetime(all_snaps["snap_date"])
+        months = sorted(all_snaps["snap_date"].dt.strftime("%Y-%m").unique())
+        max_churn, max_pair = 0.0, ""
+        for m1, m2 in zip(months, months[1:]):
+            s1 = set(all_snaps[all_snaps["snap_date"].dt.strftime("%Y-%m") == m1]
+                     ["code"].astype(str))
+            s2 = set(all_snaps[all_snaps["snap_date"].dt.strftime("%Y-%m") == m2]
+                     ["code"].astype(str))
+            if not s1 or not s2:
+                continue
+            j = len(s1 & s2) / len(s1 | s2)
+            if 1 - j > max_churn:
+                max_churn, max_pair = 1 - j, f"{m1}→{m2}"
+        if max_churn > 0.20:
+            msg = (f"成分churn闸门: {max_pair} churn={max_churn:.0%} > 20%, "
+                   f"疑似坏数据(停摆/错源)")
+            if out_name == "cb_snapshots":
+                raise ValueError(msg + ", 拒绝写入")
+            logger.warning(f"[影子表放行] {msg}")
         if append:
             old = load_meta("cb_snapshots")
             if not old.empty:
