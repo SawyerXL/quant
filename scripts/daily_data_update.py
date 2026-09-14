@@ -325,10 +325,20 @@ def _sync_csi800_index_meta():
     """把 daily/SH000906(干净指数日线) 的新日期同步进 csi800_index meta。
     策略择时 get_position_ratio 读的是 meta, 而 meta 一直没人写 → MA200会冻结(曾停在7/7)。
     这里做增量追加, 保留完整历史。
-    2026-09-14 修正: 读 SH000906 前缀键(裸键 000906 会被个股循环的
-    错误序列污染——09-09~09-14 假深熊的入口)。"""
+    2026-09-14 修正: 读 SH000906 前缀键(裸键 000906 是浙商中拓真股票
+    的个股文件——09-09~09-14 假深熊的入口就是把股价当指数读)。
+    量纲断言(2026-09-14): 指数点位 3000~7000 量级, 股价 1~500 量级,
+    一条断言拦住(与 18:42 的 amount/volume≈close 同一招: 量纲自洽,
+    不依赖历史)。"""
     try:
         idx = load_daily("SH000906", "2005-01-01", date.today().strftime("%Y-%m-%d"))
+        if not idx.empty:
+            c = pd.to_numeric(idx["close"], errors="coerce")
+            if (c < 3000).any() or (c > 7000).any():
+                n = int(((c < 3000) | (c > 7000)).sum())
+                raise ValueError(f"csi800_index 量纲断言: {n} 行 close 超出 "
+                                 f"[3000,7000] 指数点位区间, 疑似股价混入, "
+                                 f"拒绝同步 meta")
         if idx.empty:
             return
         idx = idx.copy(); idx["date"] = pd.to_datetime(idx["date"])
