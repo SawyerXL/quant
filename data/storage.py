@@ -94,7 +94,11 @@ def save_daily(code: str, df: pd.DataFrame) -> int:
     # 相对检查零维护; 50%阈值与 update_today 脏过滤一致(30%会误拒合法的
     # 44%新股首日涨幅)。qfq库无除权跳变, 主要盲点=长期停牌复牌的真实大涨。
     # 逐行游标而非向量shift: 污染行被拒后, 后续行的prev必须停留在最后一根
-    # 健康收盘(向量shift会连坐后一行); 首行prev=库内最后一根收盘
+    # 健康收盘(向量shift会连坐后一行); 首行prev=库内最后一根收盘。
+    # 份额折算豁免(2026-09-14 加): 全history重拉(ETF路径)会撞上真实折算
+    # (510500 2015-04 一拆3.5), 冻结游标被 2.243 毒化后连拒全部后续行
+    # (每日2772~2777行, 510500自09-06起一根新bar都没进库)。跳变行若与
+    # 库内同日期收盘一致(≤0.5%), 是历史既成事实而非污染, 放行并续游标。
     if "close" in df.columns and "date" in df.columns and not df.empty:
         df = df.sort_values("date").reset_index(drop=True)
         df["date"] = pd.to_datetime(df["date"], errors="coerce")
@@ -111,12 +115,27 @@ def save_daily(code: str, df: pd.DataFrame) -> int:
                 except Exception:
                     pass
         drop_idx, prev_close = [], (store_last if store_last and store_last > 0 else None)
+        _anchor_cache: dict = {}  # 年份 -> {date: close}, 只读跳变行所在年份
         for idx, r in df.iterrows():
             c = r["close"]
             c = float(c) if pd.notna(c) else None
             if (prev_close and c and pd.notna(r["date"])
                     and r["date"] >= pd.Timestamp("1997-01-01")
                     and abs(c / prev_close - 1) > 0.5):
+                stored_c = None
+                y = int(r["date"].year)
+                if y not in _anchor_cache:
+                    try:
+                        ex = pd.read_parquet(_daily_path(code, y))
+                        _anchor_cache[y] = dict(zip(
+                            pd.to_datetime(ex["date"]).dt.normalize(),
+                            pd.to_numeric(ex["close"], errors="coerce")))
+                    except Exception:
+                        _anchor_cache[y] = {}
+                stored_c = _anchor_cache[y].get(r["date"].normalize())
+                if stored_c and pd.notna(stored_c) and abs(c / float(stored_c) - 1) <= 0.005:
+                    prev_close = c  # 库内同日期一致=真实折算/事件, 放行并续游标
+                    continue
                 drop_idx.append(idx)
                 continue  # 不更新prev: 后续行仍与最后健康收盘比
             if c and c > 0:

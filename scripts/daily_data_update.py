@@ -214,6 +214,14 @@ def _update_etf_daily(today: str):
             for col in ("amount", "pct_chg"):
                 if col not in raw.columns:
                     raw[col] = 0.0
+            # 库契约=万股/万元(与 data/source/akshare_source.py 个股路径同款):
+            # 新浪 volume=股/amount=元 → ÷1e4。不除=save_daily keep="last"
+            # 全量合并以元值覆写库内万元全历史(2026-09-14 实测 588000 全史
+            # ×1e4 污染, 09-12 全库归一后第一个晚间运行就会重犯)。
+            # postVol/postAmt 库内历史即股/元原值, 保持不动。
+            for col in ("amount", "volume"):
+                if col in raw.columns:
+                    raw[col] = pd.to_numeric(raw[col], errors="coerce") / 1e4
             before = len(load_daily(code, "2005-01-01", today))
             save_daily(code, raw)
             after = len(load_daily(code, "2005-01-01", today))
