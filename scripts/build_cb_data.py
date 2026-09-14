@@ -208,7 +208,8 @@ def build_redemption():
 # ══════════════════════════════════════════════════════════════════
 # Stage 5: point-in-time 快照
 # ══════════════════════════════════════════════════════════════════
-def build_snapshots(start="2019-01-01", end=None, freq="MS", append=False):
+def build_snapshots(start="2019-01-01", end=None, freq="MS", append=False,
+                    out_name="cb_snapshots"):
     """
     生成每月初的存续可转债快照(point-in-time):
     - 已上市
@@ -217,11 +218,12 @@ def build_snapshots(start="2019-01-01", end=None, freq="MS", append=False):
     append=True: 增量模式, 与旧快照合并去重而非覆盖(2026-08-31 补洞用)
     end=None → 今天(2026-09-14 修复: 原硬编码 2025-12-31 导致周更把
     快照表整体覆盖成过期版本, 库 max(date) 从 08-01 倒退到 2025-12-01)
+    out_name: 输出表名(2026-09-14 影子表协议: 重建先落影子表 diff 后切换)
     """
     if end is None:
         from datetime import date as _date
         end = _date.today().strftime("%Y-%m-%d")
-    logger.info(f"Stage 5: point-in-time快照 {start}→{end}...")
+    logger.info(f"Stage 5: point-in-time快照 {start}→{end} → {out_name}...")
 
     universe = load_meta("cb_universe")
     redemptions = load_meta("cb_redemptions") if (CB_DIR.parent/"meta"/"cb_redemptions.parquet").exists() else pd.DataFrame()
@@ -322,7 +324,7 @@ def build_snapshots(start="2019-01-01", end=None, freq="MS", append=False):
                 all_snaps = (pd.concat([old, all_snaps], ignore_index=True)
                              .drop_duplicates(subset=["code", "snap_date"], keep="last"))
                 logger.info(f"  ✓ 快照增量合并: 旧{len(old)}条 + 新{len(snapshots)}个月 → 共{len(all_snaps)}条")
-        save_meta("cb_snapshots", all_snaps)
+        save_meta(out_name, all_snaps)
         logger.info(f"  ✓ 快照: {len(snapshots)}个月, 共{len(all_snaps)}条记录")
         # 依赖表挂钩: CB 写库范围进 write_scopes, 与 CB 结论交集自动标需复核
         try:
