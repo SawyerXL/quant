@@ -182,8 +182,12 @@ def build_redemption():
                 df = pd.read_parquet(fpath)
                 if not df.empty:
                     last_date = str(df['date'].max())[:10]
-                    # 如果最后日期 < 2025-12-31, 可能已退市
-                    if last_date < '2025-12-31':
+                    # 数据早于(今天-30天)结束 → 可能已退市(2026-09-14 修复:
+                    # 原硬编码 2025-12-31——2026 年退市的债会被判"仍存续",
+                    # 污染 2026 年 PIT 快照; 与 end 硬编码同族)
+                    from datetime import date as _date, timedelta
+                    _cutoff = (_date.today() - timedelta(days=30)).strftime("%Y-%m-%d")
+                    if last_date < _cutoff:
                         # Check if already in redemptions
                         if not any(rd['code'] == code for rd in redemptions):
                             redemptions.append({
@@ -286,19 +290,30 @@ def build_snapshots(start="2019-01-01", end=None, freq="MS", append=False):
 
     if snapshots:
         all_snaps = pd.concat(snapshots, ignore_index=True)
-        # 单调性闸门(2026-09-14): 写库不得让 max(日期) 倒退——
-        # 倒退=数据被覆写成更旧版本, 拒绝写入(闸门十二精神, fail-fast)
+        # 单调性闸门(2026-09-14): "库不得变旧"三件套——右端点/行数/逐月覆盖,
+        # 单独右端点只守 max, 漏掉中段空洞(闸门十二精神, fail-fast)
         try:
             old_snaps = load_meta("cb_snapshots")
             old_max = (str(old_snaps["snap_date"].max())[:10]
                        if not old_snaps.empty else None)
         except Exception:
-            old_max = None
+            old_snaps, old_max = None, None
         new_max = str(all_snaps["snap_date"].max())[:10]
         if old_max and new_max < old_max:
             raise ValueError(f"单调性闸门: 新快照 max={new_max} < 库内 max="
                              f"{old_max}, 拒绝写入(写库不得让数据变旧)——"
                              f"请检查 end 参数/数据源")
+        if old_snaps is not None and not old_snaps.empty:
+            old_n, new_n = len(old_snaps), len(all_snaps)
+            if new_n < old_n:
+                raise ValueError(f"单调性闸门: 新行数 {new_n} < 库内 {old_n}, "
+                                 f"拒绝写入(中段可能被删空)")
+            old_m = old_snaps["snap_date"].astype(str).str[:7].value_counts()
+            new_m = all_snaps["snap_date"].astype(str).str[:7].value_counts()
+            fewer = [k for k in old_m.index if new_m.get(k, 0) < old_m[k]]
+            if fewer:
+                raise ValueError(f"单调性闸门: 月度覆盖减少 {fewer[:5]}, "
+                                 f"拒绝写入(中段缺失)")
         if append:
             old = load_meta("cb_snapshots")
             if not old.empty:
