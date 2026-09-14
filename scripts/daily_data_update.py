@@ -266,13 +266,12 @@ def _fill_recent_gaps(calendar, today: str, src):
         info = load_meta("stock_info")
     if info.empty:
         return
-    # 2026-09-14 修正: 000688/000905/000906 是指数码不是股票(09-09 的
-    # "不再排除"判错——stock_info_full 里混有它们, 个股源拉它们返回
-    # 6.2 级错误序列写回裸键文件, 经 _sync_csi800_index_meta 污染择时
-    # meta → 假深熊 → 09-14 熊市清仓卖 511360 的根因链)。
-    # 000001 是真股票(平安银行), 保留; 纯指数码一律排除。
-    codes = [c for c in info["code"].tolist()
-             if c not in ("000688", "000905", "000906")]
+    # 2026-09-14 两次修正的定案: 000016/000688/000852/000905/000906
+    # 是深市真股票(深康佳/国城矿业/石化机械/厦门港务/浙商中拓), 个股源
+    # 拉取数据正确(实测 sz000906 与库内逐位一致)——不得排除。
+    # 假深熊的真正根因=_sync_csi800_index_meta 读了裸键僵尸文件
+    # (migration 前的指数文件被个股正确数据续写), 已改读 SH000906。
+    codes = [c for c in info["code"].tolist()]
 
     holes = []
     for code in codes:
@@ -381,11 +380,9 @@ def update_today():
         return
 
     # 指数已走 SH 前缀键独立通道(2026-09-09 normalize修复),
-    # 000001 等歧义码按个股源拉取个股数据。
-    # 2026-09-14 修正: 000688/000905/000906 为纯指数码, 个股源拉它们
-    # 返回错误序列污染裸键文件(与 _fill_recent_gaps 同修)
-    codes = [c for c in stock_info["code"].tolist()
-             if c not in ("000688", "000905", "000906")]
+    # 000001 等歧义码按个股源拉取个股数据(2026-09-14 定案: 全部是
+    # 深市真股票, 个股源数据正确, 不得排除)
+    codes = [c for c in stock_info["code"].tolist()]
     failed = []
     dirty_rejected = 0
     for i, code in enumerate(codes):
