@@ -266,9 +266,13 @@ def _fill_recent_gaps(calendar, today: str, src):
         info = load_meta("stock_info")
     if info.empty:
         return
-    # 2026-09-09 normalize修复: 不再排除 000001/000688/000905/000906
-    # (真股票, 指数已迁至 SH 前缀键无覆盖风险)
-    codes = [c for c in info["code"].tolist()]
+    # 2026-09-14 修正: 000688/000905/000906 是指数码不是股票(09-09 的
+    # "不再排除"判错——stock_info_full 里混有它们, 个股源拉它们返回
+    # 6.2 级错误序列写回裸键文件, 经 _sync_csi800_index_meta 污染择时
+    # meta → 假深熊 → 09-14 熊市清仓卖 511360 的根因链)。
+    # 000001 是真股票(平安银行), 保留; 纯指数码一律排除。
+    codes = [c for c in info["code"].tolist()
+             if c not in ("000688", "000905", "000906")]
 
     holes = []
     for code in codes:
@@ -319,11 +323,13 @@ def _fill_recent_gaps(calendar, today: str, src):
 
 
 def _sync_csi800_index_meta():
-    """把 daily/000906(干净指数日线) 的新日期同步进 csi800_index meta。
+    """把 daily/SH000906(干净指数日线) 的新日期同步进 csi800_index meta。
     策略择时 get_position_ratio 读的是 meta, 而 meta 一直没人写 → MA200会冻结(曾停在7/7)。
-    这里做增量追加, 保留完整历史。"""
+    这里做增量追加, 保留完整历史。
+    2026-09-14 修正: 读 SH000906 前缀键(裸键 000906 会被个股循环的
+    错误序列污染——09-09~09-14 假深熊的入口)。"""
     try:
-        idx = load_daily("000906", "2005-01-01", date.today().strftime("%Y-%m-%d"))
+        idx = load_daily("SH000906", "2005-01-01", date.today().strftime("%Y-%m-%d"))
         if idx.empty:
             return
         idx = idx.copy(); idx["date"] = pd.to_datetime(idx["date"])
@@ -375,8 +381,11 @@ def update_today():
         return
 
     # 指数已走 SH 前缀键独立通道(2026-09-09 normalize修复),
-    # 000001 等歧义码按个股源拉取个股数据
-    codes = [c for c in stock_info["code"].tolist()]
+    # 000001 等歧义码按个股源拉取个股数据。
+    # 2026-09-14 修正: 000688/000905/000906 为纯指数码, 个股源拉它们
+    # 返回错误序列污染裸键文件(与 _fill_recent_gaps 同修)
+    codes = [c for c in stock_info["code"].tolist()
+             if c not in ("000688", "000905", "000906")]
     failed = []
     dirty_rejected = 0
     for i, code in enumerate(codes):
