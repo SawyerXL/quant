@@ -229,6 +229,15 @@ def _update_etf_daily(today: str):
             ok += 1
         except Exception as e:
             logger.warning(f"  ETF{code} 更新失败: {e}")
+
+    # 依赖表挂钩(2026-09-14): 晚间 ETF 场次由 cron 直调本函数(不经 update_today
+    # 的主挂钩), 此处单独记录——写库范围全覆盖是依赖表不报假安全的前提
+    try:
+        from conclusion_deps import record_scope
+        record_scope("daily_data_update_etf", ["INDEX"], today, today,
+                     "rewrite", note="ETF晚间场")
+    except Exception as e:
+        logger.debug(f"写库范围记录失败(不阻断): {e}")
     logger.info(f"ETF日线更新: {ok}/{len(codes)} 成功")
 
 

@@ -116,7 +116,7 @@ def record_scope(source, stocks, start, end, kind, note="", workdir=None):
     return rec
 
 
-TOKENS = ("ALL", "INDEX", "MEMBERS")
+TOKENS = ("ALL", "INDEX", "MEMBERS", "CB")
 
 
 def _stocks_intersect(dep_stocks, scope_stocks):

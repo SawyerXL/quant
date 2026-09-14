@@ -206,6 +206,15 @@ def _update_daily_data():
 
         if saved:
             logger.info(f"Daily data: saved {saved} missing 上证 bars")
+            # 依赖表挂钩(2026-09-14): 17:42 cron 直调本函数(不经 update_today),
+            # 上证补齐写入必须进 write_scopes, 否则依赖表报假安全
+            try:
+                sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+                from conclusion_deps import record_scope
+                record_scope("web_scheduler", ["INDEX"], "2026-08-01", today,
+                             "rewrite", note="上证补齐+regime回填")
+            except Exception:
+                pass
 
         # 2. Re-backfill regime history with latest data
         from web.snapshots import write_snapshot

@@ -204,14 +204,19 @@ def build_redemption():
 # ══════════════════════════════════════════════════════════════════
 # Stage 5: point-in-time 快照
 # ══════════════════════════════════════════════════════════════════
-def build_snapshots(start="2019-01-01", end="2025-12-31", freq="MS", append=False):
+def build_snapshots(start="2019-01-01", end=None, freq="MS", append=False):
     """
     生成每月初的存续可转债快照(point-in-time):
     - 已上市
     - 未退市(未强赎)
     - 含当日价格/转股溢价率/双低值
     append=True: 增量模式, 与旧快照合并去重而非覆盖(2026-08-31 补洞用)
+    end=None → 今天(2026-09-14 修复: 原硬编码 2025-12-31 导致周更把
+    快照表整体覆盖成过期版本, 库 max(date) 从 08-01 倒退到 2025-12-01)
     """
+    if end is None:
+        from datetime import date as _date
+        end = _date.today().strftime("%Y-%m-%d")
     logger.info(f"Stage 5: point-in-time快照 {start}→{end}...")
 
     universe = load_meta("cb_universe")
@@ -281,6 +286,19 @@ def build_snapshots(start="2019-01-01", end="2025-12-31", freq="MS", append=Fals
 
     if snapshots:
         all_snaps = pd.concat(snapshots, ignore_index=True)
+        # 单调性闸门(2026-09-14): 写库不得让 max(日期) 倒退——
+        # 倒退=数据被覆写成更旧版本, 拒绝写入(闸门十二精神, fail-fast)
+        try:
+            old_snaps = load_meta("cb_snapshots")
+            old_max = (str(old_snaps["snap_date"].max())[:10]
+                       if not old_snaps.empty else None)
+        except Exception:
+            old_max = None
+        new_max = str(all_snaps["snap_date"].max())[:10]
+        if old_max and new_max < old_max:
+            raise ValueError(f"单调性闸门: 新快照 max={new_max} < 库内 max="
+                             f"{old_max}, 拒绝写入(写库不得让数据变旧)——"
+                             f"请检查 end 参数/数据源")
         if append:
             old = load_meta("cb_snapshots")
             if not old.empty:
@@ -291,6 +309,14 @@ def build_snapshots(start="2019-01-01", end="2025-12-31", freq="MS", append=Fals
                 logger.info(f"  ✓ 快照增量合并: 旧{len(old)}条 + 新{len(snapshots)}个月 → 共{len(all_snaps)}条")
         save_meta("cb_snapshots", all_snaps)
         logger.info(f"  ✓ 快照: {len(snapshots)}个月, 共{len(all_snaps)}条记录")
+        # 依赖表挂钩: CB 写库范围进 write_scopes, 与 CB 结论交集自动标需复核
+        try:
+            from conclusion_deps import record_scope
+            record_scope("build_cb_data", ["CB"],
+                         str(all_snaps["snap_date"].min())[:10], new_max,
+                         "rewrite", note="CB快照重建")
+        except Exception as e:
+            logger.debug(f"写库范围记录失败(不阻断): {e}")
 
 # ══════════════════════════════════════════════════════════════════
 if __name__ == "__main__":
