@@ -91,6 +91,16 @@ def main():
     last_td = max((d for d in tds if d <= now[:10]), default="?")
     bar_fresh = latest_bar >= last_td if last_td != "?" else True
 
+    # CB 持仓冻结状态(2026-09-15): "停用链"在有持仓时不是稳定状态——
+    # 6 只 CB 按 09-04 信号持有、冻结调整带到期日; 过期仍未处置 → 告警
+    cb_frozen = {}
+    cbf = Path("logs/cb_holdings_frozen.json")
+    if cbf.exists():
+        try:
+            cb_frozen = json.loads(cbf.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
     # 守卫拒绝计数(2026-09-15): 拦截是决定不是正常状态——688 千元股
     # 被冻结 8 天无人知晓的教训; 拒绝>0 即告警(阈值0, 每天应恰好0)
     guard_rej = 0
@@ -174,6 +184,9 @@ def main():
         alerts.append(f"CB日线缺口(未知)计数: {cb_unknown} 只(阈值50)")
     if guard_rej > 0:
         alerts.append(f"价格守卫今日拒绝 {guard_rej} 行(冻结即事件, 见闸门十四)")
+    if cb_frozen.get("expiry") and cb_frozen["expiry"] < now[:10]:
+        alerts.append(f"CB持仓冻结到期未处置(expiry={cb_frozen['expiry']}, "
+                      f"{len(cb_frozen.get('codes', []))}只)")
     for msg in alerts:
         try:
             from monitoring.alerts import send_alert
@@ -187,6 +200,7 @@ def main():
             "audit": audit, "positions_snapshot": snap_time,
             "cb_signal_date": cb_date, "cb_data_max_date": cb_data_max,
             "cb_unknown_gaps": cb_unknown, "guard_rejected_rows": guard_rej,
+            "cb_holdings_frozen": cb_frozen,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")
