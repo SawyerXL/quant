@@ -415,6 +415,17 @@ def update_today():
             logger.info(f"进度: {i+1}/{len(codes)}")
     if dirty_rejected:
         logger.warning(f"脏数据拒绝: {dirty_rejected}行")
+    # 守卫拒绝计数落盘(2026-09-15): 拦截是决定不是正常状态(闸门十二同款),
+    # 健康行读此文件——688 千元股被冻结 8 天无人知晓的教训
+    try:
+        import json as _json
+        Path("logs/data_guard_state.json").write_text(_json.dumps({
+            "rejected_rows": dirty_rejected,
+            "date": today,
+            "ts": __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }, ensure_ascii=False))
+    except Exception:
+        pass
 
     # 3.5. 更新指数日线（用stock_zh_index_daily, 避开个股代码冲突）+ 顺带补指数空洞
     _update_index_daily(today, calendar)

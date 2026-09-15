@@ -91,6 +91,18 @@ def main():
     last_td = max((d for d in tds if d <= now[:10]), default="?")
     bar_fresh = latest_bar >= last_td if last_td != "?" else True
 
+    # 守卫拒绝计数(2026-09-15): 拦截是决定不是正常状态——688 千元股
+    # 被冻结 8 天无人知晓的教训; 拒绝>0 即告警(阈值0, 每天应恰好0)
+    guard_rej = 0
+    grp = Path("logs/data_guard_state.json")
+    if grp.exists():
+        try:
+            gr = json.loads(grp.read_text(encoding="utf-8"))
+            if gr.get("date") == now[:10]:
+                guard_rej = int(gr.get("rejected_rows", 0))
+        except Exception:
+            pass
+
     # CB 信号新鲜度(2026-09-14): "正确跳过执行"是最坏的表现形式——
     # 跳过是事件不是正常状态, 任何跳过/降级/回退必须写健康行(闸门十二)
     cb_date = "?"
@@ -160,6 +172,8 @@ def main():
                       f"陈旧(>10天), max={cb_data_max}")
     if cb_unknown > 50:
         alerts.append(f"CB日线缺口(未知)计数: {cb_unknown} 只(阈值50)")
+    if guard_rej > 0:
+        alerts.append(f"价格守卫今日拒绝 {guard_rej} 行(冻结即事件, 见闸门十四)")
     for msg in alerts:
         try:
             from monitoring.alerts import send_alert
@@ -172,7 +186,7 @@ def main():
             "last_data_update": last_update, "tunnel": tunnel,
             "audit": audit, "positions_snapshot": snap_time,
             "cb_signal_date": cb_date, "cb_data_max_date": cb_data_max,
-            "cb_unknown_gaps": cb_unknown,
+            "cb_unknown_gaps": cb_unknown, "guard_rejected_rows": guard_rej,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")
