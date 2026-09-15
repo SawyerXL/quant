@@ -17,6 +17,11 @@ from monitoring.alerts import send_alert
 
 _NAV_HIGH_FILE = Path("data_store/meta/nav_high.json")
 
+# 熊市清仓豁免清单(2026-09-15): 与 scripts/cash_sweep.py BOND_ETF 同源——
+# sweep(短债现金管理)拥有的持仓不进熊市清仓, 否则 09-14 型"清仓卖底仓+
+# sweep 买回"的相消亏损重演。改动必须两处同步。
+BEAR_EXEMPT_CODES = {"511360"}
+
 # 各track名义资金(2026-09-01 配比定案: 股票40万+CB60万)。信号文件自带capital
 # 时以信号为准，此处仅作信号缺失时的兜底。
 TRACK_CAPITAL_FALLBACK = {"track_a": 1_000_000, "track_b": 400_000, "track_cb": 600_000}
@@ -176,14 +181,24 @@ class Trader:
         2026-09-02 修复: ① 旧版用 cost_price×0.998 挂限价卖——熊市股价普遍
         低于成本, 卖限价高于市价永不撮合, 清仓静默失败; 改市价单。
         ② 分笔≤10万防错单红线。③ key归一化后过风控。
+        2026-09-15 豁免(闸门十二落地): sweep 管理的持仓不进熊市清仓——
+        09-14 假深熊清仓卖出 511360(打新底仓)的直接原因=豁免额未传导到
+        trader, "拦截0笔"=豁免清单为空(闸门十四第八例)。豁免码与
+        scripts/cash_sweep.py BOND_ETF 同源, 改动须同步。
         """
         positions = {_norm(k): v for k, v in self.client.get_positions().items()
                      if self._in_scope(k, strategy_id)}
+        exempted = [c for c in positions if c in BEAR_EXEMPT_CODES]
+        positions = {c: v for c, v in positions.items() if c not in BEAR_EXEMPT_CODES}
         ref_prices = {c: float(p.get("cost_price", 0)) for c, p in positions.items()}
         gw, _ = self._build_gateway(strategy_id, capital)
         gw.state["limit_prices"] = _limit_prices(list(positions), ref_prices,
                                                  _build_st_map())
         results = {"sells": [], "buys": [], "blocked": []}
+        # 豁免计入拦截计数: "拦截 N 笔"必须反映全部未卖出的持仓(2026-09-15)
+        for c in exempted:
+            results["blocked"].append({"code": c, "direction": "sell",
+                                       "reason": "豁免标的(sweep管理)"})
 
         MAX_ORD = 100_000
         for code, pos in positions.items():
