@@ -1,5 +1,6 @@
 """Parquet 存储工具，所有数据读写通过此模块进行。"""
 from pathlib import Path
+import json
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -15,6 +16,51 @@ INDEX_CODES = {"000001", "000688", "000905", "000906"}
 # 异常的那几只从检测里摘出去, 而它们恰是最需要被看的那几只。
 # 保留空集合定义以兼容引用处。
 PRICE_WHITELIST: set = set()
+
+# 按票自标定阈值注册表(2026-09-15 晚): {code: {thr, as_of}}
+# 首次计算后冻结 30 天——同一天的回溯检查得到同一结论(闸门十三),
+# 也防止污染值逐日抬升阈值(棘轮)。
+_THR_REG = DATA_STORE / "meta" / "price_thresholds.json"
+_THR_TTL_DAYS = 30
+
+
+def _price_threshold(code: str, df: pd.DataFrame) -> float:
+    """阈值 = max(1000, 3×该票最近60根健康收盘中位数), 冻结 as_of。
+    注册表读写全部 try/except——守卫自身的故障不得阻断主链。"""
+    from datetime import date as _d
+    try:
+        if _THR_REG.exists():
+            reg = json.loads(_THR_REG.read_text(encoding="utf-8"))
+        else:
+            reg = {}
+        ent = reg.get(code)
+        today = _d.today().isoformat()
+        if ent and ent.get("as_of", "") >= today:
+            # 同一天内复用冻结值(当日回溯一致性)
+            return float(ent["thr"])
+        if ent and (_d.today() - _d.fromisoformat(ent["as_of"])).days < _THR_TTL_DAYS:
+            return float(ent["thr"])
+    except Exception:
+        reg = {}
+    med = 1.0
+    try:
+        fyear = int(pd.to_datetime(df["date"].dropna().iloc[0]).year)
+        fp = _daily_path(code, fyear)
+        if fp.exists():
+            hist = pd.read_parquet(fp, columns=["close"])
+            hc = pd.to_numeric(hist["close"], errors="coerce").dropna()
+            if len(hc) >= 20:
+                med = float(hc.tail(60).median())
+    except Exception:
+        pass
+    thr = max(1000.0, 3.0 * max(med, 0.01))
+    try:
+        reg[code] = {"thr": thr, "as_of": _d.today().isoformat()}
+        _THR_REG.parent.mkdir(parents=True, exist_ok=True)
+        _THR_REG.write_text(json.dumps(reg))
+    except Exception:
+        pass
+    return thr
 
 
 # ---------- 路径规则 ----------
@@ -89,19 +135,9 @@ def save_daily(code: str, df: pd.DataFrame) -> int:
             # 按票自标定: 阈值 = max(1000, 3×该票收盘中位数)。
             # 棘轮缓解(2026-09-15 晚): 中位数只取**最近60根健康收盘**——
             # 污染值须连续主导近60日才抬得动阈值, 而非全量历史。
-            # (待做: 阈值冻结 as_of 写元数据, 与标定清单同批)
-            try:
-                med = 1.0
-                fyear = int(pd.to_datetime(df["date"].dropna().iloc[0]).year)
-                fp = _daily_path(code, fyear)
-                if fp.exists():
-                    hist = pd.read_parquet(fp, columns=["close"])
-                    hc = pd.to_numeric(hist["close"], errors="coerce").dropna()
-                    if len(hc) >= 20:
-                        med = float(hc.tail(60).median())
-            except Exception:
-                med = 1.0
-            thr = max(1000.0, 3.0 * max(med, 0.01))
+            # as_of 冻结(2026-09-15 晚): 阈值首次计算后写入注册表, 30 天内
+            # 不重算——同一天的回溯检查得到同一结论(闸门十三)。
+            thr = _price_threshold(code, df)
             over = closes > thr
             if over.any():
                 n = int(over.sum())
