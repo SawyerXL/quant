@@ -10,13 +10,11 @@ from config.settings import DATA_STORE
 # 中证500/中证800), 与深市同名个股(平安银行等)冲突——个股单读这些代码会拿到
 # 指数点位。2026-09-06 从 daily_data_update 上移到此单一来源。
 INDEX_CODES = {"000001", "000688", "000905", "000906"}
-# A股千元股白名单(价格身份断言用): 收盘价>1000 且不在此列的代码=污染数据
-# 2026-09-15 扩充: 688256/688498/688808 两独立源(新浪+东财)逐日一致 +
-# 库内历史连续穿越 1000(688256 max 1868/688498 1886/688808 2700)——
-# 守卫的 1000 固定阈值对合法千元股误报, 冻结 8 天(09-05~09-14)。
-# 结构性注意: 1000 是手记阈值(标定清单家族), 千元股俱乐部扩大时
-# 误报率继续上升; 长修方向=用 amount/volume≈close 连续性判据替代固定阈值
-PRICE_WHITELIST = {"600519", "688256", "688498", "688808"}  # 茅台+AI千元股
+# A股千元股白名单: 已退役(2026-09-15)——固定1000阈值改按票自标定
+# (max(1000, 3×历史收盘中位数))后, 白名单应为空: 豁免=把价格量级最
+# 异常的那几只从检测里摘出去, 而它们恰是最需要被看的那几只。
+# 保留空集合定义以兼容引用处。
+PRICE_WHITELIST: set = set()
 
 
 # ---------- 路径规则 ----------
@@ -87,11 +85,26 @@ def save_daily(code: str, df: pd.DataFrame) -> int:
                 df = df[~under]
                 rejected += n
         else:
-            over = closes > 1000
-            allowed = bare in PRICE_WHITELIST
-            if over.any() and not allowed:
+            # 2026-09-15: 固定1000退役(手记阈值, 千元股误报冻结688三票8天) →
+            # 按票自标定: 阈值 = max(1000, 3×该票历史收盘中位数)。
+            # 指数点位污染(≈810×股价)仍被拦, 合法千元股(收盘≈1×中位数)放行。
+            # 白名单应为空——豁免=把价格量级最异常的那几只从检测里摘出去。
+            try:
+                med = 1.0
+                fyear = int(pd.to_datetime(df["date"].dropna().iloc[0]).year)
+                fp = _daily_path(code, fyear)
+                if fp.exists():
+                    hist = pd.read_parquet(fp, columns=["close"])
+                    hc = pd.to_numeric(hist["close"], errors="coerce").dropna()
+                    if len(hc) >= 20:
+                        med = float(hc.median())
+            except Exception:
+                med = 1.0
+            thr = max(1000.0, 3.0 * max(med, 0.01))
+            over = closes > thr
+            if over.any():
                 n = int(over.sum())
-                logger.warning(f"{code}: 拒绝{n}行收盘价>1000(疑似指数点位污染) — 白名单外不入库")
+                logger.warning(f"{code}: 拒绝{n}行收盘价>{thr:.0f}(按票自标定阈值, 疑似指数点位污染)")
                 df = df[~over]
                 rejected += n
     # ── 相对跳变检查(2026-09-06 加): 收盘价 vs 前一根健康收盘跳变>50% 且日期

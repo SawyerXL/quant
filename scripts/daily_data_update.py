@@ -447,6 +447,11 @@ def update_today():
                      note="全市场当日bar(save_daily覆写语义)")
         record_scope("daily_data_update", ["INDEX"], today, today, "rewrite",
                      note="指数/ETF当日bar")
+        # 周一成分表/meta 重写进 write_scopes(2026-09-15: 宇宙重拉与
+        # 周更都是 MEMBERS 全量写——不挂钩则依赖表对含 A0 的结论报假安全)
+        if date.today().weekday() == 0:
+            record_scope("daily_data_update", ["MEMBERS"], today, today,
+                         "rewrite", note="周一成分表/meta重写")
         if repairs:
             r_codes = sorted({c for c, _ in repairs})
             r_days = sorted({d for _, dl in repairs for d in dl})
