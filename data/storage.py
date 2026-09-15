@@ -86,9 +86,10 @@ def save_daily(code: str, df: pd.DataFrame) -> int:
                 rejected += n
         else:
             # 2026-09-15: 固定1000退役(手记阈值, 千元股误报冻结688三票8天) →
-            # 按票自标定: 阈值 = max(1000, 3×该票历史收盘中位数)。
-            # 指数点位污染(≈810×股价)仍被拦, 合法千元股(收盘≈1×中位数)放行。
-            # 白名单应为空——豁免=把价格量级最异常的那几只从检测里摘出去。
+            # 按票自标定: 阈值 = max(1000, 3×该票收盘中位数)。
+            # 棘轮缓解(2026-09-15 晚): 中位数只取**最近60根健康收盘**——
+            # 污染值须连续主导近60日才抬得动阈值, 而非全量历史。
+            # (待做: 阈值冻结 as_of 写元数据, 与标定清单同批)
             try:
                 med = 1.0
                 fyear = int(pd.to_datetime(df["date"].dropna().iloc[0]).year)
@@ -97,7 +98,7 @@ def save_daily(code: str, df: pd.DataFrame) -> int:
                     hist = pd.read_parquet(fp, columns=["close"])
                     hc = pd.to_numeric(hist["close"], errors="coerce").dropna()
                     if len(hc) >= 20:
-                        med = float(hc.median())
+                        med = float(hc.tail(60).median())
             except Exception:
                 med = 1.0
             thr = max(1000.0, 3.0 * max(med, 0.01))
