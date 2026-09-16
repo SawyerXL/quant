@@ -229,6 +229,7 @@ def run_direction(dir_id, paths=10, cost=0.0013):
     ens_base.to_csv(f"logs/sv_curve_{d['id']}_BASE.csv")
     ens_test.to_csv(f"logs/sv_curve_{d['id']}_TEST.csv")
     row = {"direction": d["id"], "variable": d["variable"], "value": d["value"],
+           "return_basis": "price", "benchmark_basis": "price",
            "base_ann": round(base_ann, 6), "test_ann": round(test_ann, 6),
            "effect_pp": round(effect_pp, 4), "TE_pct": round(ts["TE_pct"], 2),
            "SE_pp": round(se_pp, 4), "sigma": round(sigma, 4),
