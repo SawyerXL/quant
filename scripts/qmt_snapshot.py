@@ -1,8 +1,14 @@
 """
 QMT快照 + NAV追踪 — Linux主动拉取(替代不稳定的Windows推送)
 用法: python scripts/qmt_snapshot.py
+
+2026-09-16 patch重上(原09-13晚回滚): 隧道是已知不稳定的链路, 单次定点
+尝试撞进下行窗就全灭(09-09 15:12 教训)。cron 15:05 触发, 脚本内 10 分钟
+间隔 × 最多 6 次重试(15:05~15:55), 全败 → p0_alert + 状态落盘
+logs/qmt_snapshot_state.json(健康行读取: 交易日失败=告警)。
 """
-import sys, json, subprocess, shutil, pandas as pd, numpy as np
+import sys, json, os, subprocess, shutil, pandas as pd, numpy as np
+import time
 from pathlib import Path
 from datetime import date, datetime
 from loguru import logger
@@ -19,6 +25,13 @@ WIN_FILE = "H:/quant/logs/qmt_positions_latest.json"
 LOCAL_LATEST = Path("logs/qmt_positions_latest.json")
 PERF_FILE = Path("logs/qmt_performance.csv")
 NAV_FILE = Path("logs/qmt_nav_history.parquet")
+STATE_FILE = Path("logs/qmt_snapshot_state.json")
+
+# 重试窗口(2026-09-16 patch重上): 15:05 起每 10 分钟一次, 至 15:55 共 6 次。
+# 手动验证可用 QMT_SNAPSHOT_MAX_ATTEMPTS=1 缩短; 缩短窗口的全败不发 P0
+# (P0 语义=收盘后仍全败, 缩短窗口不构成收盘判定)
+RETRY_INTERVAL_S = 600
+MAX_ATTEMPTS = int(os.environ.get("QMT_SNAPSHOT_MAX_ATTEMPTS", "6"))
 
 SSH_OPTS = ["-p", WIN_PORT, "-i", SSH_KEY, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
 # scp 的端口flag是 -P(大写); 用 ssh 的 -p 会被当成 preserve, 端口号变成多余参数 → 拉取失败
@@ -110,11 +123,38 @@ def pull_missing_snapshots():
 
 def run():
     logger.info("QMT snapshot...")
-    if trigger_export() and pull_file():
-        update_nav()
-        backfill_exec_record()
-        pull_missing_snapshots()
-        logger.info("Done")
+    ok, err = False, ""
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        ok = trigger_export() and pull_file()
+        if ok:
+            break
+        err = f"第{attempt}次尝试失败"
+        if attempt < MAX_ATTEMPTS:
+            logger.warning(f"快照尝试{attempt}/{MAX_ATTEMPTS}失败, "
+                           f"{RETRY_INTERVAL_S // 60}分钟后重试")
+            time.sleep(RETRY_INTERVAL_S)
+    state = {"date": date.today().strftime("%Y-%m-%d"),
+             "attempts": attempt, "ok": ok, "last_error": err,
+             "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+    try:
+        STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=1))
+    except Exception:
+        pass
+    if not ok:
+        logger.error(f"快照全败({attempt}次), 收盘后持仓不可观测")
+        if attempt >= 6:   # 完整窗口全败才是收盘判定, 缩短窗口(手动验证)不报警
+            try:
+                from monitoring.alerts import p0_alert
+                p0_alert("持仓快照全败",
+                         f"{state['date']} 快照 {attempt} 次尝试全败(15:05~15:55 "
+                         f"重试窗口), 持仓不可观测, 请检查隧道/Windows")
+            except Exception:
+                pass
+        return
+    update_nav()
+    backfill_exec_record()
+    pull_missing_snapshots()
+    logger.info("Done")
 
 if __name__ == "__main__":
     run()

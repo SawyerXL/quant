@@ -1443,6 +1443,18 @@ data_store/meta/signal_a_*.json holdings；档位=实盘纯函数口径）。
    3 天稳定期完成 → 周二队列解锁（执行价对照/patch 重上/同宇宙
    叠加层复审）③明早 08:00 三连验第 1 天不变。
 
+## patch 重上完成（2026-09-16 傍晚，周三，用户在场）
+- 四项全部 apply + py_compile 全过：①p0_alerts sweep 19:10+ts≠今日
+  判据 ②qmt_snapshot 重试窗口(10min×6, 全败P0, 状态落盘) ③健康行
+  snapshot_state 字段 ④引擎 inv_vol fallback 横截面中位数(分母纳入
+  缺失票)。spool+master 已同步(19:10 sweep/15:05 快照)。
+- 验证：健康行复跑仅 2 条已知 CB 告警(裁定状态)无新增；p0 sweep
+  --dry-run 正常。
+- **顺带发现**：两条 open P0 8 天未 ack（执行失败/质量异常，9/8 时代
+  遗留）——待用户处置 ack 或关闭。
+- 注意：快照 cron 15:05 今天已过（老 15:12 单次版跑过），新重试窗口
+  明日起生效。
+
 ## 收工四件（2026-09-13 深夜）
 1. **周一清单落盘**（logs/monday_20260914_checklist.md）：18:42 三条
    判据写成数字（锚定票比值∈[0.3,3.0] / amount÷volume≈close 误差<5%

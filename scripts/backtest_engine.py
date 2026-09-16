@@ -506,19 +506,25 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 #      0.5%是未经检验的常数(与5.7pp同型);
                 #   ② 权重上限 3×等权——断裂日NaN被跳过→有效样本减少→vol低估
                 #      →权重放大, "数据质量最差的票拿最大权重"必须封死。
-                # 样本不足(<10)的票无vol条目, 取均值权重1.0=保守减配, 维持。
+                # 样本不足(<10)的票无vol条目——fallback=当日横截面vol中位数
+                # 对应因子(中性, 2026-09-16 patch重上: 常数1.0=静默减配到
+                # 典型权重30%, "fallback普及度随时间变化"会混进 D2−基准
+                # 差分; 分母纳入缺失票, 修掉权重之和超 w_sum 的重叠)
                 if getattr(config, "weight_scheme", "equal") == "inv_vol" and new_w:
-                    vols = {}
+                    vols, vs = {}, []
                     for c in new_w:
                         rr = panel[c].iloc[max(0, i-21):i].pct_change().dropna()
                         if len(rr) >= 10:
                             v = float(rr.iloc[-20:].std() * np.sqrt(252))
                             vols[c] = min(1.0 / max(v, 0.05), 3.0)
+                            vs.append(v)
                     if vols:
-                        tot = sum(vols.values())
+                        med_v = float(np.median(vs)) if vs else 0.05
+                        fb = min(1.0 / max(med_v, 0.05), 3.0)
+                        factors = {c: vols.get(c, fb) for c in new_w}
+                        tot = sum(factors.values())
                         w_sum = sum(new_w.values())
-                        new_w = {c: (vols.get(c, 1.0) / tot) * w_sum
-                                 for c in new_w}
+                        new_w = {c: (factors[c] / tot) * w_sum for c in new_w}
 
                 # lot约束: 按实盘floor-to-lot语义落地(2026-09-01)
                 # 买不起一手(688板200股)的票跳过, 释放资金不重归一=现金拖累,

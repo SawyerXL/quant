@@ -159,6 +159,15 @@ def main():
         except Exception:
             pass
 
+    # 快照状态(2026-09-16 patch重上): "快照没拿到"成为可观测事件
+    snap_state = {}
+    ssp = Path("logs/qmt_snapshot_state.json")
+    if ssp.exists():
+        try:
+            snap_state = json.loads(ssp.read_text(encoding="utf-8"))
+        except Exception:
+            snap_state = {"error": "状态文件不可读"}
+
     alerts = []
     # bootstrap 是合法运行前的宽限态, 不告警; missing/err 才告警
     if dep.get("dep_scan") in ("missing", "err"):
@@ -182,6 +191,9 @@ def main():
                       f"陈旧(>10天), max={cb_data_max}")
     if cb_unknown > 50:
         alerts.append(f"CB日线缺口(未知)计数: {cb_unknown} 只(阈值50)")
+    if snap_state.get("date") == now[:10] and not snap_state.get("ok"):
+        alerts.append(f"今日快照 {snap_state.get('attempts', '?')} 次尝试全败, "
+                      f"持仓不可观测")
     if guard_rej > 0:
         alerts.append(f"价格守卫今日拒绝 {guard_rej} 行(冻结即事件, 见闸门十四)")
     # 官方成分归档新鲜度(2026-09-16): 低频关键链最容易静默腐烂——
@@ -232,7 +244,7 @@ def main():
             "last_data_update": last_update, "tunnel": tunnel,
             "audit": audit, "positions_snapshot": snap_time,
             "cb_signal_date": cb_date, "cb_data_max_date": cb_data_max,
-            "cb_unknown_gaps": cb_unknown, "guard_rejected_rows": guard_rej,
+            "cb_unknown_gaps": cb_unknown, "guard_rejected_rows": guard_rej, "snapshot_state": snap_state,
             "cb_holdings_frozen": cb_frozen, "index_members_as_of": members_asof,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),

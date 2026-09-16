@@ -4,7 +4,7 @@ P0 告警状态管理（2026-09-06 建，告警分级的第一层落地）
     python scripts/p0_alerts.py --list               # 列出未确认的 P0
     python scripts/p0_alerts.py --ack 隧道断          # 人工确认某一类
     python scripts/p0_alerts.py --ack all             # 全部确认
-    python scripts/p0_alerts.py --sweep               # 升级清扫(cron 18:10)
+    python scripts/p0_alerts.py --sweep               # 升级清扫(cron 19:10, 2026-09-16 patch重上: 必须读当日健康行)
 
 分级规则(2026-09-06 用户定): 数据缺口/隧道断/质量异常/执行失败=P0
 (必须响应); 其余降级或聚合日报。P0 连续 2 天未确认 → 升级重发。
@@ -68,7 +68,7 @@ def cmd_sweep(dry_run: bool = False):
 
 # 健康行首次落盘时点(18:40 cron 首跑日+余量)。此前文件缺失=bootstrap 不告警
 # ——合法运行之前的缺失不该训练"忽略告警"(2026-09-13晚用户裁定)
-HEALTH_LINE_BOOTSTRAP_UNTIL = "2026-09-14 19:00"
+HEALTH_LINE_BOOTSTRAP_UNTIL = "2026-09-14 19:15"
 
 
 def _check_health_line(dry_run: bool = False):
@@ -87,15 +87,14 @@ def _check_health_line(dry_run: bool = False):
         return
     try:
         ts = json.loads(hp.read_text(encoding="utf-8")).get("ts", "")
-        age_h = (datetime.now() - datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
-                 ).total_seconds() / 3600
+        ts_date = ts[:10]
     except Exception:
-        age_h = 999.0
-    if age_h > 26:
+        ts_date = ""
+    if ts_date != now_s[:10]:
         if not dry_run:
-            send_alert(f"[P0] 健康行 {age_h:.0f}h 未更新(>26h), "
-                       f"机器或 cron 静默死亡", level="error")
-        logger.warning(f"健康行 {age_h:.0f}h 未更新{'[dry-run]' if dry_run else ''}")
+            send_alert(f"[P0] 健康行时间戳={ts_date or '不可读'}≠今日"
+                       f"{now_s[:10]}, 机器或 cron 静默死亡", level="error")
+        logger.warning(f"健康行 ts={ts_date}≠今日{'[dry-run]' if dry_run else ''}")
 
 
 def main():
