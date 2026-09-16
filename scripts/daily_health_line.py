@@ -184,6 +184,24 @@ def main():
         alerts.append(f"CB日线缺口(未知)计数: {cb_unknown} 只(阈值50)")
     if guard_rej > 0:
         alerts.append(f"价格守卫今日拒绝 {guard_rej} 行(冻结即事件, 见闸门十四)")
+    # 阈值重算事件(2026-09-16): 30天冻结与60根窗口不同步, 重算必须可见
+    thev = Path("data_store/meta/price_threshold_events.jsonl")
+    if thev.exists():
+        try:
+            big = 0
+            for line in thev.read_text(encoding="utf-8").splitlines():
+                if not line.strip() or not line.startswith("{"):
+                    continue
+                e = json.loads(line)
+                if e.get("ts", "")[:10] != now[:10]:
+                    continue
+                o, n = e.get("old_thr"), e.get("new_thr")
+                if o and n and abs(n - o) / o > 0.5:
+                    big += 1
+            if big:
+                alerts.append(f"价格阈值重算跳变>50%: {big} 只票")
+        except Exception:
+            pass
     if cb_frozen.get("expiry") and cb_frozen["expiry"] < now[:10]:
         alerts.append(f"CB持仓冻结到期未处置(expiry={cb_frozen['expiry']}, "
                       f"{len(cb_frozen.get('codes', []))}只)")

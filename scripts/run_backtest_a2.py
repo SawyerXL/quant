@@ -97,10 +97,15 @@ def get_position_ratio(index_close: pd.Series, date: pd.Timestamp) -> float:
     """
     hist = index_close[index_close.index <= date].dropna()
     if len(hist) < MA_PERIOD:
+        logger.info(f"[择时] {date.date()} MA200不足({len(hist)}根) → 0.85")
         return 0.85  # 数据不足时保守70%
 
     ma200 = hist.rolling(MA_PERIOD).mean().iloc[-1]
     ratio = float(hist.iloc[-1]) / float(ma200) + MA200_THRESH_SHIFT
+    # 2026-09-16: 输出原始 ratio——14:25 逐位比对判据的可执行前提
+    # (此前链只存档位, 判据锁了却无法出数; 档位有余量能掩盖小偏差)
+    logger.info(f"[择时] {date.date()} close={float(hist.iloc[-1]):.3f} "
+                f"ratio+shift={ratio:.6f}")
 
     if ratio >= 1.05:   return 1.00
     elif ratio >= 1.02: return 0.85

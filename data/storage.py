@@ -55,6 +55,19 @@ def _price_threshold(code: str, df: pd.DataFrame) -> float:
         pass
     thr = max(1000.0, 3.0 * max(med, 0.01))
     try:
+        # 重算是事件不是静默(2026-09-16): 覆盖旧阈值时记录 old→new,
+        # 健康行消费, 变化>50% 告警——"冻结到期自动续期"与"留查"同形
+        old = reg.get(code, {}).get("thr")
+        if old is not None and old != thr:
+            from datetime import datetime as _dt
+            ev = {"ts": _dt.now().strftime("%Y-%m-%d %H:%M:%S"), "code": code,
+                  "old_thr": round(float(old), 1), "new_thr": round(thr, 1)}
+            try:
+                evp = Path(str(_THR_REG.parent / "price_threshold_events.jsonl"))
+                with open(evp, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(ev, ensure_ascii=False) + "\n")
+            except Exception:
+                pass
         reg[code] = {"thr": thr, "as_of": _d.today().isoformat()}
         _THR_REG.parent.mkdir(parents=True, exist_ok=True)
         _THR_REG.write_text(json.dumps(reg))
