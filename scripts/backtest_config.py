@@ -84,6 +84,11 @@ class BacktestConfig:
     halt_recover_rebound: float = 0.05 # 从触发后最低点反弹5%恢复
     halt_recover_min_days: int = 10    # 触发后至少10个交易日才允许恢复
 
+    # ── 执行价假设(2026-09-16, 方法锁§9 执行价对照): False=当日收盘价
+    #    成交(现状, 乐观无滑点); True=信号在 T 收盘算、成交在 T+1 开盘
+    #    (买卖都走 open_panel, 滑点可叠加 commission)。──
+    exec_t1_open: bool = False
+
     # ── 做T增厚 (2026-08全市场回测验证: 年化+26%) ──
     enable_t0: bool = False            # 做T总开关(默认关, 验证期后开)
     t0_trigger_pct: float = 2.0        # 涨跌≥2%触发

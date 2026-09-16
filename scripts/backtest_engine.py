@@ -114,6 +114,8 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
     """
     all_dates = panel.index
     rebal_set = set(rebal_dates)
+    if getattr(config, "exec_t1_open", False) and open_panel is None:
+        raise ValueError("exec_t1_open=True 需要 open_panel（闸门五 fail-fast）")
 
     port_rets = pd.Series(0.0, index=all_dates)
     cur_weights = {}; entry_prices = {}
@@ -135,7 +137,8 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
     pending_days = 0
     tier_switch_count = 0
     prev_pos_ratio = 1.0
-    pending_exits = {}   # ma10_exit_delay: code -> 触发日索引
+    pending_exits = {}   # ma10_exit_delay / exec_t1_open: code -> 待卖权重
+    pending_buys = {}    # exec_t1_open: code -> (w, 决策日收盘价)
     cooldown_until = {}  # ma10_reentry_cool: code -> 解冻日索引
 
     trade_count = 0; total_sells = 0; total_buys = 0
@@ -262,17 +265,44 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 halt_triggers.append((str(date.date()), round(cumul_nav, 4), config.halt_mode))
                 if config.halt_mode == "A" and cur_weights:
                     wsum = sum(cur_weights.values())
-                    port_rets.iloc[i] -= wsum * config.commission
-                    for _c in list(cur_weights.keys()):
-                        _close_span(_c, str(date.date()))
-                    cur_weights = {}; entry_prices = {}; days_below_ma10 = {}
-                    trail_hwm = {}; overheat_tags = {}
+                    if getattr(config, "exec_t1_open", False):
+                        for _c, _w in list(cur_weights.items()):
+                            pending_exits[_c] = _w   # 次日开盘全清
+                    else:
+                        port_rets.iloc[i] -= wsum * config.commission
+                        for _c in list(cur_weights.keys()):
+                            _close_span(_c, str(date.date()))
+                        cur_weights = {}; entry_prices = {}; days_below_ma10 = {}
+                        trail_hwm = {}; overheat_tags = {}
                 elif config.halt_mode == "C" and cur_weights:
                     wsum = sum(cur_weights.values())
                     if wsum > 0.30:
                         scale = 0.30 / wsum
-                        port_rets.iloc[i] -= wsum * (1 - scale) * config.commission
-                        cur_weights = {c: w * scale for c, w in cur_weights.items()}
+                        if getattr(config, "exec_t1_open", False):
+                            for _c, _w in list(cur_weights.items()):
+                                pending_exits[_c] = pending_exits.get(_c, 0) \
+                                    + _w * (1 - scale)
+                        else:
+                            port_rets.iloc[i] -= wsum * (1 - scale) * config.commission
+                            cur_weights = {c: w * scale for c, w in cur_weights.items()}
+
+        # ── Step 0c (exec_t1_open, 2026-09-16): 昨日决策的买入于今日
+        #    开盘成交——权重今日才入, MTM 将计 w×(今收/昨收-1), 实际应
+        #    w×(今收/今开-1), 修正 -w×(今开/昨收-1) + 今日佣金 ──
+        if pending_buys and i > 0:
+            for code in list(pending_buys):
+                w = pending_buys.pop(code)
+                o_t = open_panel.iloc[i].get(code)
+                pp = panel.iloc[i - 1].get(code)
+                if not (w > 0 and o_t and pp and not pd.isna(o_t)
+                        and not pd.isna(pp) and pp > 0):
+                    continue
+                cur_weights[code] = cur_weights.get(code, 0.0) + w
+                entry_prices[code] = float(o_t)
+                port_rets.iloc[i] -= w * (float(o_t) / pp - 1.0) \
+                    + w * config.commission
+                total_commission_paid += w * config.commission
+                total_buys += 1; trade_count += 1
 
         # ── Step 1: Mark-to-market ──
         if cur_weights and i > 0:
@@ -288,29 +318,34 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
         #   持仓已被弹出→当日MTM漏计该票, 修正项 -w*(c/o-1) 从0基扣减,
         #   净贡献=-(盘中涨跌) 符号翻转; 移到MTM后, MTM计入昨收→今收,
         #   再扣回今开→今收段 → 净贡献=+w*(今开/昨收-1), 开盘卖语义正确 ──
+        # 2026-09-16 exec_t1_open 泛化: pending_exits[code]=待卖权重(支持
+        #   部分卖: TP/tier 减仓), 开盘成交后权重扣减或移除 ──
         if pending_exits and i > 0:
-            for code in list(pending_exits.keys()):
+            for code, sell_w in list(pending_exits.items()):
                 w = cur_weights.get(code, 0)
-                if w <= 0:
+                if w <= 0 or sell_w <= 0:
                     del pending_exits[code]
                     continue
+                sold = min(w, sell_w)
                 if open_panel is not None:
                     o_t = open_panel.iloc[i].get(code)
                     c_t = panel.iloc[i].get(code)
                     pp = panel.iloc[i - 1].get(code)
                     # 开盘卖净贡献 = MTM(昨收→今收) − (今收−今开)/昨收
-                    # = w×(今开/昨收−1) 精确成立; 原 -(c/o-1) 在o≠c时
-                    # 会多乘一个 c/o 因子, 且旧位置在MTM前导致符号翻转
+                    # = w×(今开/昨收−1) 精确成立
                     if (o_t and c_t and pp and not pd.isna(o_t)
                             and not pd.isna(c_t) and not pd.isna(pp) and pp > 0):
-                        port_rets.iloc[i] -= w * (c_t - o_t) / pp
-                total_commission_paid += w * config.commission
-                port_rets.iloc[i] -= w * config.commission
-                cur_weights.pop(code, None)
-                entry_prices.pop(code, None); days_below_ma10.pop(code, None)
-                trail_hwm.pop(code, None)
-                _close_span(code, str(date.date()))
-                trade_count += 1; total_sells += 1
+                        port_rets.iloc[i] -= sold * (c_t - o_t) / pp
+                total_commission_paid += sold * config.commission
+                port_rets.iloc[i] -= sold * config.commission
+                if w - sold <= 0.001:
+                    cur_weights.pop(code, None)
+                    entry_prices.pop(code, None); days_below_ma10.pop(code, None)
+                    trail_hwm.pop(code, None)
+                    _close_span(code, str(date.date()))
+                    trade_count += 1; total_sells += 1
+                else:
+                    cur_weights[code] = w - sold
                 del pending_exits[code]
 
         # ── Step 2: Stops & exits (daily check) ──
@@ -358,12 +393,14 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 cool = getattr(config, "ma10_reentry_cool", 0)
                 if cool > 0:
                     cooldown_until[code] = i + cool   # 重入冷却: N日内不买回
-                if getattr(config, "ma10_exit_delay", False):
+                if getattr(config, "ma10_exit_delay", False) or \
+                        getattr(config, "exec_t1_open", False):
                     # 延迟次日开盘卖: 当日不卖出, 次日开盘价成交(开盘/昨收近似次日gap)
-                    pending_exits[code] = i
+                    pending_exits[code] = w
                     # 权重暂缓移除, 次日处理
                     cur_weights[code] = w
                     days_below_ma10[code] = days_below_ma10.get(code, 0)
+                    exit_ma10_sells += w
                     continue
                 total_commission_paid += w * config.commission
                 port_rets.iloc[i] -= w * config.commission
@@ -391,6 +428,10 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                     sells.append((code, reduce_w))
 
             for code, reduce_w in sells:
+                if getattr(config, "exec_t1_open", False):
+                    # 次日开盘卖: 权重暂留, Step 1b 次日按 open 成交扣佣金
+                    pending_exits[code] = pending_exits.get(code, 0) + reduce_w
+                    continue
                 cur_weights[code] = cur_weights.get(code, 0) - reduce_w
                 if cur_weights[code] <= 0.001:
                     cur_weights.pop(code)
@@ -401,6 +442,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
 
         # ── Step 4: Rebalance ──
         if date_str in rebal_set and i >= config.min_bars and not halted:
+            old_w = dict(cur_weights)
             pos_ratio = pos_ratio_now if index_close is not None else 1.0
             # timing_scale: MA200择时强度系数(<1=熊市降仓更狠), clamp到1
             if pos_ratio < 1.0:
@@ -481,8 +523,9 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                         w = config.max_single
                     if tier_reduce > 0:
                         sell_w = cur_weights[c] * (tier_reduce / prev_pos_ratio) if prev_pos_ratio > 0 else 0.0
-                        total_commission_paid += sell_w * config.commission
-                        port_rets.iloc[i] -= sell_w * config.commission
+                        if not getattr(config, "exec_t1_open", False):
+                            total_commission_paid += sell_w * config.commission
+                            port_rets.iloc[i] -= sell_w * config.commission
                         tier_sells += sell_w
                     new_w[c] = w
 
@@ -553,13 +596,16 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 enter_w = sum(new_w.get(c, 0) for c in set(new_w) - old_set)
                 exit_w = sum(cur_weights.get(c, 0) for c in old_set - set(new_w))
                 rebal_sells += exit_w
-                rebal_cost = (enter_w + exit_w) / 2 * config.commission * 2
-                total_commission_paid += rebal_cost
-                port_rets.iloc[i] -= rebal_cost
+                if not getattr(config, "exec_t1_open", False):
+                    rebal_cost = (enter_w + exit_w) / 2 * config.commission * 2
+                    total_commission_paid += rebal_cost
+                    port_rets.iloc[i] -= rebal_cost
 
-                # Update entry prices for new stocks
+                # Update entry prices for new stocks (t1 模式推迟到开盘成交时)
                 cp_s = panel.ffill().iloc[i]
                 for c in set(new_w) - old_set:
+                    if getattr(config, "exec_t1_open", False):
+                        continue
                     ep = cp_s.get(c)
                     if ep and not pd.isna(ep):
                         entry_prices[c] = float(ep)
@@ -576,6 +622,17 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                     total_sells += 1; trade_count += 1
 
                 cur_weights = new_w
+                # exec_t1_open: 卖出权重暂留至次日开盘(Step 1b 成交),
+                # 买入权重次日才入(Step 0c 开盘成交+修正) —— 2026-09-16
+                if getattr(config, "exec_t1_open", False):
+                    for c in old_set:
+                        sell = old_w.get(c, 0.0) - new_w.get(c, 0.0)
+                        if sell > 0.001:
+                            pending_exits[c] = pending_exits.get(c, 0) + sell
+                            cur_weights[c] = old_w.get(c, 0.0)
+                    for c in set(new_w) - old_set:
+                        pending_buys[c] = new_w.get(c, 0.0)
+                        cur_weights.pop(c, None)
                 prev_pos_ratio = pos_ratio
                 # Track concentration
                 if cur_weights:
