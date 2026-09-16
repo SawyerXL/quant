@@ -184,6 +184,21 @@ def main():
         alerts.append(f"CB日线缺口(未知)计数: {cb_unknown} 只(阈值50)")
     if guard_rej > 0:
         alerts.append(f"价格守卫今日拒绝 {guard_rej} 行(冻结即事件, 见闸门十四)")
+    # 官方成分归档新鲜度(2026-09-16): 低频关键链最容易静默腐烂——
+    # 一年只有 6/12 月两次真正重要, 平时跑不跑看不出区别(CB 链同型)
+    members_asof = "?"
+    try:
+        mf = Path("data_store/meta/csi800_members_official.parquet")
+        if mf.exists():
+            md = pd.read_parquet(mf, columns=["as_of"])
+            if not md.empty:
+                members_asof = str(md["as_of"].iloc[0])
+        if members_asof != "?" and (
+                pd.Timestamp(now[:10]) - pd.Timestamp(members_asof)).days > 8:
+            alerts.append(f"官方成分归档陈旧: as_of={members_asof}")
+    except Exception:
+        pass
+
     # 阈值重算事件(2026-09-16): 30天冻结与60根窗口不同步, 重算必须可见
     thev = Path("data_store/meta/price_threshold_events.jsonl")
     if thev.exists():
@@ -218,7 +233,7 @@ def main():
             "audit": audit, "positions_snapshot": snap_time,
             "cb_signal_date": cb_date, "cb_data_max_date": cb_data_max,
             "cb_unknown_gaps": cb_unknown, "guard_rejected_rows": guard_rej,
-            "cb_holdings_frozen": cb_frozen,
+            "cb_holdings_frozen": cb_frozen, "index_members_as_of": members_asof,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")
