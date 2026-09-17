@@ -14,6 +14,9 @@ async def regime(user=Depends(optional_user)):
     snap = get_regime_snapshot()
     if not snap:
         return {"error": "No snapshot available"}
+    # 2026-09-16 口径标注: 本快照=上证库,显示用;交易档位=csi800库T-1
+    # (daily_signal_a_v2._get_position_ratio), 两者非同一 regime
+    snap["basis"] = "上证库(显示用,非交易档位;交易档位=csi800库T-1,见signal文件)"
     return snap
 
 

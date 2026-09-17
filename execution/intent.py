@@ -16,6 +16,12 @@ Intent 层（2026-09-15 立项）——所有下单意图的单一入口。
 **下周才接管真实下单**——本模块暂不接入 trader/sweep 的实盘路径。
 接入时须合并现有双写：cash_sweep.BOND_ETF 与 trader.BEAR_EXEMPT_CODES
 统一为本注册表的豁免条目（intent 层验收清单第 1 条）。
+
+交易 regime 单一来源（2026-09-17 归一，验收清单第 2 条）：接管后本层
+若需 regime/仓位档位，**只能读当日 signal JSON 的 regime/position_ratio
+字段**（14:25 daily_signal_a_grouped 链，csi800 库 T-1 计算）——禁止
+自拉新源、禁止读 web regime 快照（上证库显示用，已标 basis，非交易
+档位）。三套 regime 并存事故见账本 2026-09-16/17 节。
 """
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple
