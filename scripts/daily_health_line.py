@@ -232,6 +232,28 @@ def main():
     if cb_frozen.get("expiry") and cb_frozen["expiry"] < now[:10]:
         alerts.append(f"CB持仓冻结到期未处置(expiry={cb_frozen['expiry']}, "
                       f"{len(cb_frozen.get('codes', []))}只)")
+    # Windows 代码同步(2026-09-17 Git-Sync 断供8天实锤后接): 状态由
+    # 22:10 check_win_sync 写, 健康行读前夜; verified 不一致连续2天=告警
+    # (ssh 不可达=unknown 不计, 隧道问题归 tunnel watchdog)
+    win_sync = {}
+    wsf = Path("logs/win_sync_state.json")
+    if wsf.exists():
+        try:
+            win_sync = json.loads(wsf.read_text(encoding="utf-8"))
+        except Exception:
+            win_sync = {"error": "状态文件不可读"}
+    win_consec = 0
+    wcf = Path("logs/win_sync_fail_count.json")
+    if wcf.exists():
+        try:
+            win_consec = int(json.loads(wcf.read_text(encoding="utf-8"))
+                             .get("consecutive", 0))
+        except Exception:
+            pass
+    if win_sync.get("synced") is False and win_consec >= 2:
+        alerts.append(f"Windows代码同步断供连续{win_consec}天: "
+                      f"win={str(win_sync.get('win_head', '?'))[:8]} "
+                      f"linux={str(win_sync.get('linux_head', '?'))[:8]}")
     for msg in alerts:
         try:
             from monitoring.alerts import send_alert
@@ -246,7 +268,7 @@ def main():
             "cb_signal_date": cb_date, "cb_data_max_date": cb_data_max,
             "cb_unknown_gaps": cb_unknown, "guard_rejected_rows": guard_rej, "snapshot_state": snap_state,
             "cb_holdings_frozen": cb_frozen, "index_members_as_of": members_asof,
-            "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
+            "win_sync": win_sync, "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")
     print(json.dumps(line, ensure_ascii=False))
