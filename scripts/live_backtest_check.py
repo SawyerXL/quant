@@ -81,18 +81,29 @@ def _weight_from_positions(pos):
 
 
 def _target_holdings():
-    """模型应有持仓: 最近一次信号的目标名单(信号链产物
-    data_store/meta/signal_a_*.json 的 holdings 键)。缺失=维持状态。"""
-    sigs = sorted(ROOT.glob("data_store/meta/signal_a_*.json"))
-    target = []
-    if sigs:
+    """目标=执行器实际消费的分组信号(g0+g1)的 holdings 并集。
+
+    v2 (2026-09-17): 旧 glob 按文件名排序会拿到 signal_a_latest.json
+    (09-01 陈旧 24 票) → bear 日对账恒报"名单差 0+24"假事件。改为
+    只读执行链真输入 signal_a_g0/g1.json; 返回 (target, regime,
+    signal_date, position_ratio)。"""
+    target, regime, sig_date, ratio = [], None, None, None
+    for g in ("g0", "g1"):
+        p = ROOT / "data_store" / "meta" / f"signal_a_{g}.json"
+        if not p.exists():
+            continue
         try:
-            d = json.loads(sigs[-1].read_text(encoding="utf-8"))
-            if isinstance(d.get("holdings"), list):
-                target = [str(x) for x in d["holdings"]]
+            d = json.loads(p.read_text(encoding="utf-8"))
         except Exception:
-            target = []
-    return target
+            continue
+        if isinstance(d.get("holdings"), list):
+            target += [str(x) for x in d["holdings"]]
+        regime = d.get("regime", regime)
+        sig_date = d.get("signal_date", sig_date)
+        ratio = d.get("position_ratio", ratio)
+    if regime == "bear":
+        target = []  # bear 信号持仓为空, 以信号为准
+    return target, regime, sig_date, ratio
 
 
 def _tier_position_today():
@@ -124,8 +135,7 @@ def main(report=False):
     pos = snap.get("positions", [])
     live_codes = _codes_from_positions(pos)
     live_w = _weight_from_positions(pos)
-    target = _target_holdings()
-    tier_pos = _tier_position_today()
+    target, sig_regime, sig_date, tier_pos = _target_holdings()
 
     # 档位作用域=股票腿(CB腿/扫尾单不计入; 信号 holdings 亦为股票腿名单)
     stock_codes = [c for c in live_codes if _leg(c) == "stock"]
@@ -139,12 +149,17 @@ def main(report=False):
                if abs(live_w.get(c, 0.0) - 1.0 / max(len(target), 1)) > 0.05}
 
     events = []
+    if sig_date != today:
+        events.append(f"信号陈旧: signal_date={sig_date} ≠ {today}")
     if len(list_extra) + len(list_missing) > 2:
         events.append(f"名单差 {len(list_extra)}+{len(list_missing)} > 2")
     if w_diffs:
         events.append(f"权重差超5pp: {len(w_diffs)}票")
-    if tier_pos is not None and abs(stock_w - tier_pos) > 0.20:
-        events.append(f"现金档差: 股票腿{stock_w:.0%} vs 目标{tier_pos:.0%}")
+    # bear=股票腿清仓, 目标=0 而非 position_ratio(0.3 是总资金档位,
+    # 股票腿执行语义=清仓, 见 trader._execute_bear)
+    target_stock_pos = 0.0 if sig_regime == "bear" else (tier_pos or 0.0)
+    if abs(stock_w - target_stock_pos) > 0.20:
+        events.append(f"现金档差: 股票腿{stock_w:.0%} vs 目标{target_stock_pos:.0%}")
 
     res.update({
         "status": "ok" if not events else "事件",
@@ -155,6 +170,7 @@ def main(report=False):
         "list_extra": list_extra, "list_missing": list_missing,
         "weight_diff_gt5pp": w_diffs,
         "stock_leg_pos": round(stock_w, 3), "tier_pos": tier_pos,
+        "sig_regime": sig_regime, "signal_date": sig_date,
         "events": events,
         "note": "盘前快照市值可能为零(等权退化); 权威对账以 15:12 收盘快照为准",
     })

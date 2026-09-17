@@ -254,6 +254,21 @@ def main():
         alerts.append(f"Windows代码同步断供连续{win_consec}天: "
                       f"win={str(win_sync.get('win_head', '?'))[:8]} "
                       f"linux={str(win_sync.get('linux_head', '?'))[:8]}")
+    # live-vs-backtest 对账(2026-09-17 实装 cron 17:55 + v2 修复):
+    # 每日三路 diff 结果——有事件或产物缺失/陈旧=告警
+    lvbc = {}
+    lf = Path("logs/live_backtest_check.json")
+    if lf.exists():
+        try:
+            lvbc = json.loads(lf.read_text(encoding="utf-8"))
+        except Exception:
+            lvbc = {"error": "对账产物不可读"}
+        if lvbc.get("events"):
+            alerts.append(f"实盘对账事件: {'; '.join(lvbc['events'])}")
+        elif str(lvbc.get("snapshot", "")) != now[:10]:
+            alerts.append(f"实盘对账陈旧/不可行: snapshot={lvbc.get('snapshot')}")
+    else:
+        alerts.append("实盘对账产物缺失(17:55 cron 未跑或失败)")
     for msg in alerts:
         try:
             from monitoring.alerts import send_alert
@@ -268,7 +283,8 @@ def main():
             "cb_signal_date": cb_date, "cb_data_max_date": cb_data_max,
             "cb_unknown_gaps": cb_unknown, "guard_rejected_rows": guard_rej, "snapshot_state": snap_state,
             "cb_holdings_frozen": cb_frozen, "index_members_as_of": members_asof,
-            "win_sync": win_sync, "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
+            "win_sync": win_sync, "live_reconcile": lvbc,
+            "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")
     print(json.dumps(line, ensure_ascii=False))
