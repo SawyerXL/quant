@@ -39,6 +39,17 @@ def win_head() -> str | None:
         return None
 
 
+def _behind_count(win: str, linux: str) -> tuple[int, bool]:
+    """win 相对 linux 落后几个 commit; 是否分叉(win 有 linux 没有的提交)。"""
+    r = subprocess.run(["git", "rev-list", "--count", f"{win}..{linux}"],
+                       capture_output=True, text=True, timeout=15)
+    behind = int(r.stdout.strip()) if r.returncode == 0 else 999
+    d = subprocess.run(["git", "rev-list", "--count", f"{linux}..{win}"],
+                       capture_output=True, text=True, timeout=15)
+    diverged = d.returncode != 0 or int(d.stdout.strip() or 0) > 0
+    return behind, diverged
+
+
 def main():
     lh = local_head()
     wh = win_head()
@@ -48,11 +59,16 @@ def main():
                  "synced": "unknown", "error": "ssh不可达(隧道?)"}
         logger.warning(f"win sync 不可验证: {state['error']}")
     else:
-        synced = lh == wh
+        # 同步判据(2026-09-17 首跑暴露缺陷): 同一晚 21:00 后提交会
+        # 造成 1~3 个 commit 的日频滞后——真断供的形态是"分叉"或
+        # "落后 10+ commit"(8天断供≈10~15)。滞后≤10=正常日频,
+        # 不计连续失败; 分叉或落后>10=真失败。
+        behind, diverged = _behind_count(wh, lh)
+        synced = (not diverged) and behind <= 10
         state = {"date": today, "linux_head": lh, "win_head": wh,
-                 "synced": synced}
+                 "behind": behind, "diverged": diverged, "synced": synced}
         logger.info(f"win_head={wh[:8]} linux_head={lh[:8]} "
-                    f"synced={synced}")
+                    f"behind={behind} diverged={diverged} synced={synced}")
     STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=1))
 
     # 连续失败计数: 只数 verified 不一致; unknown 不计数
