@@ -123,7 +123,10 @@ def main():
         logger.info("默认动作=平仓清单。张数来源=当日新鲜快照（信号份额仅"
                     "旁注对照，不作下单依据；两者背离时以快照为准并记 "
                     "FWD-002）。")
-        sys.exit(_close_list_from_snapshot(new))
+        rc = _close_list_from_snapshot(new)
+        _notify("CB 09-22 裁定: 链未恢复, 第二次延期不允许, 默认倾向平仓"
+                "(清单见运行日志 logs/cron_cb_verdict.log), 须人工确认")
+        sys.exit(rc)
 
     common, rho = spearman_rho(rank_positions(old_hold), rank_positions(new_hold))
     jac = len(common) / len(set(old_hold) | set(new_hold))
@@ -150,6 +153,17 @@ def main():
     removed = [c for c in old_hold if c not in new_hold]
     if added or removed:
         logger.info(f"名单漂移: 新增 {added} / 移除 {removed}")
+    _notify(f"CB 09-22 裁定已出: ρ={rho:+.3f}, 实现度见日志, "
+            f"判读={verdict(rho)}, 须人工确认处置")
+
+
+def _notify(msg: str):
+    """系统 cron 路径无人值守: 裁定结论必须有人看到(邮件)。"""
+    try:
+        from monitoring.alerts import send_alert
+        send_alert(msg, level="warning")
+    except Exception:
+        logger.warning("裁定邮件发送失败(不影响裁定本身)")
 
 
 if __name__ == "__main__":
