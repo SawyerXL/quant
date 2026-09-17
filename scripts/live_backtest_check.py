@@ -80,16 +80,17 @@ def _weight_from_positions(pos):
     return {c: 1.0 / n for c in codes}
 
 
-def _target_holdings():
+def _target_holdings(meta_dir=None):
     """目标=执行器实际消费的分组信号(g0+g1)的 holdings 并集。
 
     v2 (2026-09-17): 旧 glob 按文件名排序会拿到 signal_a_latest.json
     (09-01 陈旧 24 票) → bear 日对账恒报"名单差 0+24"假事件。改为
     只读执行链真输入 signal_a_g0/g1.json; 返回 (target, regime,
     signal_date, position_ratio)。"""
+    base = Path(meta_dir) if meta_dir else ROOT / "data_store" / "meta"
     target, regime, sig_date, ratio = [], None, None, None
     for g in ("g0", "g1"):
-        p = ROOT / "data_store" / "meta" / f"signal_a_{g}.json"
+        p = base / f"signal_a_{g}.json"
         if not p.exists():
             continue
         try:
@@ -106,6 +107,52 @@ def _target_holdings():
     return target, regime, sig_date, ratio
 
 
+def _selftest() -> list[str]:
+    """已知失败用例（闸门十六）: 每次运行先自证校验逻辑本身有效。
+    用例1=陈旧 latest 被忽略(旧 bug 回归); 用例2=bear 空持仓正确;
+    用例3=g0+g1 并集; 用例4=仅 latest 存在→信号缺失被检出。
+    返回失败列表, 空=自测通过。"""
+    import tempfile
+    fails = []
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+
+        def write(name, **kw):
+            (d / name).write_text(json.dumps(kw), encoding="utf-8")
+
+        # 用例1+2: 陈旧 latest(24票) + bear g0/g1(空) → 目标空、不读 latest
+        write("signal_a_latest.json", signal_date="2026-09-01",
+              regime="bull", holdings=[f"{i:06d}" for i in range(1, 25)],
+              position_ratio=1.0)
+        write("signal_a_g0.json", signal_date="2026-09-17", regime="bear",
+              holdings=[], position_ratio=0.3)
+        write("signal_a_g1.json", signal_date="2026-09-17", regime="bear",
+              holdings=[], position_ratio=0.3)
+        t, r, s, p = _target_holdings(td)
+        if t or r != "bear" or s != "2026-09-17" or p != 0.3:
+            fails.append("用例1/2: bear 语义或陈旧 latest 隔离失效")
+
+        # 用例3: bull g0+g1 并集=10
+        write("signal_a_g0.json", signal_date="2026-09-17", regime="bull",
+              holdings=["600001", "600002", "600003", "600004", "600005"],
+              position_ratio=1.0)
+        write("signal_a_g1.json", signal_date="2026-09-17", regime="bull",
+              holdings=["000001", "000002", "000003", "000004", "000005"],
+              position_ratio=1.0)
+        t, r, s, p = _target_holdings(td)
+        if len(t) != 10 or r != "bull":
+            fails.append("用例3: g0+g1 并集错误")
+
+        # 用例4: 仅 latest(无 g0/g1) → 目标空+signal_date None(将被
+        # 主流程标"信号陈旧"事件, 正确失败方向)
+        for g in ("signal_a_g0.json", "signal_a_g1.json"):
+            (d / g).unlink()
+        t, r, s, p = _target_holdings(td)
+        if t or s is not None:
+            fails.append("用例4: 无分组信号时应空目标+信号缺失检出")
+    return fails
+
+
 def _tier_position_today():
     """五档目标仓位(纯函数, 与实盘信号链同实现)。"""
     ic = load_meta("csi800_index").set_index("date")["close"].sort_index()
@@ -117,6 +164,13 @@ def _tier_position_today():
 
 def main(report=False):
     res = {"ts": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")}
+    fails = _selftest()
+    if fails:
+        res["status"] = "SELFTEST_FAIL"
+        res["events"] = [f"校验器自测失败: {f}" for f in fails]
+        OUT.write_text(json.dumps(res, ensure_ascii=False, indent=1))
+        print(json.dumps(res, ensure_ascii=False))
+        return
     if not SNAP.exists():
         res["status"] = "快照缺失, 对账不可行"
         OUT.write_text(json.dumps(res, ensure_ascii=False, indent=1))

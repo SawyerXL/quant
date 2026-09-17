@@ -1889,3 +1889,54 @@ v2.3+SYSTEM/safe_execute 无旧 IP；④备份件 vs 入库版 diff 查 Windows
 - 今天 cron 又没触发（会话在场），手动补跑；cron 已改为只覆盖 09-18/19
   （4dfe7a44）。三连验第 1 天：晨间 ①②过+昨夜零翻转，白昼零翻转+
   导出链 AND 过——第 1 天全项通过。
+
+## 导出链拓扑查清（2026-09-17 15:5x，机器值）
+- 15:05:10 产物生产者的真身=**Linux 15:05 cron qmt_snapshot.py 的
+  trigger_export**（ssh Windows 跑 export_qmt_positions.py --no-push，
+  6 次重试窗至 15:55）——今天 attempts=1 ok=True 自证。
+- Windows 侧 15:10 有两个独立任务：ExportDaily（--no-push 二次导出）
+  与 Snapshot-1510（push 模式）——与 Linux 链互为冗余，**它们的
+  res=0 不是 Linux 链的独立证据**。
+- **修正后 ③ 判据**：主证据=snapshot_state(今日 AND ok=True) +
+  产物 exported_at=今日；Windows 两任务 res=0 降为旁证（冗余链
+  健康），不再入 AND。已同步进 09-18/19 白昼采集 cron（重建
+  4dfe7a44 同名 id 已换）。
+- 含义：若 Linux 15:05 链全败但 Windows 15:10 任务成功 → 快照状态
+  ok=False 会告警（P0+健康行），不会因 ExportDaily res=0 被掩盖。
+
+## 判据补记（2026-09-17 15:5x，用户裁定）
+- **exported_at=今日 不能单独作为 Linux 链健康证据**：三条路径
+  （Linux 15:05 trigger / Windows 15:10 ExportDaily --no-push /
+  Snapshot-1510 push）写同一份快照——将来 Linux 链失败、Windows
+  冗余链成功时，文件仍是今日的：snapshot_state.ok=False 会告警
+  （对），但 exported_at=今日 会假通过（误导）。**AND 判据中唯一
+  主证据=snapshot_state(今日 AND ok=True)**；exported_at 仅作产物
+  新鲜度参考。冗余本身是好事（单点失败不致命），判据只需知道
+  自己在看谁。已同步进 09-18/19 采集 cron（重建 31bb0e9f 已换）。
+- 旁注（不追查）：今日 exported_at=15:05:10 而 15:10 两任务 res=0
+  ——15:10 那两次要么写别处、要么时间戳未更新；不影响判定。
+
+## FWD-002 两 bug + 校验器失效闸门（2026-09-17 16:2x，用户裁定）
+- **bug 记档**：①glob 按名排序读到 09-01 陈旧 signal_a_latest（24 票）
+  → bear 日恒报"名单差 0+24"；②bear 语义错——position_ratio 0.3 当
+  成股票腿目标（bear 股票腿=清仓 0）。后果：输出存在、格式正确、
+  内容无意义。**本周第三个"报正常但实际没在工作"实例**（CB 链
+  res=0 / ExportDaily 冗余 / 本件）。
+- **新闸门（用户裁定，已入 CLAUDE.md）**：凡对账/校验类脚本必须带
+  一个已知应当失败的用例，每次运行时跑；失败分支不触发=脚本本身
+  失效。恒报 PASS 的校验器比没有更危险（让人以为验过了）。
+- **已落地**：live_backtest_check.py 加 --selftest（三用例：陈旧
+  latest 被忽略/bear 空持仓正确/g0+g1 并集），自测失败→status=
+  SELFTEST_FAIL 进 events→健康行告警；cron 17:55 命令带 --selftest。
+
+## 择时换手纯计数判据锁（2026-09-17 16:2x 登记，出数前）
+- 测：择时臂逐次调仓的名单变动数/金额变动占比，按事件分组：
+  bull→bear / bear→bull / 档内微调。
+- **锁死常数（此刻锁定，数据未出）**：
+  Y = 6.5bp（单边成本，engine commission 0.0013 双边之半）
+  impact = 5bp/单边（分档执行可省下的冲击成本假设）
+  Z = 0.5pp/年（年化节省门槛，低于此不做分档执行）
+- **锁死判读**：某事件组（如 bear→bull）年化潜在节省 =
+  该组年频次 × 组平均换手 × 5bp；任一组 > Z → 分档执行有收益空间，
+  立项；所有组 ≤ Z 且换手主要来自档内微调 → 分档解决不了，转评估
+  档位平滑。判据先于数据，出数后不许换 impact 假设。
