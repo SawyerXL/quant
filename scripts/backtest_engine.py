@@ -146,6 +146,8 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
     rotation_sells = 0.0     # 调仓轮换卖出的权重和(2026-09-06 换手口径对齐)
     rebal_sells = 0.0        # 调仓轮换卖出的权重和
     tier_sells = 0.0         # 切档减仓的权重和(pos_ratio下降)
+    rebal_events = []        # 诊断(2026-09-17 换手计数): 每次调仓的
+                             # {date, tier, enter_w, exit_w}——纯记录不改行为
     total_commission_paid = 0.0  # track cumulative commission
     lot_skip_total = 0           # lot约束: 买不起一手被跳过的票次数
     exposure_ts = []             # 敞口诊断: (date, 实际权重, 目标权重, nav)
@@ -443,6 +445,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
         # ── Step 4: Rebalance ──
         if date_str in rebal_set and i >= config.min_bars and not halted:
             old_w = dict(cur_weights)
+            rb_enter, rb_exit = 0.0, 0.0
             pos_ratio = pos_ratio_now if index_close is not None else 1.0
             # timing_scale: MA200择时强度系数(<1=熊市降仓更狠), clamp到1
             if pos_ratio < 1.0:
@@ -455,6 +458,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                     total_commission_paid += wsum * config.commission
                     port_rets.iloc[i] -= wsum * config.commission
                     tier_sells += wsum
+                    rb_exit = wsum
                     for _c in list(cur_weights.keys()):
                         _close_span(_c, str(date.date()))
                 cur_weights = {}; entry_prices = {}; days_below_ma10 = {}
@@ -596,6 +600,8 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 enter_w = sum(new_w.get(c, 0) for c in set(new_w) - old_set)
                 exit_w = sum(cur_weights.get(c, 0) for c in old_set - set(new_w))
                 rebal_sells += exit_w
+                rb_enter += enter_w
+                rb_exit += exit_w
                 if not getattr(config, "exec_t1_open", False):
                     rebal_cost = (enter_w + exit_w) / 2 * config.commission * 2
                     total_commission_paid += rebal_cost
@@ -639,6 +645,10 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                     wvals = sorted(cur_weights.values(), reverse=True)
                     max_single_track.append(wvals[0] if wvals else 0)
                     top3_track.append(sum(wvals[:3]) if len(wvals)>=3 else sum(wvals))
+            rebal_events.append({"date": date_str,
+                                 "tier": round(float(pos_ratio), 3),
+                                 "enter_w": round(float(rb_enter), 4),
+                                 "exit_w": round(float(rb_exit), 4)})
 
         # ── Step 5: Cash yield ──
         cash_r = max(0, 1.0 - sum(cur_weights.values())) if cur_weights else 1.0
@@ -697,6 +707,7 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
         "rotation_sells": round(rotation_sells, 4),
         "rebal_sells": round(rebal_sells, 4),
         "tier_sells": round(tier_sells, 4),
+        "rebal_events": rebal_events,
     }
 
 
