@@ -140,6 +140,13 @@ class MCPSource(DataSource):
         df = self._first_table(results)
         if df.empty:
             return pd.DataFrame()
+        # 2026-09-18 实锤: MCP 把歧义个股码映射成指数(000016=深康佳A
+        # 返回上证50点位级 close 2844)——个股查询语义下返回指数数据=
+        # 答非所问, 直接判空(守卫层拒绝是第二道, 这里从源头不引入)
+        if any("指数" in str(c) for c in df.columns):
+            logger.warning(f"MCP 对个股码 {code} 返回指数数据(源端码映射歧义), "
+                           f"判空——该票若停牌则今日无bar属正常")
+            return pd.DataFrame()
 
         keyword_map = {
             "交易日": "date", "今开盘": "open", "最高价": "high",
