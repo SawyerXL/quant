@@ -71,6 +71,8 @@ def main():
         boots = [ann_sharpe_of_diff(x) for x in circ_block_boot(d)]
         se = float(np.std(boots))
         sigma = sh / se if se > 0 else 0.0
+        print(f"  [防伪] SE_boot 全精度 = {se:.6f} (B={B}, block={BLOCK}, "
+              f"seed={SEED}, n={len(d)}日)")
         ann_a = (a3c.iloc[-1] / a3c.iloc[0]) ** (252 / len(a3c)) - 1
         ann_b = (bc.iloc[-1] / bc.iloc[0]) ** (252 / len(bc)) - 1
         cdar = float((1 - (a3c / a3c.cummax())).max())
@@ -80,7 +82,11 @@ def main():
               f"(SE_boot) → σ={sigma:+.2f} → {verdict}")
         print(f"  年化: A3 {ann_a*100:+.2f}% vs 官方指数 {ann_b*100:+.2f}% "
               f"→ Δ {100*(ann_a-ann_b):+.2f}pp | CDaR(A3) {cdar*100:.1f}%")
-        # 叠加层分解(同配对差分法, 层间)
+        # 叠加层分解 —— 2026-09-18 更正: 层间判读归锁定 TE 方法
+        # (叠加层复审视唯一方法, 09-16 锁"不得重选"), 不再用主指标
+        # bootstrap(块bootstrap层σ已撤回, 见账本)
+        from overlay_review_te import te_stats as layer_te
+        years = (a3c.index[-1] - a3c.index[0]).days / 365.25
         for lo, hi, label in (("A0", "A1c", "池层"),
                               ("A1c", "A2c", "择时层"),
                               ("A2c", "A3", "组件层")):
@@ -88,12 +94,14 @@ def main():
                 print(f"  {label}: 缺曲线, 跳过")
                 continue
             lo_s, hi_s = curves[lo], curves[hi]
-            c = lo_s.index.intersection(hi_s.index)
-            dd = np.log(hi_s.loc[c] / hi_s.loc[c].shift(1)).dropna().values \
-                - np.log(lo_s.loc[c] / lo_s.loc[c].shift(1)).dropna().values
-            sh_l = ann_sharpe_of_diff(dd)
-            print(f"  {label} (hi−lo): 差分夏普 {sh_l:+.2f} "
-                  f"(块bootstrap SE 略, 仅点值)")
+            te = layer_te(lo_s, hi_s, years)
+            ann_hi = (hi_s.iloc[-1] / hi_s.iloc[0]) ** (252 / len(hi_s)) - 1
+            ann_lo = (lo_s.iloc[-1] / lo_s.iloc[0]) ** (252 / len(lo_s)) - 1
+            eff = (ann_hi - ann_lo) * 100
+            sig = eff / te["SE_pp"]
+            print(f"  {label} (hi−lo, 锁定TE法): 效应{eff:+.2f}pp "
+                  f"±{te['SE_pp']:.2f}pp → σ={sig:+.2f} → "
+                  f"{'过线(≥0.35)' if abs(sig) >= 0.35 else '与0不可分辨'}")
 
 
 if __name__ == "__main__":
