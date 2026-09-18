@@ -8,6 +8,7 @@ Spearman ρ = 重算信号 vs 旧信号(2026-09-04, 冻结件) 的排序相关�
 import json
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from loguru import logger
 
