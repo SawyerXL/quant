@@ -2507,3 +2507,14 @@ CDaR 13.3%。层分解(差分夏普)：池 −0.93 / 择时 +0.27 / 组件 +0.62
   前库——不重跑（全部判死，一只票补回不翻案），但任何方向重开或
   主回测升级预注册版时，基线=补洞后库，须声明此分界。
 - 库内可追溯物：backup/hole_fill_20260918/（5 shard 原版备份）。
+
+## csindex 历史 PIT 探索现状（2026-09-18 16:5x）
+- 已探测：csindex 现站 exportExcel 系列（downloadindex-perf 可用，
+  参数=POST+JSON数组体+YYYYMMDD）；index-sample-information-excel
+  /index-details-data/sample-information 全 404/500（历史成份接口
+  疑似从新版移除）；UI"样本"标签已无日期选择器（用户确认）。
+- 新发现：MCP FinQuery 可返回当期 800 成分+**纳入日期**字段（最早
+  2007-01-15）——不按历史日期口径，但纳入日期可支撑"仍在指数票"
+  的部分 PIT 重建（盲区=已剔除票，声明）。
+- 剩余路：①用户抓"样本"标签下载的 cURL（若带日期参数则重放）；
+  ②Wayback 从本服务器不可达。
