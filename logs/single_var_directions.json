@@ -1,56 +1,65 @@
 {
-  "registered_at": "2026-09-13",
-  "te_method": "logs/single_var_registration_20260913.md §1 — 唯一实现 scripts/single_var_harness.py te_stats(), 干净库重跑不得重选",
-  "base_arm": {
-    "name": "BASE_800等权+现金",
-    "desc": "pit800等权 + 五档择时(现网配置冻结: TIER_POS+ma200_thresh_shift=-3%) + 组件全关 = 判读矩阵基准臂(A0_OV+timing)"
+ "registered_at": "2026-09-13",
+ "te_method": "logs/single_var_registration_20260913.md §1 — 唯一实现 scripts/single_var_harness.py te_stats(), 干净库重跑不得重选",
+ "base_arm": {
+  "name": "BASE_800等权+现金",
+  "desc": "pit800等权 + 五档择时(现网配置冻结: TIER_POS+ma200_thresh_shift=-3%) + 组件全关 = 判读矩阵基准臂(A0_OV+timing)"
+ },
+ "directions": [
+  {
+   "id": "D1_timing_reestimate",
+   "name": "择时重估",
+   "mode": "backtest",
+   "registered": true,
+   "value_locked": true,
+   "variable": "五档择时开关",
+   "value": "现网五档配置冻结(TIER_POS+shift-3%)",
+   "effect_sign": -1,
+   "override": {},
+   "timing_off": true,
+   "te_estimate_pct": 15.8,
+   "plausible_effect_pp": [
+    2.4,
+    4.4
+   ],
+   "note": "已由 09-16 叠加层复审回答(同对象同方法, 非相近替代): A2c−A1c 干净库 +3.94±35.27pp σ=0.11 不通过——效应与0不可分辨, 不重跑(省1预算)",
+   "status": "answered_by_overlay_review_20260916"
   },
-  "directions": [
-    {
-      "id": "D1_timing_reestimate",
-      "name": "择时重估",
-      "mode": "backtest",
-      "registered": true,
-      "value_locked": true,
-      "variable": "五档择时开关",
-      "value": "现网五档配置冻结(TIER_POS+shift-3%)",
-      "effect_sign": -1,
-      "override": {},
-      "timing_off": true,
-      "te_estimate_pct": 15.8,
-      "plausible_effect_pp": [2.4, 4.4],
-      "note": "重估≠重拟合; 若通过, 参数重拟合另立方向单独登记; 中立性半自证见登记文档§1.1"
-    },
-    {
-      "id": "D2_weight_scheme",
-      "name": "权重方案",
-      "mode": "backtest",
-      "registered": true,
-      "value_locked": true,
-      "variable": "weight_scheme equal→inv_vol",
-      "value": "inv_vol (1/vol20, T-1 严格口径; vol20 NaN 规则见登记文档§7)",
-      "override": {"weight_scheme": "inv_vol"},
-      "timing_off": false,
-      "effect_sign": 1,
-      "te_estimate_pct": 3.6,
-      "plausible_effect_pp": [0.3, 1.0],
-      "note": "2026-09-13晚用户批准, 条件: NaN规则已锁(§7)+价格侧<1.25×盲区声明已入登记§6 D2; 开跑前月频实测TE重算MDE(实测MDE>可信上沿1pp则不跑, harness已编码); fallback中位数修订回滚待周二(logs/rollback_patch_20260913.md)"
-    },
-    {
-      "id": "D3_rebalance_freq",
-      "name": "再平衡频率",
-      "mode": "calc",
-      "registered": true,
-      "value_locked": false,
-      "note": "可算不测: 效应≈换手成本差=Δ换手×13bp×边数, 与MDE 0.23pp(×1.2月频修正后)对照; 成本差<0.23pp则该方向永不值得测; 不占预算"
-    },
-    {
-      "id": "D4_cash_tier",
-      "name": "现金档位",
-      "mode": "pending",
-      "registered": true,
-      "value_locked": false,
-      "note": "暂不登记(2026-09-13晚用户裁定): 等波动重标部分抵消仓位变动, 净效应=波动暴露时序分布; 先解析估计(时间占比×收益差×等波动重标系数), 估计<MDE(≥0.57pp)→归可算不测不占预算"
-    }
-  ]
+  {
+   "id": "D2_weight_scheme",
+   "name": "权重方案",
+   "mode": "backtest",
+   "registered": true,
+   "value_locked": true,
+   "variable": "weight_scheme equal→inv_vol",
+   "value": "inv_vol (1/vol20, T-1 严格口径; vol20 NaN 规则见登记文档§7)",
+   "override": {
+    "weight_scheme": "inv_vol"
+   },
+   "timing_off": false,
+   "effect_sign": 1,
+   "te_estimate_pct": 3.6,
+   "plausible_effect_pp": [
+    0.3,
+    1.0
+   ],
+   "note": "2026-09-13晚用户批准, 条件: NaN规则已锁(§7)+价格侧<1.25×盲区声明已入登记§6 D2; 开跑前月频实测TE重算MDE(实测MDE>可信上沿1pp则不跑, harness已编码); fallback中位数修订回滚待周二(logs/rollback_patch_20260913.md)"
+  },
+  {
+   "id": "D3_rebalance_freq",
+   "name": "再平衡频率",
+   "mode": "calc",
+   "registered": true,
+   "value_locked": false,
+   "note": "可算不测: 效应≈换手成本差=Δ换手×13bp×边数, 与MDE 0.23pp(×1.2月频修正后)对照; 成本差<0.23pp则该方向永不值得测; 不占预算"
+  },
+  {
+   "id": "D4_cash_tier",
+   "name": "现金档位",
+   "mode": "pending",
+   "registered": true,
+   "value_locked": false,
+   "note": "暂不登记(2026-09-13晚用户裁定): 等波动重标部分抵消仓位变动, 净效应=波动暴露时序分布; 先解析估计(时间占比×收益差×等波动重标系数), 估计<MDE(≥0.57pp)→归可算不测不占预算"
+  }
+ ]
 }
