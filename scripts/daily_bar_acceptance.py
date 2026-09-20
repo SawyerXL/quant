@@ -7,7 +7,7 @@
   ③ 全市场 amount 总和 ∈ [3000亿, 3万亿]
   ④ 锚点逐位: tests/unit_ground_truth.json 对照, 差异=0
   ⑤ (闸门十七, 2026-09-18 增) 单票绝对量级哨兵: 全库扫描
-     单票日额 >100亿元 计数——比值检查对双字段同倍失效(920 实锤),
+     单票日额 >500亿元 计数——比值检查对双字段同倍失效(920 实锤),
      绝对量级是更基础的防线; 计数>0 = 失败分支
 日更完成后跑(17:00 更新 ~17:50 落地)。输出机器值+判定一行。
 用法: python scripts/daily_bar_acceptance.py
@@ -25,7 +25,9 @@ from data.storage import load_daily, load_meta
 
 ANCHORS = ["600519", "000001", "300750"]
 BASE_DATE = "2026-09-11"
-MAX_STOCK_AMOUNT_WAN = 1_000_000.0   # 100亿元(万元单位), 闸门十七哨兵
+MAX_STOCK_AMOUNT_WAN = 5_000_000.0   # 500亿元(万元单位), 闸门十七哨兵
+# 2026-09-20 校准: 100亿在活跃日误报14只合法大盘股(105~271亿);
+# 合法上限~300亿, 污染=万亿级 → 500亿留1.7倍裕度且仍拦10^4污染
 TOTAL_LO, TOTAL_HI = 3000e8, 3e12    # 全市场总额带(元)
 
 
@@ -82,7 +84,7 @@ def main():
     total_yuan = total * 1e4
     checks.append((f"③全市场 {total_yuan/1e8:.0f}亿({n}票)",
                    TOTAL_LO <= total_yuan <= TOTAL_HI, ""))
-    checks.append((f"⑤单票哨兵 >100亿: {len(over_cap)}只 {over_cap[:3]}",
+    checks.append((f"⑤单票哨兵 >500亿: {len(over_cap)}只 {over_cap[:3]}",
                    len(over_cap) == 0, ""))
 
     # ④ 锚点逐位

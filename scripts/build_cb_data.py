@@ -15,7 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pandas as pd, numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from loguru import logger
 from data.storage import save_meta, load_meta
 import time
@@ -120,8 +120,17 @@ def build_daily(batch_size=50, sleep_sec=2):
     for i, code in enumerate(codes):
         fpath = DAILY_DIR / f"{code}.parquet"
         if fpath.exists():
-            skip += 1
-            continue
+            # 2026-09-20 修复: 旧逻辑对已有文件一律跳过——CB 日线自
+            # 08-06 起整体冻结无人察觉(闸门十二形状), 快照链随之停摆。
+            # 改为: 陈旧文件(最后bar>10天前)重拉覆盖, 新鲜文件才跳过。
+            try:
+                _d = pd.read_parquet(fpath, columns=["date"])
+                _mx = str(_d["date"].max())[:10] if not _d.empty else "1900-01-01"
+                if _mx >= (date.today() - timedelta(days=10)).strftime("%Y-%m-%d"):
+                    skip += 1
+                    continue
+            except Exception:
+                pass  # 读失败按不存在处理, 走下载
 
         try:
             # 东方财富可转债日线
