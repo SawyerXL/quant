@@ -27,11 +27,30 @@ OUT = Path("data_store/meta/csi800_pit_weights.parquet")
 
 def main():
     pro = ts.pro_api()
-    df = pro.index_weight(index_code="000906.SH", start_date=START,
-                          end_date=END)
-    if df is None or df.empty:
-        logger.error("index_weight 返回空——检查权限(需2000积分)或日期范围")
+    # Tushare 单次返回上限 7000 行(800成员×~8.7月)——按 6 个月窗口
+    # 分页拉取(2026-09-20 实锤: 全窗单查询被截断只回最近 9 个月)
+    from datetime import datetime, timedelta
+    cur = datetime(int(START[:4]), int(START[4:6]), int(START[6:8]))
+    end_dt = datetime(int(END[:4]), int(END[4:6]), int(END[6:8]))
+    frames = []
+    while cur < end_dt:
+        nxt = min(cur + timedelta(days=182), end_dt)
+        try:
+            part = pro.index_weight(
+                index_code="000906.SH",
+                start_date=cur.strftime("%Y%m%d"),
+                end_date=nxt.strftime("%Y%m%d"))
+        except Exception as e:
+            logger.error(f"窗口 {cur.date()} 拉取失败: {e}")
+            sys.exit(1)
+        if part is not None and len(part):
+            frames.append(part)
+            logger.info(f"  {cur.date()}→{nxt.date()}: {len(part)} 条")
+        cur = nxt
+    if not frames:
+        logger.error("index_weight 全窗口空——检查权限或日期范围")
         sys.exit(1)
+    df = pd.concat(frames).drop_duplicates()
     df = df[["con_code", "trade_date", "weight"]].rename(
         columns={"con_code": "code"})
     df["code"] = df["code"].str.split(".").str[0]
