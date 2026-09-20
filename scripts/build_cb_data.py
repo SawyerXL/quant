@@ -103,7 +103,7 @@ def build_universe():
 # ══════════════════════════════════════════════════════════════════
 # Stage 3: 逐只日线数据
 # ══════════════════════════════════════════════════════════════════
-def build_daily(batch_size=50, sleep_sec=2):
+def build_daily(batch_size=50, sleep_sec=2, force_refresh=False):
     """下载每只可转债的日线数据(含价格/溢价率)。"""
     logger.info("Stage 3: 逐只日线数据...")
 
@@ -123,30 +123,28 @@ def build_daily(batch_size=50, sleep_sec=2):
             # 2026-09-20 修复: 旧逻辑对已有文件一律跳过——CB 日线自
             # 08-06 起整体冻结无人察觉(闸门十二形状), 快照链随之停摆。
             # 改为: 陈旧文件(最后bar>10天前)重拉覆盖, 新鲜文件才跳过。
+            # force_refresh: 前缀bug修复后的一次性全量重拉(错前缀文件
+            # 可能带着错券的"新鲜"日期, 靠新鲜度跳不过去)
             try:
-                _d = pd.read_parquet(fpath, columns=["date"])
-                _mx = str(_d["date"].max())[:10] if not _d.empty else "1900-01-01"
-                if _mx >= (date.today() - timedelta(days=10)).strftime("%Y-%m-%d"):
-                    skip += 1
-                    continue
+                if not force_refresh:
+                    _d = pd.read_parquet(fpath, columns=["date"])
+                    _mx = str(_d["date"].max())[:10] if not _d.empty else "1900-01-01"
+                    if _mx >= (date.today() - timedelta(days=10)).strftime("%Y-%m-%d"):
+                        skip += 1
+                        continue
             except Exception:
                 pass  # 读失败按不存在处理, 走下载
 
         try:
-            # 东方财富可转债日线
-            df = ak.bond_zh_hs_cov_daily(symbol=f"sh{code}" if not code.startswith('sh') else code)
+            # 2026-09-20 修复: 旧"先试sh、空才试sz"启发式对深市转债
+            # (12xxxx)返回错券/截断史(127115被写成2016年截断, 一批
+            # 12xxxx被写成08-06截断)——非空即保留, sz 分支永不执行。
+            # 改为按代码段定交易所: 11=沪, 12/127/128=深。
+            prefix = "sh" if code.startswith("11") else "sz"
+            df = ak.bond_zh_hs_cov_daily(symbol=f"{prefix}{code}")
             if not df.empty:
                 df.to_parquet(fpath)
                 done += 1
-            else:
-                # Try sz prefix
-                try:
-                    df = ak.bond_zh_hs_cov_daily(symbol=f"sz{code}" if not code.startswith('sz') else code)
-                    if not df.empty:
-                        df.to_parquet(fpath)
-                        done += 1
-                except Exception:
-                    pass
         except Exception as e:
             pass  # bond may be delisted, skip
 
@@ -323,6 +321,16 @@ def build_snapshots(start="2019-01-01", end=None, freq="MS", append=False,
 
     if snapshots:
         all_snaps = pd.concat(snapshots, ignore_index=True)
+        # 2026-09-20 修复: append 合并先于闸门——增量语义下"新∪旧≥旧"
+        # 由构造保证, 单调性闸门在合并后的表上跑(旧顺序误拒合法增量)
+        if append:
+            old = load_meta("cb_snapshots")
+            if not old.empty:
+                old["snap_date"] = pd.to_datetime(old["snap_date"])
+                all_snaps["snap_date"] = pd.to_datetime(all_snaps["snap_date"])
+                all_snaps = (pd.concat([old, all_snaps], ignore_index=True)
+                             .drop_duplicates(subset=["code", "snap_date"], keep="last"))
+                logger.info(f"  ✓ 快照增量合并: 旧{len(old)}条 + 新{len(snapshots)}个月 → 共{len(all_snaps)}条")
         # 单调性闸门(2026-09-14): "库不得变旧"三件套——右端点/行数/逐月覆盖,
         # 单独右端点只守 max, 漏掉中段空洞(闸门十二精神, fail-fast)
         try:
@@ -370,14 +378,7 @@ def build_snapshots(start="2019-01-01", end=None, freq="MS", append=False,
             if out_name == "cb_snapshots":
                 raise ValueError(msg + ", 拒绝写入")
             logger.warning(f"[影子表放行] {msg}")
-        if append:
-            old = load_meta("cb_snapshots")
-            if not old.empty:
-                old["snap_date"] = pd.to_datetime(old["snap_date"])
-                all_snaps["snap_date"] = pd.to_datetime(all_snaps["snap_date"])
-                all_snaps = (pd.concat([old, all_snaps], ignore_index=True)
-                             .drop_duplicates(subset=["code", "snap_date"], keep="last"))
-                logger.info(f"  ✓ 快照增量合并: 旧{len(old)}条 + 新{len(snapshots)}个月 → 共{len(all_snaps)}条")
+
         save_meta(out_name, all_snaps)
         logger.info(f"  ✓ 快照: {len(snapshots)}个月, 共{len(all_snaps)}条记录")
         # 依赖表挂钩: CB 写库范围进 write_scopes, 与 CB 结论交集自动标需复核
