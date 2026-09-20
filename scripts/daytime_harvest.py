@@ -67,7 +67,21 @@ def main():
             state = json.loads(sp.read_text(encoding="utf-8"))
         except Exception:
             state = {"error": "状态文件不可读"}
-    snap_ok = (state.get("date") == today and state.get("ok") is True)
+    # 2026-09-20 修复: 非交易日(周末)15:05 链不跑——判据基准改
+    # 最近交易日(今天=交易日时即今天), 否则周末恒报假"主证据不过"
+    ref_day = today
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(Path(__file__).parent.parent))
+        _sys.path.insert(0, str(Path(__file__).parent))
+        from data.storage import load_meta as _lm
+        _cal = sorted(_lm("trade_calendar")["trade_date"].astype(str).tolist())
+        _past = [d for d in _cal if d <= today]
+        if _past:
+            ref_day = _past[-1]
+    except Exception:
+        pass
+    snap_ok = (state.get("date") == ref_day and state.get("ok") is True)
     exported = "?"
     lp = Path("logs/qmt_positions_latest.json")
     if lp.exists():

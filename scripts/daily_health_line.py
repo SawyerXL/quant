@@ -265,7 +265,9 @@ def main():
             lvbc = {"error": "对账产物不可读"}
         if lvbc.get("events"):
             alerts.append(f"实盘对账事件: {'; '.join(lvbc['events'])}")
-        elif str(lvbc.get("snapshot", "")) != now[:10]:
+        elif str(lvbc.get("snapshot", "")) != last_td:
+            # 2026-09-20 修复: 对账 cron 仅交易日跑, 周末 snapshot 停在
+            # 上一交易日属正常——基准改最近交易日(原 now[:10] 周末恒误报)
             alerts.append(f"实盘对账陈旧/不可行: snapshot={lvbc.get('snapshot')}")
     else:
         alerts.append("实盘对账产物缺失(17:55 cron 未跑或失败)")
