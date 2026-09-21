@@ -23,7 +23,7 @@ from loguru import logger
 from execution.trader import Trader, _build_st_map, _limit_prices
 
 CODE = sys.argv[1] if len(sys.argv) > 1 else "600000"
-SHARES = 100
+SHARES = int(sys.argv[2]) if len(sys.argv) > 2 else 100
 OFFSET = 0.92  # 现价−8%: 主板跌停−10% 内, 不可能成交
 STRATEGY = "track_a"
 CAPITAL = 1_000_000
