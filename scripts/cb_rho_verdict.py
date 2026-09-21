@@ -125,6 +125,8 @@ def main():
                     "旁注对照，不作下单依据；两者背离时以快照为准并记 "
                     "FWD-002）。")
         rc = _close_list_from_snapshot(new)
+        _mark_pending(json.loads(Path("logs/cb_holdings_frozen.json")
+                                 .read_text(encoding="utf-8"))["codes"])
         _notify("CB 09-22 裁定: 链未恢复, 第二次延期不允许, 默认倾向平仓"
                 "(清单见运行日志 logs/cron_cb_verdict.log), 须人工确认")
         sys.exit(rc)
@@ -147,6 +149,8 @@ def main():
         if impl < 1.0:
             logger.info("判读: 实现度不过关 → 平仓（残骸规则，与 ρ 无关）。"
                         "ρ 仅作参考: " + verdict(rho))
+            _mark_pending(json.loads(Path("logs/cb_holdings_frozen.json")
+                                         .read_text(encoding="utf-8"))["codes"])
             sys.exit(_close_list_from_snapshot(new))
     logger.info(f"判读: {verdict(rho)}")
     # 成员差异补充信息（ρ 只看共同标的，名单漂移本身也是信息）
@@ -165,6 +169,19 @@ def _notify(msg: str):
         send_alert(msg, level="warning")
     except Exception:
         logger.warning("裁定邮件发送失败(不影响裁定本身)")
+
+
+def _mark_pending(codes: list):
+    """清仓清单待执行标记(2026-09-21 预案): 清单生成与执行是两个
+    状态——15:45 核对先查本标记, 未销且持仓仍在=A未执行(非核对失败)。"""
+    try:
+        from datetime import datetime
+        Path("logs/cb_close_pending.json").write_text(
+            json.dumps({"ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "codes": codes, "executed": False},
+                       ensure_ascii=False, indent=1))
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
