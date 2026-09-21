@@ -237,8 +237,9 @@ def build_redemption():
 # ══════════════════════════════════════════════════════════════════
 # Stage 5: point-in-time 快照
 # ══════════════════════════════════════════════════════════════════
-def build_snapshots(start="2019-01-01", end=None, freq="MS", append=False,
+def build_snapshots(start="2019-01-01", end=None, freq="MS", append=True,
                     out_name="cb_snapshots"):
+    # 2026-09-21: 生产默认 append=True——周一 06:30 cron 直跑本函数,
     """
     生成每月初的存续可转债快照(point-in-time):
     - 已上市
