@@ -17,7 +17,7 @@
 用法:
   python scripts/single_var_harness.py --validate
   python scripts/single_var_harness.py --direction D1_timing_reestimate \
-      [--paths 10] [--cost 0.0013] [--window main]
+      [--paths 10] [--cost 0.0013]
 输出: 各臂曲线 logs/sv_curve_{id}_{arm}.csv + 汇总 logs/sv_summary.csv
 """
 import json
