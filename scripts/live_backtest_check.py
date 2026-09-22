@@ -45,9 +45,11 @@ def _codes_from_positions(pos):
 
 
 def _leg(code):
-    """腿分类: 12xxxx=可转债腿, 511360=扫尾单, 其余=股票腿(档位作用域)。"""
+    """腿分类: 11xxxx(沪)/12xxxx(深)=可转债腿, 511360=扫尾单,
+    其余=股票腿(档位作用域)。2026-09-22 修复: 旧版只认 12 开头——
+    11 开头沪转债被归为股票, 09-21 新买的 10 只沪券连 CB 名单都没进。"""
     code = str(code)
-    if code.startswith("12"):
+    if code.startswith(("11", "12")):
         return "cb"
     if code == "511360":
         return "sweep"
@@ -203,6 +205,33 @@ def main(report=False):
                if abs(live_w.get(c, 0.0) - 1.0 / max(len(target), 1)) > 0.05}
 
     events = []
+    # CB 腿对账(2026-09-22 新增): 09-21 事故=CB 腿增减对观测完全不可见
+    # ——执行链差量建仓 10 只而日更链无任何告警。对账对象=账户 CB
+    # vs 信号 CB(shares 差量=执行器真实动作的依据)。
+    cb_sig = {}
+    cb_sig_path = ROOT / "data_store" / "meta" / "signal_cb_latest.json"
+    if cb_sig_path.exists():
+        try:
+            cb_sig = json.loads(cb_sig_path.read_text(encoding="utf-8"))
+        except Exception:
+            cb_sig = {}
+    cb_target = [str(c) for c in cb_sig.get("holdings", [])]
+    cb_shares = {str(c): int(v) for c, v in cb_sig.get("shares", {}).items()}
+    cb_live = set(cb_codes)
+    cb_missing = sorted(set(cb_target) - cb_live)
+    cb_extra = sorted(cb_live - set(cb_target))
+    cb_vol_diff = {}
+    for c in cb_target:
+        tgt = cb_shares.get(c)
+        live_v = pos.get(c, {}).get("volume")
+        if tgt is not None and live_v is not None and abs(live_v - tgt) > tgt * 0.1:
+            cb_vol_diff[c] = {"target": tgt, "live": live_v}
+    cb_impl = round(len(cb_live & set(cb_target)) / len(cb_target), 3) \
+        if cb_target else None
+    if cb_missing or cb_extra:
+        events.append(f"CB名单差: 缺{len(cb_missing)} 多{len(cb_extra)}")
+    if cb_vol_diff:
+        events.append(f"CB张数差>10%: {len(cb_vol_diff)}只")
     if sig_date != today:
         events.append(f"信号陈旧: signal_date={sig_date} ≠ {today}")
     if len(list_extra) + len(list_missing) > 2:
@@ -220,6 +249,10 @@ def main(report=False):
         "snapshot": exported,
         "live_codes": sorted(live_codes),
         "cb_codes": sorted(cb_codes),
+        "cb_target_count": len(cb_target),
+        "cb_missing": cb_missing, "cb_extra": cb_extra,
+        "cb_vol_diff_gt10pct": cb_vol_diff,
+        "cb_implementation": cb_impl,
         "target_codes": sorted(target),
         "list_extra": list_extra, "list_missing": list_missing,
         "weight_diff_gt5pp": w_diffs,
