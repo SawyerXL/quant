@@ -58,6 +58,9 @@ all_dates = sorted(price_panel.keys())
 # ══════════════════════════════════════════════════════════════════
 def select_double_low(snap):
     df = snap.copy()
+    # 2026-09-22 修: 与实盘 cb_signal 一致剔除404退市板块债(违约债dblow极低
+    # 常年霸占排名第1且评级含'A'能过过滤——回测含它们=与实盘不同构)
+    df = df[~df['code'].astype(str).str.startswith('404')]
     # 排除低评级 (BBB+及以下)
     rating_order = {'AAA':0,'AA+':1,'AA':2,'AA-':3,'A+':4,'A':5,'A-':6}
     df['rn'] = df['rating'].map(rating_order).fillna(99)

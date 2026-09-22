@@ -12,6 +12,7 @@ N 取值: 只试 3/5/10, 取夏普最接近中位者, 不取最优者。
 回测eligibility用"调仓日有价"(avails) — 与实时信号N日规则在调仓日等价;
 执行侧另加实时停牌过滤(双保险)。
 """
+import os
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -21,7 +22,8 @@ import numpy as np
 from loguru import logger
 from data.storage import load_meta
 
-REAL_COST = 0.001
+# CB_COST 环境变量可覆盖双边成本(2026-09-22: 13bp敏感性变体用)
+REAL_COST = float(os.environ.get("CB_COST", "0.001"))
 TOP_N = 25
 
 logger.info("加载快照...")
@@ -56,6 +58,9 @@ logger.info(f"  面板: {len(price_panel)}交易日")
 
 def select_double_low(snap):
     df = snap.copy()
+    # 2026-09-22 修: 与实盘 cb_signal 一致剔除404退市板块债(违约债dblow极低
+    # 常年霸占排名第1且评级含'A'能过过滤——回测含它们=与实盘不同构)
+    df = df[~df["code"].astype(str).str.startswith("404")]
     rating_order = {"AAA": 0, "AA+": 1, "AA": 2, "AA-": 3, "A+": 4,
                     "A": 5, "A-": 6}
     df["rn"] = df["rating"].map(rating_order).fillna(99)
