@@ -23,7 +23,9 @@ logger.remove()
 from data.storage import load_daily, load_meta
 from backtest_config import DEFAULT_CONFIG
 from backtest_engine import run_backtest, make_rebal_dates, calc_metrics
-from backtest_cb_doublelow import run_bt as cb_run_bt
+# 2026-09-22: CB腿改用 V3 剔404 口径(停牌污染审计+404修正定案的对外口径,
+# 由 backtest_cb_eligibility_arms.py 产出) —— 不再 import backtest_cb_doublelow
+# (其 run_bt 为 V0 日1pop 口径, 且 import 会触发整脚本顶层执行)
 
 START, END = "2019-01-01", "2026-08-28"
 
@@ -59,8 +61,10 @@ def main():
     nav_s, _ = run_backtest(panel, ap, rebal, DEFAULT_CONFIG, ic)
     ret_s = nav_s.pct_change().dropna()
 
-    # ── CB引擎日收益 ──
-    nav_cb = cb_run_bt("dblow")
+    # ── CB引擎日收益(2026-09-22: V3 N=10 剔404口径, 见脚本头注释) ──
+    _cb_navs = pd.read_csv("logs/cb_eligibility_arms_nav.csv",
+                           index_col=0, parse_dates=True)
+    nav_cb = _cb_navs["nav_V3_N10"]
     ret_cb = nav_cb.pct_change().dropna()
 
     # 交集
