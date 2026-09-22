@@ -26,11 +26,20 @@ from backtest_engine import run_backtest, make_rebal_dates, calc_metrics
 # 2026-09-22: CB腿改用 V3 剔404 口径(停牌污染审计+404修正定案的对外口径,
 # 由 backtest_cb_eligibility_arms.py 产出) —— 不再 import backtest_cb_doublelow
 # (其 run_bt 为 V0 日1pop 口径, 且 import 会触发整脚本顶层执行)
+# 2026-09-22 深夜: END 由数据末端派生(闸门十三)——原字面量 '2026-08-28' 与
+# CB腿数据末端(09-18)错位, 同一NAV两个窗口差0.02夏普(1.41 vs 1.39)已定位。
 
-START, END = "2019-01-01", "2026-08-28"
+START = "2019-01-01"
 
 
 def main():
+    # ── CB引擎日收益(先载, 用其末端派生股票侧END——两腿窗口强制一致) ──
+    _cb_navs = pd.read_csv("logs/cb_eligibility_arms_nav.csv",
+                           index_col=0, parse_dates=True)
+    nav_cb = _cb_navs["nav_V3_N10"]
+    ret_cb = nav_cb.pct_change().dropna()
+    END = str(nav_cb.index[-1].date())
+
     # ── 股票主策略日收益(全期) ──
     meta = load_meta("stock_info_full")
     codes = meta["code"].tolist() if not meta.empty else []
@@ -61,11 +70,7 @@ def main():
     nav_s, _ = run_backtest(panel, ap, rebal, DEFAULT_CONFIG, ic)
     ret_s = nav_s.pct_change().dropna()
 
-    # ── CB引擎日收益(2026-09-22: V3 N=10 剔404口径, 见脚本头注释) ──
-    _cb_navs = pd.read_csv("logs/cb_eligibility_arms_nav.csv",
-                           index_col=0, parse_dates=True)
-    nav_cb = _cb_navs["nav_V3_N10"]
-    ret_cb = nav_cb.pct_change().dropna()
+    # (CB腿已在函数开头加载: V3 N=10 剔404口径)
 
     # 交集
     j = pd.DataFrame({"s": ret_s, "cb": ret_cb}).dropna()
