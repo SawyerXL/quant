@@ -14,6 +14,7 @@ import pandas as pd
 import numpy as np
 from loguru import logger
 from data.storage import load_meta
+from data.cb_select import select_double_low, filter_universe
 
 REAL_COST = 0.001
 TOP_N = 25
@@ -70,19 +71,7 @@ for code in zombie_codes:
 logger.info(f"   僵尸(券,月)记录: {zom_records}")
 
 
-def select_double_low(snap):
-    df = snap.copy()
-    rating_order = {"AAA": 0, "AA+": 1, "AA": 2, "AA-": 3, "A+": 4,
-                    "A": 5, "A-": 6}
-    df["rn"] = df["rating"].map(rating_order).fillna(99)
-    df = df[df["rn"] <= 6]
-    if "size" in df.columns:
-        df = df[df["size"] >= 0.5]
-    if "price" in df.columns and "premium" in df.columns:
-        df = df[~((df["price"] > 130) & (df["premium"] < 5))]
-    if "dblow" not in df.columns:
-        df["dblow"] = df["price"] + 100 * df["premium"] / 100
-    return df.sort_values("dblow").head(TOP_N)["code"].tolist()
+# 选股过滤共用 data/cb_select (闸门二十一), 不再自带拷贝
 
 
 def run_bt(strategy="dblow", variant="V0", stats=None):
@@ -150,15 +139,7 @@ def run_bt(strategy="dblow", variant="V0", stats=None):
                     continue
                 selected = selected[:TOP_N]
             else:
-                df = snap[snap["code"].isin(avails)].copy()
-                rating_order = {"AAA": 0, "AA+": 1, "AA": 2, "AA-": 3,
-                                "A+": 4, "A": 5, "A-": 6}
-                df["rn"] = df["rating"].map(rating_order).fillna(99)
-                df = df[df["rn"] <= 6]
-                if "size" in df.columns:
-                    df = df[df["size"] >= 0.5]
-                if "price" in df.columns and "premium" in df.columns:
-                    df = df[~((df["price"] > 130) & (df["premium"] < 5))]
+                df = filter_universe(snap[snap["code"].isin(avails)])
                 selected = df["code"].unique().tolist()
                 if len(selected) < 10:
                     skip_rebal += 1

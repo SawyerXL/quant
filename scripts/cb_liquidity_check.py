@@ -12,6 +12,7 @@ import pandas as pd
 import numpy as np
 from loguru import logger
 from data.storage import load_meta
+from data.cb_select import select_double_low
 
 REAL_COST = 0.001
 TOP_N = 25
@@ -47,23 +48,7 @@ all_dates = sorted(price_panel.keys())
 logger.info(f"  面板: {len(price_panel)}交易日")
 
 
-def select_double_low(snap, top=None):
-    df = snap.copy()
-    # 2026-09-22: 与实盘 cb_signal 一致, 剔除404退市板块债(违约债, 实盘买不进;
-    # 且其 dblow 极低(-30~-42)常年霸占排名第1——回测含它们=与实盘不同构)
-    df = df[~df["code"].astype(str).str.startswith("404")]
-    rating_order = {"AAA": 0, "AA+": 1, "AA": 2, "AA-": 3, "A+": 4,
-                    "A": 5, "A-": 6}
-    df["rn"] = df["rating"].map(rating_order).fillna(99)
-    df = df[df["rn"] <= 6]
-    if "size" in df.columns:
-        df = df[df["size"] >= 0.5]
-    if "price" in df.columns and "premium" in df.columns:
-        df = df[~((df["price"] > 130) & (df["premium"] < 5))]
-    if "dblow" not in df.columns:
-        df["dblow"] = df["price"] + 100 * df["premium"] / 100
-    ranked = df.sort_values("dblow")["code"].tolist()
-    return ranked[:top] if top else ranked
+# 选股过滤共用 data/cb_select (闸门二十一)
 
 
 # ── 逐月选股(甲: 补足25), 收集 (调仓日, code) ──

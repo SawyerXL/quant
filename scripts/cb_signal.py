@@ -21,6 +21,7 @@ from loguru import logger
 logger.add("logs/cb_signal_{time:YYYY-MM-DD}.log", rotation="1 day", retention="365 days")
 
 from data.storage import load_meta
+from data.cb_select import select_double_low
 from monitoring.alerts import send_alert
 
 CB_CAPITAL = 600_000
@@ -30,17 +31,6 @@ TOP_N = 25
 TRADABLE_MAX_GAP_DAYS = 10
 SIGNAL_FILE = Path("data_store/meta/signal_cb_latest.json")
 CB_DIR = Path("data_store/convertible_bonds")
-
-
-def select_double_low(snap, top=None):
-    """快照已含 dblow 列, 按双低排序。top=None 返回全排名(停牌过滤
-    需要从全排名向下补足——甲方案)。与回测口径一致。"""
-    df = snap.copy()
-    df["dblow"] = pd.to_numeric(df["dblow"], errors="coerce")
-    df = df.dropna(subset=["dblow"])
-    df = df[~df["code"].astype(str).str.startswith("404")]   # 退市板块债, 实盘流动性买不进
-    ranked = df.sort_values("dblow")["code"].tolist()
-    return ranked[:top] if top else ranked
 
 
 def _load_prev():

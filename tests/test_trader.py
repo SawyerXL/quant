@@ -112,6 +112,48 @@ class TestMissingSharesFailSafe:
 
 # ── 修复4: 涨跌停检查 ─────────────────────────────────────────────
 
+class TestCBDeadZone:
+
+    def test_small_sell_diff_skipped(self, _mock_env):
+        """CB超配<10张不卖(死区, 2026-09-22)——防取整超配后天天卖零头。"""
+        from execution.trader import Trader
+        client = _mock_env["client"]
+        client._positions = {
+            "123107.SZ": {"volume": 213, "cost_price": 114.0,
+                          "market_value": 24282},
+        }
+        sig = {
+            "signal_date": "2026-09-23", "regime": "bull",
+            "holdings": ["123107"],
+            "shares": {"123107": 210},
+            "prices": {"123107": 114.0},
+            "sell": [], "buy": [],
+        }
+        t = Trader()
+        res = t.execute_signal(_write_signal(_mock_env["tmp"], sig), "track_cb")
+        assert not [s for s in res["sells"] if s["code"] == "123107"], \
+            "超配3张不得卖出(死区)"
+
+    def test_clear_sell_not_dead_zoned(self, _mock_env):
+        """清仓路径不受死区限制(奇数零头一次性卖出合法)。"""
+        from execution.trader import Trader
+        client = _mock_env["client"]
+        client._positions = {
+            "123107.SZ": {"volume": 163, "cost_price": 114.0,
+                          "market_value": 18582},
+        }
+        sig = {
+            "signal_date": "2026-09-23", "regime": "bull",
+            "holdings": [], "shares": {},
+            "prices": {"123107": 114.0},
+            "sell": ["123107"], "buy": [],
+        }
+        t = Trader()
+        res = t.execute_signal(_write_signal(_mock_env["tmp"], sig), "track_cb")
+        assert any(s["code"] == "123107" for s in res["sells"]), \
+            "清仓163张必须卖(死区不适用)"
+
+
 class TestLimitPriceEnforcement:
 
     def _limit_gw(self, caps):

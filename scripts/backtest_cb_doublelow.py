@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import pandas as pd, numpy as np
 from loguru import logger
 from data.storage import load_meta
+from data.cb_select import select_double_low, filter_universe
 
 REAL_COST = 0.001   # 转债双边0.1%
 TOP_N = 25
@@ -54,29 +55,8 @@ logger.info(f"  加载{loaded}只, {len(price_panel)}个交易日")
 all_dates = sorted(price_panel.keys())
 
 # ══════════════════════════════════════════════════════════════════
-# 选股
-# ══════════════════════════════════════════════════════════════════
-def select_double_low(snap):
-    df = snap.copy()
-    # 2026-09-22 修: 与实盘 cb_signal 一致剔除404退市板块债(违约债dblow极低
-    # 常年霸占排名第1且评级含'A'能过过滤——回测含它们=与实盘不同构)
-    df = df[~df['code'].astype(str).str.startswith('404')]
-    # 排除低评级 (BBB+及以下)
-    rating_order = {'AAA':0,'AA+':1,'AA':2,'AA-':3,'A+':4,'A':5,'A-':6}
-    df['rn'] = df['rating'].map(rating_order).fillna(99)
-    df = df[df['rn'] <= rating_order.get('A-', 6)]
-    # 排除小规模 (<0.5亿)
-    if 'size' in df.columns: df = df[df['size'] >= 0.5]
-    # 排除临近强赎 (价>130且溢价<5%)
-    if 'price' in df.columns and 'premium' in df.columns:
-        df = df[~((df['price']>130) & (df['premium']<5))]
-    # 双低排序
-    if 'dblow' not in df.columns:
-        df['dblow'] = df['price'] + 100 * df['premium'] / 100
-    return df.sort_values('dblow').head(TOP_N)['code'].tolist()
-
-# ══════════════════════════════════════════════════════════════════
 # 通用回测: strategy="dblow" or "equal"(全市场等权基准)
+# 选股过滤共用 data/cb_select (闸门二十一)
 # ══════════════════════════════════════════════════════════════════
 def run_bt(strategy="dblow"):
     nav = pd.Series(1.0, index=all_dates)
@@ -122,14 +102,8 @@ def run_bt(strategy="dblow"):
                 if len(selected) < TOP_N: continue
                 selected = selected[:TOP_N]
             else:
-                # 全市场等权基准: 所有通过过滤的债
-                df = snap[snap['code'].isin(avails)].copy()
-                rating_order = {'AAA':0,'AA+':1,'AA':2,'AA-':3,'A+':4,'A':5,'A-':6}
-                df['rn'] = df['rating'].map(rating_order).fillna(99)
-                df = df[df['rn'] <= rating_order.get('A-', 6)]
-                if 'size' in df.columns: df = df[df['size'] >= 0.5]
-                if 'price' in df.columns and 'premium' in df.columns:
-                    df = df[~((df['price']>130) & (df['premium']<5))]
+                # 全市场等权基准: 所有通过过滤的债(过滤共用 data/cb_select)
+                df = filter_universe(snap[snap['code'].isin(avails)])
                 selected = df['code'].unique().tolist()
                 if len(selected) < 10: continue
 

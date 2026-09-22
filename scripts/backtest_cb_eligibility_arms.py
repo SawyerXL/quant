@@ -21,6 +21,7 @@ import pandas as pd
 import numpy as np
 from loguru import logger
 from data.storage import load_meta
+from data.cb_select import select_double_low
 
 # CB_COST 环境变量可覆盖双边成本(2026-09-22: 13bp敏感性变体用)
 REAL_COST = float(os.environ.get("CB_COST", "0.001"))
@@ -54,24 +55,7 @@ for code in snap_codes:
 
 all_dates = sorted(price_panel.keys())
 logger.info(f"  面板: {len(price_panel)}交易日")
-
-
-def select_double_low(snap):
-    df = snap.copy()
-    # 2026-09-22 修: 与实盘 cb_signal 一致剔除404退市板块债(违约债dblow极低
-    # 常年霸占排名第1且评级含'A'能过过滤——回测含它们=与实盘不同构)
-    df = df[~df["code"].astype(str).str.startswith("404")]
-    rating_order = {"AAA": 0, "AA+": 1, "AA": 2, "AA-": 3, "A+": 4,
-                    "A": 5, "A-": 6}
-    df["rn"] = df["rating"].map(rating_order).fillna(99)
-    df = df[df["rn"] <= 6]
-    if "size" in df.columns:
-        df = df[df["size"] >= 0.5]
-    if "price" in df.columns and "premium" in df.columns:
-        df = df[~((df["price"] > 130) & (df["premium"] < 5))]
-    if "dblow" not in df.columns:
-        df["dblow"] = df["price"] + 100 * df["premium"] / 100
-    return df.sort_values("dblow").head(TOP_N)["code"].tolist()
+# 选股过滤共用 data/cb_select (闸门二十一)
 
 
 def run_bt(N, fillup=True, stats=None):
@@ -133,11 +117,11 @@ def run_bt(N, fillup=True, stats=None):
             avails = [c for c in snap["code"].unique() if c in prices_today]
 
             if fillup:
-                full_rank = select_double_low(snap)
+                full_rank = select_double_low(snap, top=TOP_N)
                 blocked = [c for c in full_rank if c not in prices_today]
                 blocked_top += len(blocked)
                 selected = select_double_low(
-                    snap[snap["code"].isin(avails)])
+                    snap[snap["code"].isin(avails)], top=TOP_N)
                 if len(selected) < TOP_N:
                     skip_rebal += 1
                     continue
@@ -146,7 +130,7 @@ def run_bt(N, fillup=True, stats=None):
                 new_w = {c: 1.0 / n for c in selected}
             else:
                 # 乙: 全快照排名TOP25, 只保留可交易, 权重1/n重分配
-                full_rank = select_double_low(snap)
+                full_rank = select_double_low(snap, top=TOP_N)
                 kept = [c for c in full_rank if c in avails]
                 blocked_top += TOP_N - len(kept)
                 if len(kept) < 10:
