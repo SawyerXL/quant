@@ -340,7 +340,14 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
         actual_positions = {str(k).split(".")[0]: v
                             for k, v in actual_positions.items()}
         filled_codes   = set(actual_positions.keys())
-        target_buys    = {str(c).split(".")[0] for c in buy_list}
+        # 2026-09-22 修复(计数与动作分叉): 旧版 target_buys 只读信号
+        # buy[] 列表——而 trader 的 shares 差量路径会自行建仓(09-21
+        # 实锤: 信号 buy=[] 但实际买入10只, 结果文件报"买入0")。
+        # 改为并集: 信号 buy[] ∪ trader 实际动作(result["buys"])。
+        trader_buys   = {str(r.get("code", "")).split(".")[0]
+                         for r in result.get("buys", [])
+                         if r.get("code")}
+        target_buys   = {str(c).split(".")[0] for c in buy_list} | trader_buys
 
         for code in target_buys:
             assumed = assumed_prices.get(code)
@@ -378,6 +385,10 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
             "target_buy_count":   len(target_buys),
             "fill_count":         fill_count,
             "fill_rate_pct":      round(fill_rate, 1),
+            # 2026-09-22: 分叉可见性——trader 差量路径动作单独记录,
+            # 与信号 buy[] 路径分开, 防止"报告0交易实际在交易"再现
+            "signal_buy_count":   len(buy_list),
+            "trader_diff_buys":   sorted(trader_buys),
             "avg_slippage_pct":   round(avg_slip, 4),
             "max_slippage_pct":   round(max_slip, 4),
             "slippage_detail":    slippage_data,
