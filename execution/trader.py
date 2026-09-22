@@ -86,6 +86,15 @@ def _limit_prices(codes: list[str], ref_prices: dict, st_codes: set) -> dict:
     return out
 
 
+def _round_cb_lot(qty: int) -> int:
+    """CB买入张数取整到10的整数倍(半进位: 47→50, 5→10, 4→0)。
+    2026-09-22 废单调查: 差量=信号目标−实际持仓, 持仓可能为奇数张
+    (09-01乱序买卖残留), 柜台对买入方向拒非整手(卖出零头一次性合法
+    ——09-01五笔奇数卖出成交实锤买卖不对称)。取整后差量幂等收敛
+    (目标±5张内不再下单)。"""
+    return (int(qty) + 5) // 10 * 10
+
+
 class Trader:
 
     def __init__(self):
@@ -265,7 +274,16 @@ class Trader:
         # 54部成待撤)的 shares-filled 净额。
         try:
             OPEN_STATUS = (50, 52, 54)
-            for o in self.client.get_today_orders():
+            today_orders = self.client.get_today_orders() or []
+            # 2026-09-22: 当日已废单的买入不再重试(09-01多波重跑每波
+            # 重复撞8只停牌券+1只仿真冻结券的废单; 废单是柜台判定的
+            # "不可成交", 当日重试纯噪音)。卖出方向不受此限。
+            rejected_buys = {
+                _norm(o.get("code"))
+                for o in today_orders
+                if o.get("status") == 57 and o.get("direction") == "buy"
+            }
+            for o in today_orders:
                 code = _norm(o.get("code"))
                 if not self._in_scope(code, strategy_id):
                     continue
@@ -279,7 +297,7 @@ class Trader:
                 elif d == "sell":
                     cur["volume"] -= net
         except Exception:
-            pass
+            rejected_buys = set()
         target_shares = {_norm(k): v for k, v in sig.get("shares", {}).items()}
         holdings      = {_norm(c) for c in sig.get("holdings", [])}
         sell_set      = {_norm(c) for c in sig.get("sell", [])}
@@ -294,7 +312,7 @@ class Trader:
                     check_prices[c] = float(cp)
         gw.state["limit_prices"] = _limit_prices(list(check_prices), check_prices,
                                                  _build_st_map())
-        results = {"sells": [], "buys": [], "blocked": []}
+        results = {"sells": [], "buys": [], "blocked": [], "skipped_rejected": []}
 
         # ── 卖出差量：清仓票全卖 / 目标<实际 补卖差量 ──
         missing_shares = []
@@ -360,6 +378,17 @@ class Trader:
                 continue
             cur = positions.get(code, {}).get("volume", 0)
             buy_qty = tgt - cur
+            # 2026-09-22: CB买入张数取整到10整数倍(柜台拒非整手买入,
+            # 09-21补仓47/57/72/74张全废; 卖出零头一次性合法, 故只限买入)
+            if strategy_id == "track_cb":
+                buy_qty = _round_cb_lot(buy_qty)
+            # 2026-09-22: 当日已废单的买入不重试(停牌券/仿真冻结券
+            # 每天重试=每天必废, 与闸门十二同族: 跳过必须是可见事件)
+            if code in rejected_buys:
+                results["skipped_rejected"].append(
+                    {"code": code, "direction": "buy",
+                     "reason": "当日已废单, 不重试(停牌/无行情类)"})
+                continue
             price  = ref_prices.get(code, 0)
             if buy_qty <= 0 or price <= 0:
                 continue
@@ -373,6 +402,12 @@ class Trader:
                 logger.info(f"买入 {code} {buy_qty}股 @{price:.2f}")
             else:
                 results["blocked"].append({"code": code, "direction": "buy", "reason": reason})
+
+        if results["skipped_rejected"]:
+            msg = (f"[{strategy_id}] 当日已废单跳过重试 {len(results['skipped_rejected'])}笔: "
+                   f"{[r['code'] for r in results['skipped_rejected'][:8]]}")
+            logger.warning(msg)
+            send_alert(msg, level="warning")
 
         # ── 幂等对账：执行后复查，未收敛只告警不自动重试（防重复下单） ──
         try:

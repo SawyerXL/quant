@@ -393,6 +393,8 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
             "max_slippage_pct":   round(max_slip, 4),
             "slippage_detail":    slippage_data,
             "blocked":            result.get("blocked", []),
+            # 2026-09-22: 当日已废单跳过重试(停牌/无行情类)可见性
+            "skipped_rejected":   result.get("skipped_rejected", []),
         }
 
         # 保存到本地并推回 Linux（按track分文件: 旧版同日期名被cb覆盖, Track A

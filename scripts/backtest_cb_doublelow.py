@@ -157,10 +157,13 @@ common = nav_dblow.index.intersection(nav_equal.index)
 nav_d = nav_dblow[common]; nav_e = nav_equal[common]
 
 def metrics(nav_s):
-    n = len(nav_s); ar = (nav_s.iloc[-1]/nav_s.iloc[0])**(252/n) - 1
-    dr = nav_s.pct_change(fill_method=None).dropna()
+    # 2026-09-22 修: 从首个调仓日(首快照月)起算, 排除2013-2018无持仓平段
+    # (平段混入会把年化稀释~1.7倍、夏普稀释~1.3倍——同一份NAV曾出1.02与1.32两个数)
+    active = nav_s.loc[snap_dates[0]:]
+    n = len(active); ar = (active.iloc[-1]/active.iloc[0])**(252/n) - 1
+    dr = active.pct_change(fill_method=None).dropna()
     sr = dr.mean()/dr.std()*np.sqrt(252) if dr.std()>0 else 0
-    dd = (nav_s/nav_s.cummax()-1).min(); vol = dr.std()*np.sqrt(252)
+    dd = (active/active.cummax()-1).min(); vol = dr.std()*np.sqrt(252)
     return ar, sr, dd, vol
 
 d_ar,d_sr,d_dd,d_vol = metrics(nav_d)

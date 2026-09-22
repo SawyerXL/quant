@@ -1,0 +1,823 @@
+2026-09-01 09:40:02.149 | INFO     | __main__:execute:109 - ============================================================
+2026-09-01 09:40:02.153 | INFO     | __main__:execute:110 - Track A 信号执行  模式=正式执行
+2026-09-01 09:40:02.154 | INFO     | __main__:execute:111 - ============================================================
+2026-09-01 09:40:02.155 | INFO     | __main__:fetch_signal_from_linux:76 - 从 Linux 拉取 Track A 信号...
+2026-09-01 09:40:03.295 | INFO     | __main__:fetch_signal_from_linux:83 - 信号拉取成功: 2026-08-31，持仓 24 只，买入 0 只，卖出 0 只
+2026-09-01 09:40:03.296 | WARNING  | __main__:check_signal_fresh:98 - 信号日期 2026-08-31 ≠ 今天 2026-09-01，跳过执行
+2026-09-01 09:58:11.048 | INFO     | __main__:execute:109 - ============================================================
+2026-09-01 09:58:11.058 | INFO     | __main__:execute:110 - Track CB 信号执行  模式=正式执行
+2026-09-01 09:58:11.059 | INFO     | __main__:execute:111 - ============================================================
+2026-09-01 09:58:11.059 | INFO     | __main__:fetch_signal_from_linux:76 - 从 Linux 拉取 Track CB 信号...
+2026-09-01 09:58:12.125 | INFO     | __main__:fetch_signal_from_linux:83 - 信号拉取成功: 2026-09-01，持仓 25 只，买入 25 只，卖出 0 只
+2026-09-01 09:58:12.128 | INFO     | __main__:execute:143 - 交易计划：买入 25 只，卖出 0 只
+2026-09-01 09:58:12.128 | INFO     | __main__:execute:147 -   买入：['110075', '110076', '110081', '110092', '113042', '113052', '113056', '113062', '113605', '113658', '113681', '118027', '118053', '123064', '123065', '123107', '123188', '127027', '127040', '127061', '128127', '128128', '128129', '128134', '128142']
+2026-09-01 09:58:20.860 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 09:58:24.937 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 09:58:24.937 | INFO     | execution.trader:execute_signal:73 - [track_cb] 读取信号: 2026-09-01 regime=None holdings=25
+2026-09-01 09:58:24.983 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 000725.SZ 2000股 @5.50 → order_id=403701773
+2026-09-01 09:58:24.983 | INFO     | execution.trader:_execute_bull:161 - 卖出 000725.SZ 2000股 @5.51
+2026-09-01 09:58:25.060 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 000988.SZ 100股 @93.28 → order_id=403701774
+2026-09-01 09:58:25.060 | INFO     | execution.trader:_execute_bull:161 - 卖出 000988.SZ 100股 @93.47
+2026-09-01 09:58:25.090 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002008.SZ 100股 @82.72 → order_id=403701775
+2026-09-01 09:58:25.091 | INFO     | execution.trader:_execute_bull:161 - 卖出 002008.SZ 100股 @82.88
+2026-09-01 09:58:25.119 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002185.SZ 900股 @15.64 → order_id=403701776
+2026-09-01 09:58:25.119 | INFO     | execution.trader:_execute_bull:161 - 卖出 002185.SZ 900股 @15.67
+2026-09-01 09:58:25.148 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002281.SZ 100股 @158.24 → order_id=403701777
+2026-09-01 09:58:25.148 | INFO     | execution.trader:_execute_bull:161 - 卖出 002281.SZ 100股 @158.56
+2026-09-01 09:58:25.179 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002407.SZ 300股 @30.60 → order_id=403701778
+2026-09-01 09:58:25.179 | INFO     | execution.trader:_execute_bull:161 - 卖出 002407.SZ 300股 @30.66
+2026-09-01 09:58:25.207 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002409.SZ 100股 @121.60 → order_id=403701779
+2026-09-01 09:58:25.207 | INFO     | execution.trader:_execute_bull:161 - 卖出 002409.SZ 100股 @121.85
+2026-09-01 09:58:25.234 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002463.SZ 100股 @101.51 → order_id=403701780
+2026-09-01 09:58:25.234 | INFO     | execution.trader:_execute_bull:161 - 卖出 002463.SZ 100股 @101.71
+2026-09-01 09:58:25.267 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002475.SZ 200股 @53.70 → order_id=403701781
+2026-09-01 09:58:25.268 | INFO     | execution.trader:_execute_bull:161 - 卖出 002475.SZ 200股 @53.81
+2026-09-01 09:58:25.298 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 300059.SZ 1100股 @20.26 → order_id=403701782
+2026-09-01 09:58:25.298 | INFO     | execution.trader:_execute_bull:161 - 卖出 300059.SZ 1100股 @20.30
+2026-09-01 09:58:25.328 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 300136.SZ 200股 @56.87 → order_id=403701783
+2026-09-01 09:58:25.328 | INFO     | execution.trader:_execute_bull:161 - 卖出 300136.SZ 200股 @56.98
+2026-09-01 09:58:25.358 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 300408.SZ 100股 @112.28 → order_id=403701784
+2026-09-01 09:58:25.358 | INFO     | execution.trader:_execute_bull:161 - 卖出 300408.SZ 100股 @112.50
+2026-09-01 09:58:25.388 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 300433.SZ 600股 @35.34 → order_id=403701785
+2026-09-01 09:58:25.389 | INFO     | execution.trader:_execute_bull:161 - 卖出 300433.SZ 600股 @35.41
+2026-09-01 09:58:25.422 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 300475.SZ 200股 @134.82 → order_id=403701786
+2026-09-01 09:58:25.423 | INFO     | execution.trader:_execute_bull:161 - 卖出 300475.SZ 200股 @135.09
+2026-09-01 09:58:25.452 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 301526.SZ 1000股 @31.05 → order_id=403701787
+2026-09-01 09:58:25.452 | INFO     | execution.trader:_execute_bull:161 - 卖出 301526.SZ 1000股 @31.11
+2026-09-01 09:58:25.483 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 600030.SH 800股 @28.54 → order_id=403701788
+2026-09-01 09:58:25.483 | INFO     | execution.trader:_execute_bull:161 - 卖出 600030.SH 800股 @28.59
+2026-09-01 09:58:25.518 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 600105.SH 1000股 @38.77 → order_id=403701789
+2026-09-01 09:58:25.519 | INFO     | execution.trader:_execute_bull:161 - 卖出 600105.SH 1000股 @38.85
+2026-09-01 09:58:25.549 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 600176.SH 300股 @35.56 → order_id=403701790
+2026-09-01 09:58:25.549 | INFO     | execution.trader:_execute_bull:161 - 卖出 600176.SH 300股 @35.63
+2026-09-01 09:58:25.582 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 600276.SH 300股 @51.53 → order_id=403701791
+2026-09-01 09:58:25.583 | INFO     | execution.trader:_execute_bull:161 - 卖出 600276.SH 300股 @51.63
+2026-09-01 09:58:25.616 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 600522.SH 400股 @30.34 → order_id=403701792
+2026-09-01 09:58:25.616 | INFO     | execution.trader:_execute_bull:161 - 卖出 600522.SH 400股 @30.40
+2026-09-01 09:58:25.649 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 601138.SH 200股 @54.83 → order_id=403701793
+2026-09-01 09:58:25.649 | INFO     | execution.trader:_execute_bull:161 - 卖出 601138.SH 200股 @54.94
+2026-09-01 09:58:25.684 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 601318.SH 300股 @55.25 → order_id=403701794
+2026-09-01 09:58:25.685 | INFO     | execution.trader:_execute_bull:161 - 卖出 601318.SH 300股 @55.36
+2026-09-01 09:58:25.722 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 601899.SH 500股 @27.57 → order_id=403701795
+2026-09-01 09:58:25.722 | INFO     | execution.trader:_execute_bull:161 - 卖出 601899.SH 500股 @27.63
+2026-09-01 09:58:25.757 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 603019.SH 100股 @83.59 → order_id=403701796
+2026-09-01 09:58:25.757 | INFO     | execution.trader:_execute_bull:161 - 卖出 603019.SH 100股 @83.76
+2026-09-01 09:58:25.790 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113658 220股 @113.40 → order_id=403701797
+2026-09-01 09:58:25.790 | INFO     | execution.trader:_execute_bull:181 - 买入 113658 220股 @108.00
+2026-09-01 09:58:25.822 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 118027 290股 @84.63 → order_id=403701798
+2026-09-01 09:58:25.822 | INFO     | execution.trader:_execute_bull:181 - 买入 118027 290股 @80.60
+2026-09-01 09:58:26.101 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127061 210股 @114.55 → order_id=403701799
+2026-09-01 09:58:26.102 | INFO     | execution.trader:_execute_bull:181 - 买入 127061 210股 @109.10
+2026-09-01 09:58:26.125 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110081 230股 @106.70 → order_id=403701800
+2026-09-01 09:58:26.125 | INFO     | execution.trader:_execute_bull:181 - 买入 110081 230股 @101.62
+2026-09-01 09:58:26.155 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110092 320股 @78.05 → order_id=403701801
+2026-09-01 09:58:26.155 | INFO     | execution.trader:_execute_bull:181 - 买入 110092 320股 @74.33
+2026-09-01 09:58:26.186 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113042 200股 @125.00 → order_id=403701802
+2026-09-01 09:58:26.186 | INFO     | execution.trader:_execute_bull:181 - 买入 113042 200股 @119.05
+2026-09-01 09:58:26.213 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113605 200股 @125.41 → order_id=403701803
+2026-09-01 09:58:26.213 | INFO     | execution.trader:_execute_bull:181 - 买入 113605 200股 @119.44
+2026-09-01 09:58:26.241 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128128 210股 @115.62 → order_id=403701804
+2026-09-01 09:58:26.241 | INFO     | execution.trader:_execute_bull:181 - 买入 128128 210股 @110.11
+2026-09-01 09:58:26.269 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128134 190股 @129.15 → order_id=403701805
+2026-09-01 09:58:26.270 | INFO     | execution.trader:_execute_bull:181 - 买入 128134 190股 @123.00
+2026-09-01 09:58:26.301 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128127 200股 @120.69 → order_id=403701806
+2026-09-01 09:58:26.301 | INFO     | execution.trader:_execute_bull:181 - 买入 128127 200股 @114.94
+2026-09-01 09:58:26.330 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113056 180股 @135.28 → order_id=403701807
+2026-09-01 09:58:26.343 | INFO     | execution.trader:_execute_bull:181 - 买入 113056 180股 @128.84
+2026-09-01 09:58:26.375 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110075 220股 @112.99 → order_id=403701808
+2026-09-01 09:58:26.375 | INFO     | execution.trader:_execute_bull:181 - 买入 110075 220股 @107.61
+2026-09-01 09:58:26.404 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113062 180股 @136.72 → order_id=403701809
+2026-09-01 09:58:26.404 | INFO     | execution.trader:_execute_bull:181 - 买入 113062 180股 @130.21
+2026-09-01 09:58:26.437 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123188 160股 @149.95 → order_id=403701810
+2026-09-01 09:58:26.437 | INFO     | execution.trader:_execute_bull:181 - 买入 123188 160股 @142.81
+2026-09-01 09:58:26.470 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128142 190股 @127.43 → order_id=403701811
+2026-09-01 09:58:26.471 | INFO     | execution.trader:_execute_bull:181 - 买入 128142 190股 @121.36
+2026-09-01 09:58:26.503 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123065 190股 @128.50 → order_id=403701812
+2026-09-01 09:58:26.503 | INFO     | execution.trader:_execute_bull:181 - 买入 123065 190股 @122.38
+2026-09-01 09:58:26.533 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128129 220股 @113.30 → order_id=403701813
+2026-09-01 09:58:26.533 | INFO     | execution.trader:_execute_bull:181 - 买入 128129 220股 @107.90
+2026-09-01 09:58:26.565 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110076 190股 @126.96 → order_id=403701814
+2026-09-01 09:58:26.565 | INFO     | execution.trader:_execute_bull:181 - 买入 110076 190股 @120.91
+2026-09-01 09:58:26.597 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127027 210股 @118.78 → order_id=403701815
+2026-09-01 09:58:26.597 | INFO     | execution.trader:_execute_bull:181 - 买入 127027 210股 @113.12
+2026-09-01 09:58:26.633 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123064 210股 @115.62 → order_id=403701816
+2026-09-01 09:58:26.633 | INFO     | execution.trader:_execute_bull:181 - 买入 123064 210股 @110.11
+2026-09-01 09:58:26.667 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113052 200股 @123.95 → order_id=403701817
+2026-09-01 09:58:26.667 | INFO     | execution.trader:_execute_bull:181 - 买入 113052 200股 @118.05
+2026-09-01 09:58:26.698 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123107 200股 @120.44 → order_id=403701818
+2026-09-01 09:58:26.699 | INFO     | execution.trader:_execute_bull:181 - 买入 123107 200股 @114.70
+2026-09-01 09:58:26.729 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127040 180股 @134.61 → order_id=403701819
+2026-09-01 09:58:26.729 | INFO     | execution.trader:_execute_bull:181 - 买入 127040 180股 @128.20
+2026-09-01 09:58:26.754 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 118053 170股 @147.01 → order_id=403701820
+2026-09-01 09:58:26.754 | INFO     | execution.trader:_execute_bull:181 - 买入 118053 170股 @140.01
+2026-09-01 09:58:26.779 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113681 170股 @146.24 → order_id=403701821
+2026-09-01 09:58:26.779 | INFO     | execution.trader:_execute_bull:181 - 买入 113681 170股 @139.28
+2026-09-01 09:58:26.780 | WARNING  | execution.trader:_execute_bull:198 - [对账未收敛] 113658:实盘0≠目标220; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标230; 110092:实盘0≠目标320（等待下次对账修正，不自动重试）
+2026-09-01 09:58:26.781 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock] ⚠️ [track_cb] 对账未收敛 25只: 113658:实盘0≠目标220; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标230; 110092:实盘0≠目标320
+2026-09-01 09:58:26.781 | INFO     | execution.trader:_execute_bull:207 - [track_cb] 调仓完成 (2026-09-01)
+卖出 24 笔 / 买入 25 笔 / 风控拦截 0 笔
+2026-09-01 09:58:26.781 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [track_cb] 调仓完成 (2026-09-01)
+卖出 24 笔 / 买入 25 笔 / 风控拦截 0 笔
+2026-09-01 09:58:26.781 | INFO     | __main__:execute:183 - 委托提交完成，等待 300s 后采集成交价...
+2026-09-01 10:03:26.784 | INFO     | __main__:execute:248 - 执行结果已保存: H:\quant\logs\execution_result_20260901.json
+2026-09-01 10:03:26.784 | INFO     | __main__:execute:249 - 成交率: 0%  平均滑点: +0.000%
+2026-09-01 10:03:27.810 | INFO     | __main__:push_result_to_linux:52 - 执行结果已推送至 Linux: execution_result_20260901.json
+2026-09-01 10:03:27.811 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [Track CB 调仓完成] 2026-09-01
+买入: 25 只  卖出: 0 只
+成交率: 0%  平均滑点: +0.000%
+信号日期: 2026-09-01
+2026-09-01 10:05:29.395 | INFO     | __main__:execute:109 - ============================================================
+2026-09-01 10:05:29.396 | INFO     | __main__:execute:110 - Track CB 信号执行  模式=正式执行
+2026-09-01 10:05:29.396 | INFO     | __main__:execute:111 - ============================================================
+2026-09-01 10:05:29.396 | INFO     | __main__:fetch_signal_from_linux:76 - 从 Linux 拉取 Track CB 信号...
+2026-09-01 10:05:30.442 | INFO     | __main__:fetch_signal_from_linux:83 - 信号拉取成功: 2026-09-01，持仓 25 只，买入 25 只，卖出 0 只
+2026-09-01 10:05:30.443 | INFO     | __main__:execute:143 - 交易计划：买入 25 只，卖出 0 只
+2026-09-01 10:05:30.443 | INFO     | __main__:execute:147 -   买入：['110075', '110076', '110081', '110092', '113042', '113052', '113056', '113062', '113605', '113658', '113681', '118027', '118053', '123064', '123065', '123107', '123188', '127027', '127040', '127061', '128127', '128128', '128129', '128134', '128142']
+2026-09-01 10:05:37.705 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:05:41.780 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:05:41.781 | INFO     | execution.trader:execute_signal:73 - [track_cb] 读取信号: 2026-09-01 regime=None holdings=25
+2026-09-01 10:05:41.807 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 000725.SZ 2000股 @5.50 → order_id=403701822
+2026-09-01 10:05:41.807 | INFO     | execution.trader:_execute_bull:161 - 卖出 000725.SZ 2000股 @5.51
+2026-09-01 10:05:41.831 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 000988.SZ 100股 @93.28 → order_id=403701823
+2026-09-01 10:05:41.831 | INFO     | execution.trader:_execute_bull:161 - 卖出 000988.SZ 100股 @93.47
+2026-09-01 10:05:41.855 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002008.SZ 100股 @82.72 → order_id=403701824
+2026-09-01 10:05:41.855 | INFO     | execution.trader:_execute_bull:161 - 卖出 002008.SZ 100股 @82.88
+2026-09-01 10:05:41.880 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002185.SZ 900股 @15.64 → order_id=403701825
+2026-09-01 10:05:41.880 | INFO     | execution.trader:_execute_bull:161 - 卖出 002185.SZ 900股 @15.67
+2026-09-01 10:05:41.908 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002281.SZ 100股 @158.24 → order_id=403701826
+2026-09-01 10:05:41.908 | INFO     | execution.trader:_execute_bull:161 - 卖出 002281.SZ 100股 @158.56
+2026-09-01 10:05:41.938 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002407.SZ 300股 @30.60 → order_id=403701827
+2026-09-01 10:05:41.938 | INFO     | execution.trader:_execute_bull:161 - 卖出 002407.SZ 300股 @30.66
+2026-09-01 10:05:41.969 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002409.SZ 100股 @121.60 → order_id=403701828
+2026-09-01 10:05:41.969 | INFO     | execution.trader:_execute_bull:161 - 卖出 002409.SZ 100股 @121.85
+2026-09-01 10:05:42.230 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002463.SZ 100股 @101.51 → order_id=403701829
+2026-09-01 10:05:42.230 | INFO     | execution.trader:_execute_bull:161 - 卖出 002463.SZ 100股 @101.71
+2026-09-01 10:05:42.254 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 002475.SZ 200股 @53.70 → order_id=403701830
+2026-09-01 10:05:42.254 | INFO     | execution.trader:_execute_bull:161 - 卖出 002475.SZ 200股 @53.81
+2026-09-01 10:05:42.278 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 123107.SZ 200股 @113.78 → order_id=403701831
+2026-09-01 10:05:42.278 | INFO     | execution.trader:_execute_bull:161 - 卖出 123107.SZ 200股 @114.01
+2026-09-01 10:05:42.306 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 127027.SZ 210股 @111.53 → order_id=403701832
+2026-09-01 10:05:42.306 | INFO     | execution.trader:_execute_bull:161 - 卖出 127027.SZ 210股 @111.75
+2026-09-01 10:05:42.336 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 127040.SZ 180股 @121.05 → order_id=403701833
+2026-09-01 10:05:42.336 | INFO     | execution.trader:_execute_bull:161 - 卖出 127040.SZ 180股 @121.30
+2026-09-01 10:05:42.368 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128134.SZ 190股 @120.57 → order_id=403701834
+2026-09-01 10:05:42.368 | INFO     | execution.trader:_execute_bull:161 - 卖出 128134.SZ 190股 @120.81
+2026-09-01 10:05:42.402 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128142.SZ 190股 @111.67 → order_id=403701835
+2026-09-01 10:05:42.402 | INFO     | execution.trader:_execute_bull:161 - 卖出 128142.SZ 190股 @111.90
+2026-09-01 10:05:42.433 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 300059.SZ 1100股 @20.26 → order_id=403701836
+2026-09-01 10:05:42.434 | INFO     | execution.trader:_execute_bull:161 - 卖出 300059.SZ 1100股 @20.30
+2026-09-01 10:05:42.462 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 300136.SZ 200股 @56.87 → order_id=403701837
+2026-09-01 10:05:42.462 | INFO     | execution.trader:_execute_bull:161 - 卖出 300136.SZ 200股 @56.98
+2026-09-01 10:05:42.491 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 300408.SZ 100股 @112.28 → order_id=403701838
+2026-09-01 10:05:42.491 | INFO     | execution.trader:_execute_bull:161 - 卖出 300408.SZ 100股 @112.50
+2026-09-01 10:05:42.525 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 300433.SZ 600股 @35.34 → order_id=403701839
+2026-09-01 10:05:42.526 | INFO     | execution.trader:_execute_bull:161 - 卖出 300433.SZ 600股 @35.41
+2026-09-01 10:05:42.566 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 300475.SZ 200股 @134.82 → order_id=403701840
+2026-09-01 10:05:42.566 | INFO     | execution.trader:_execute_bull:161 - 卖出 300475.SZ 200股 @135.09
+2026-09-01 10:05:42.593 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 301526.SZ 1000股 @31.05 → order_id=403701841
+2026-09-01 10:05:42.593 | INFO     | execution.trader:_execute_bull:161 - 卖出 301526.SZ 1000股 @31.11
+2026-09-01 10:05:42.618 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 600030.SH 800股 @28.54 → order_id=403701842
+2026-09-01 10:05:42.618 | INFO     | execution.trader:_execute_bull:161 - 卖出 600030.SH 800股 @28.59
+2026-09-01 10:05:42.643 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 600105.SH 1000股 @38.77 → order_id=403701843
+2026-09-01 10:05:42.643 | INFO     | execution.trader:_execute_bull:161 - 卖出 600105.SH 1000股 @38.85
+2026-09-01 10:05:42.666 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 600176.SH 300股 @35.56 → order_id=403701844
+2026-09-01 10:05:42.666 | INFO     | execution.trader:_execute_bull:161 - 卖出 600176.SH 300股 @35.63
+2026-09-01 10:05:42.689 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 600276.SH 300股 @51.53 → order_id=403701845
+2026-09-01 10:05:42.689 | INFO     | execution.trader:_execute_bull:161 - 卖出 600276.SH 300股 @51.63
+2026-09-01 10:05:42.714 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 600522.SH 400股 @30.34 → order_id=403701846
+2026-09-01 10:05:42.715 | INFO     | execution.trader:_execute_bull:161 - 卖出 600522.SH 400股 @30.40
+2026-09-01 10:05:42.739 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 601138.SH 200股 @54.83 → order_id=403701847
+2026-09-01 10:05:42.740 | INFO     | execution.trader:_execute_bull:161 - 卖出 601138.SH 200股 @54.94
+2026-09-01 10:05:42.763 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 601318.SH 300股 @55.25 → order_id=403701848
+2026-09-01 10:05:42.763 | INFO     | execution.trader:_execute_bull:161 - 卖出 601318.SH 300股 @55.36
+2026-09-01 10:05:42.786 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 601899.SH 500股 @27.57 → order_id=403701849
+2026-09-01 10:05:42.787 | INFO     | execution.trader:_execute_bull:161 - 卖出 601899.SH 500股 @27.63
+2026-09-01 10:05:42.809 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 603019.SH 100股 @83.59 → order_id=403701850
+2026-09-01 10:05:42.809 | INFO     | execution.trader:_execute_bull:161 - 卖出 603019.SH 100股 @83.76
+2026-09-01 10:05:42.833 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113658 190股 @128.30 → order_id=403701851
+2026-09-01 10:05:42.833 | INFO     | execution.trader:_execute_bull:181 - 买入 113658 190股 @122.19
+2026-09-01 10:05:42.860 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 118027 290股 @84.50 → order_id=403701852
+2026-09-01 10:05:42.860 | INFO     | execution.trader:_execute_bull:181 - 买入 118027 290股 @80.48
+2026-09-01 10:05:42.890 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127061 210股 @119.97 → order_id=403701853
+2026-09-01 10:05:42.890 | INFO     | execution.trader:_execute_bull:181 - 买入 127061 210股 @114.26
+2026-09-01 10:05:42.921 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110081 220股 @113.47 → order_id=403701854
+2026-09-01 10:05:42.922 | INFO     | execution.trader:_execute_bull:181 - 买入 110081 220股 @108.07
+2026-09-01 10:05:42.953 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110092 320股 @76.99 → order_id=403701855
+2026-09-01 10:05:42.953 | INFO     | execution.trader:_execute_bull:181 - 买入 110092 320股 @73.32
+2026-09-01 10:05:42.986 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113042 200股 @123.15 → order_id=403701856
+2026-09-01 10:05:42.986 | INFO     | execution.trader:_execute_bull:181 - 买入 113042 200股 @117.29
+2026-09-01 10:05:43.014 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113605 200股 @120.14 → order_id=403701857
+2026-09-01 10:05:43.014 | INFO     | execution.trader:_execute_bull:181 - 买入 113605 200股 @114.42
+2026-09-01 10:05:43.043 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128128 210股 @115.45 → order_id=403701858
+2026-09-01 10:05:43.043 | INFO     | execution.trader:_execute_bull:181 - 买入 128128 210股 @109.95
+2026-09-01 10:05:43.075 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128134 190股 @126.42 → order_id=403701859
+2026-09-01 10:05:43.075 | INFO     | execution.trader:_execute_bull:181 - 买入 128134 190股 @120.40
+2026-09-01 10:05:43.109 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128127 200股 @120.46 → order_id=403701860
+2026-09-01 10:05:43.109 | INFO     | execution.trader:_execute_bull:181 - 买入 128127 200股 @114.72
+2026-09-01 10:05:43.137 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113056 180股 @133.70 → order_id=403701861
+2026-09-01 10:05:43.137 | INFO     | execution.trader:_execute_bull:181 - 买入 113056 180股 @127.33
+2026-09-01 10:05:43.167 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110075 220股 @111.73 → order_id=403701862
+2026-09-01 10:05:43.167 | INFO     | execution.trader:_execute_bull:181 - 买入 110075 220股 @106.41
+2026-09-01 10:05:43.190 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113062 180股 @134.98 → order_id=403701863
+2026-09-01 10:05:43.190 | INFO     | execution.trader:_execute_bull:181 - 买入 113062 180股 @128.55
+2026-09-01 10:05:43.214 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123188 160股 @149.95 → order_id=403701864
+2026-09-01 10:05:43.214 | INFO     | execution.trader:_execute_bull:181 - 买入 123188 160股 @142.81
+2026-09-01 10:05:43.238 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128142 210股 @117.33 → order_id=403701865
+2026-09-01 10:05:43.238 | INFO     | execution.trader:_execute_bull:181 - 买入 128142 210股 @111.74
+2026-09-01 10:05:43.267 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123065 200股 @120.70 → order_id=403701866
+2026-09-01 10:05:43.267 | INFO     | execution.trader:_execute_bull:181 - 买入 123065 200股 @114.95
+2026-09-01 10:05:43.296 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128129 220股 @113.34 → order_id=403701867
+2026-09-01 10:05:43.296 | INFO     | execution.trader:_execute_bull:181 - 买入 128129 220股 @107.94
+2026-09-01 10:05:43.328 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110076 210股 @118.10 → order_id=403701868
+2026-09-01 10:05:43.328 | INFO     | execution.trader:_execute_bull:181 - 买入 110076 210股 @112.48
+2026-09-01 10:05:43.360 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127027 210股 @116.98 → order_id=403701869
+2026-09-01 10:05:43.360 | INFO     | execution.trader:_execute_bull:181 - 买入 127027 210股 @111.41
+2026-09-01 10:05:43.384 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123064 210股 @115.45 → order_id=403701870
+2026-09-01 10:05:43.384 | INFO     | execution.trader:_execute_bull:181 - 买入 123064 210股 @109.95
+2026-09-01 10:05:43.410 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113052 210股 @119.68 → order_id=403701871
+2026-09-01 10:05:43.410 | INFO     | execution.trader:_execute_bull:181 - 买入 113052 210股 @113.98
+2026-09-01 10:05:43.434 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123107 210股 @119.70 → order_id=403701872
+2026-09-01 10:05:43.434 | INFO     | execution.trader:_execute_bull:181 - 买入 123107 210股 @114.00
+2026-09-01 10:05:43.459 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127040 190股 @127.67 → order_id=403701873
+2026-09-01 10:05:43.459 | INFO     | execution.trader:_execute_bull:181 - 买入 127040 190股 @121.59
+2026-09-01 10:05:43.485 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 118053 140股 @177.35 → order_id=403701874
+2026-09-01 10:05:43.485 | INFO     | execution.trader:_execute_bull:181 - 买入 118053 140股 @168.90
+2026-09-01 10:05:43.512 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113681 170股 @146.54 → order_id=403701875
+2026-09-01 10:05:43.512 | INFO     | execution.trader:_execute_bull:181 - 买入 113681 170股 @139.56
+2026-09-01 10:05:43.513 | WARNING  | execution.trader:_execute_bull:198 - [对账未收敛] 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320（等待下次对账修正，不自动重试）
+2026-09-01 10:05:43.513 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock] ⚠️ [track_cb] 对账未收敛 25只: 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320
+2026-09-01 10:05:43.514 | INFO     | execution.trader:_execute_bull:207 - [track_cb] 调仓完成 (2026-09-01)
+卖出 29 笔 / 买入 25 笔 / 风控拦截 0 笔
+2026-09-01 10:05:43.514 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [track_cb] 调仓完成 (2026-09-01)
+卖出 29 笔 / 买入 25 笔 / 风控拦截 0 笔
+2026-09-01 10:05:43.514 | INFO     | __main__:execute:183 - 委托提交完成，等待 300s 后采集成交价...
+2026-09-01 10:10:43.520 | INFO     | __main__:execute:248 - 执行结果已保存: H:\quant\logs\execution_result_20260901.json
+2026-09-01 10:10:43.520 | INFO     | __main__:execute:249 - 成交率: 0%  平均滑点: +0.000%
+2026-09-01 10:10:44.494 | INFO     | __main__:push_result_to_linux:52 - 执行结果已推送至 Linux: execution_result_20260901.json
+2026-09-01 10:10:44.494 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [Track CB 调仓完成] 2026-09-01
+买入: 25 只  卖出: 0 只
+成交率: 0%  平均滑点: +0.000%
+信号日期: 2026-09-01
+2026-09-01 10:13:50.230 | INFO     | __main__:execute:109 - ============================================================
+2026-09-01 10:13:50.231 | INFO     | __main__:execute:110 - Track CB 信号执行  模式=正式执行
+2026-09-01 10:13:50.231 | INFO     | __main__:execute:111 - ============================================================
+2026-09-01 10:13:50.231 | INFO     | __main__:fetch_signal_from_linux:76 - 从 Linux 拉取 Track CB 信号...
+2026-09-01 10:13:51.238 | INFO     | __main__:fetch_signal_from_linux:83 - 信号拉取成功: 2026-09-01，持仓 25 只，买入 25 只，卖出 0 只
+2026-09-01 10:13:51.238 | INFO     | __main__:execute:143 - 交易计划：买入 25 只，卖出 0 只
+2026-09-01 10:13:51.239 | INFO     | __main__:execute:147 -   买入：['110075', '110076', '110081', '110092', '113042', '113052', '113056', '113062', '113605', '113658', '113681', '118027', '118053', '123064', '123065', '123107', '123188', '127027', '127040', '127061', '128127', '128128', '128129', '128134', '128142']
+2026-09-01 10:13:58.627 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:14:02.699 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:14:02.700 | INFO     | execution.trader:execute_signal:73 - [track_cb] 读取信号: 2026-09-01 regime=None holdings=25
+2026-09-01 10:14:02.762 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 123107.SZ 410股 @113.74 → order_id=403701877
+2026-09-01 10:14:02.762 | INFO     | execution.trader:_execute_bull:172 - 卖出 123107.SZ 410股 @113.97
+2026-09-01 10:14:02.799 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 127027.SZ 420股 @111.40 → order_id=403701878
+2026-09-01 10:14:02.799 | INFO     | execution.trader:_execute_bull:172 - 卖出 127027.SZ 420股 @111.63
+2026-09-01 10:14:02.831 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 127040.SZ 370股 @120.97 → order_id=403701879
+2026-09-01 10:14:02.831 | INFO     | execution.trader:_execute_bull:172 - 卖出 127040.SZ 370股 @121.21
+2026-09-01 10:14:02.863 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 127061.SZ 210股 @116.02 → order_id=403701880
+2026-09-01 10:14:02.863 | INFO     | execution.trader:_execute_bull:172 - 卖出 127061.SZ 210股 @116.26
+2026-09-01 10:14:02.897 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128134.SZ 380股 @120.48 → order_id=403701881
+2026-09-01 10:14:02.897 | INFO     | execution.trader:_execute_bull:172 - 卖出 128134.SZ 380股 @120.72
+2026-09-01 10:14:02.927 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128142.SZ 400股 @111.68 → order_id=403701882
+2026-09-01 10:14:02.927 | INFO     | execution.trader:_execute_bull:172 - 卖出 128142.SZ 400股 @111.90
+2026-09-01 10:14:02.952 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113658 190股 @128.30 → order_id=403701883
+2026-09-01 10:14:02.953 | INFO     | execution.trader:_execute_bull:192 - 买入 113658 190股 @122.19
+2026-09-01 10:14:02.977 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 118027 290股 @84.50 → order_id=403701884
+2026-09-01 10:14:02.977 | INFO     | execution.trader:_execute_bull:192 - 买入 118027 290股 @80.48
+2026-09-01 10:14:03.000 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127061 210股 @119.97 → order_id=403701885
+2026-09-01 10:14:03.000 | INFO     | execution.trader:_execute_bull:192 - 买入 127061 210股 @114.26
+2026-09-01 10:14:03.026 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110081 220股 @113.47 → order_id=403701886
+2026-09-01 10:14:03.026 | INFO     | execution.trader:_execute_bull:192 - 买入 110081 220股 @108.07
+2026-09-01 10:14:03.052 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110092 320股 @76.99 → order_id=403701887
+2026-09-01 10:14:03.052 | INFO     | execution.trader:_execute_bull:192 - 买入 110092 320股 @73.32
+2026-09-01 10:14:03.079 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113042 200股 @123.15 → order_id=403701888
+2026-09-01 10:14:03.079 | INFO     | execution.trader:_execute_bull:192 - 买入 113042 200股 @117.29
+2026-09-01 10:14:03.103 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113605 200股 @120.14 → order_id=403701889
+2026-09-01 10:14:03.103 | INFO     | execution.trader:_execute_bull:192 - 买入 113605 200股 @114.42
+2026-09-01 10:14:03.128 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128128 210股 @115.45 → order_id=403701890
+2026-09-01 10:14:03.128 | INFO     | execution.trader:_execute_bull:192 - 买入 128128 210股 @109.95
+2026-09-01 10:14:03.155 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128134 190股 @126.42 → order_id=403701891
+2026-09-01 10:14:03.155 | INFO     | execution.trader:_execute_bull:192 - 买入 128134 190股 @120.40
+2026-09-01 10:14:03.180 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128127 200股 @120.46 → order_id=403701892
+2026-09-01 10:14:03.181 | INFO     | execution.trader:_execute_bull:192 - 买入 128127 200股 @114.72
+2026-09-01 10:14:03.204 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113056 180股 @133.70 → order_id=403701893
+2026-09-01 10:14:03.204 | INFO     | execution.trader:_execute_bull:192 - 买入 113056 180股 @127.33
+2026-09-01 10:14:03.230 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110075 220股 @111.73 → order_id=403701894
+2026-09-01 10:14:03.230 | INFO     | execution.trader:_execute_bull:192 - 买入 110075 220股 @106.41
+2026-09-01 10:14:03.255 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113062 180股 @134.98 → order_id=403701895
+2026-09-01 10:14:03.255 | INFO     | execution.trader:_execute_bull:192 - 买入 113062 180股 @128.55
+2026-09-01 10:14:03.278 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123188 160股 @149.95 → order_id=403701896
+2026-09-01 10:14:03.278 | INFO     | execution.trader:_execute_bull:192 - 买入 123188 160股 @142.81
+2026-09-01 10:14:03.303 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128142 210股 @117.33 → order_id=403701897
+2026-09-01 10:14:03.303 | INFO     | execution.trader:_execute_bull:192 - 买入 128142 210股 @111.74
+2026-09-01 10:14:03.328 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123065 200股 @120.70 → order_id=403701898
+2026-09-01 10:14:03.329 | INFO     | execution.trader:_execute_bull:192 - 买入 123065 200股 @114.95
+2026-09-01 10:14:03.352 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128129 220股 @113.34 → order_id=403701899
+2026-09-01 10:14:03.352 | INFO     | execution.trader:_execute_bull:192 - 买入 128129 220股 @107.94
+2026-09-01 10:14:03.382 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110076 210股 @118.10 → order_id=403701900
+2026-09-01 10:14:03.382 | INFO     | execution.trader:_execute_bull:192 - 买入 110076 210股 @112.48
+2026-09-01 10:14:03.408 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127027 210股 @116.98 → order_id=403701901
+2026-09-01 10:14:03.409 | INFO     | execution.trader:_execute_bull:192 - 买入 127027 210股 @111.41
+2026-09-01 10:14:03.436 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123064 210股 @115.45 → order_id=403701902
+2026-09-01 10:14:03.436 | INFO     | execution.trader:_execute_bull:192 - 买入 123064 210股 @109.95
+2026-09-01 10:14:03.462 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113052 210股 @119.68 → order_id=403701903
+2026-09-01 10:14:03.462 | INFO     | execution.trader:_execute_bull:192 - 买入 113052 210股 @113.98
+2026-09-01 10:14:03.492 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123107 210股 @119.70 → order_id=403701904
+2026-09-01 10:14:03.492 | INFO     | execution.trader:_execute_bull:192 - 买入 123107 210股 @114.00
+2026-09-01 10:14:03.522 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127040 190股 @127.67 → order_id=403701905
+2026-09-01 10:14:03.522 | INFO     | execution.trader:_execute_bull:192 - 买入 127040 190股 @121.59
+2026-09-01 10:14:03.809 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 118053 140股 @177.35 → order_id=403701906
+2026-09-01 10:14:03.809 | INFO     | execution.trader:_execute_bull:192 - 买入 118053 140股 @168.90
+2026-09-01 10:14:03.836 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113681 170股 @146.54 → order_id=403701907
+2026-09-01 10:14:03.837 | INFO     | execution.trader:_execute_bull:192 - 买入 113681 170股 @139.56
+2026-09-01 10:14:03.838 | WARNING  | execution.trader:_execute_bull:209 - [对账未收敛] 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320（等待下次对账修正，不自动重试）
+2026-09-01 10:14:03.838 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock] ⚠️ [track_cb] 对账未收敛 25只: 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320
+2026-09-01 10:14:03.838 | INFO     | execution.trader:_execute_bull:218 - [track_cb] 调仓完成 (2026-09-01)
+卖出 6 笔 / 买入 25 笔 / 风控拦截 0 笔
+2026-09-01 10:14:03.838 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [track_cb] 调仓完成 (2026-09-01)
+卖出 6 笔 / 买入 25 笔 / 风控拦截 0 笔
+2026-09-01 10:14:03.838 | INFO     | __main__:execute:183 - 委托提交完成，等待 300s 后采集成交价...
+2026-09-01 10:19:03.840 | INFO     | __main__:execute:248 - 执行结果已保存: H:\quant\logs\execution_result_20260901.json
+2026-09-01 10:19:03.840 | INFO     | __main__:execute:249 - 成交率: 0%  平均滑点: +0.000%
+2026-09-01 10:19:05.159 | INFO     | __main__:push_result_to_linux:52 - 执行结果已推送至 Linux: execution_result_20260901.json
+2026-09-01 10:19:05.159 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [Track CB 调仓完成] 2026-09-01
+买入: 25 只  卖出: 0 只
+成交率: 0%  平均滑点: +0.000%
+信号日期: 2026-09-01
+2026-09-01 10:20:11.311 | INFO     | __main__:execute:138 - ============================================================
+2026-09-01 10:20:11.312 | INFO     | __main__:execute:139 - Track CB 信号执行  模式=正式执行
+2026-09-01 10:20:11.312 | INFO     | __main__:execute:140 - ============================================================
+2026-09-01 10:20:11.312 | INFO     | __main__:fetch_signal_from_linux:76 - 从 Linux 拉取 Track CB 信号...
+2026-09-01 10:20:12.354 | INFO     | __main__:fetch_signal_from_linux:83 - 信号拉取成功: 2026-09-01，持仓 25 只，买入 25 只，卖出 0 只
+2026-09-01 10:20:12.354 | INFO     | __main__:execute:178 - 交易计划：买入 25 只，卖出 0 只
+2026-09-01 10:20:12.354 | INFO     | __main__:execute:182 -   买入：['110075', '110076', '110081', '110092', '113042', '113052', '113056', '113062', '113605', '113658', '113681', '118027', '118053', '123064', '123065', '123107', '123188', '127027', '127040', '127061', '128127', '128128', '128129', '128134', '128142']
+2026-09-01 10:20:24.502 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:20:28.583 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:20:28.583 | INFO     | execution.trader:execute_signal:73 - [track_cb] 读取信号: 2026-09-01 regime=None holdings=25
+2026-09-01 10:20:28.634 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 110075.SZ 660股 @1.00 → order_id=403701913
+2026-09-01 10:20:28.635 | INFO     | execution.trader:_execute_bull:187 - 卖出 110075.SZ 660股 @1.00
+2026-09-01 10:20:28.658 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 110076.SZ 610股 @1.00 → order_id=403701914
+2026-09-01 10:20:28.659 | INFO     | execution.trader:_execute_bull:187 - 卖出 110076.SZ 610股 @1.00
+2026-09-01 10:20:28.683 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 110081.SZ 670股 @1.00 → order_id=403701915
+2026-09-01 10:20:28.684 | INFO     | execution.trader:_execute_bull:187 - 卖出 110081.SZ 670股 @1.00
+2026-09-01 10:20:28.707 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 110092.SZ 960股 @1.00 → order_id=403701916
+2026-09-01 10:20:28.708 | INFO     | execution.trader:_execute_bull:187 - 卖出 110092.SZ 960股 @1.00
+2026-09-01 10:20:28.732 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113042.SZ 600股 @1.00 → order_id=403701917
+2026-09-01 10:20:28.733 | INFO     | execution.trader:_execute_bull:187 - 卖出 113042.SZ 600股 @1.00
+2026-09-01 10:20:28.757 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113052.SZ 620股 @1.00 → order_id=403701918
+2026-09-01 10:20:28.758 | INFO     | execution.trader:_execute_bull:187 - 卖出 113052.SZ 620股 @1.00
+2026-09-01 10:20:28.780 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113056.SZ 540股 @1.00 → order_id=403701919
+2026-09-01 10:20:28.781 | INFO     | execution.trader:_execute_bull:187 - 卖出 113056.SZ 540股 @1.00
+2026-09-01 10:20:28.804 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113062.SZ 540股 @1.00 → order_id=403701920
+2026-09-01 10:20:28.805 | INFO     | execution.trader:_execute_bull:187 - 卖出 113062.SZ 540股 @1.00
+2026-09-01 10:20:28.827 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113605.SZ 600股 @1.00 → order_id=403701921
+2026-09-01 10:20:28.828 | INFO     | execution.trader:_execute_bull:187 - 卖出 113605.SZ 600股 @1.00
+2026-09-01 10:20:28.851 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113658.SZ 600股 @1.00 → order_id=403701922
+2026-09-01 10:20:28.852 | INFO     | execution.trader:_execute_bull:187 - 卖出 113658.SZ 600股 @1.00
+2026-09-01 10:20:28.875 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113681.SZ 510股 @1.00 → order_id=403701923
+2026-09-01 10:20:28.875 | INFO     | execution.trader:_execute_bull:187 - 卖出 113681.SZ 510股 @1.00
+2026-09-01 10:20:28.899 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 118027.SZ 870股 @1.00 → order_id=403701924
+2026-09-01 10:20:28.900 | INFO     | execution.trader:_execute_bull:187 - 卖出 118027.SZ 870股 @1.00
+2026-09-01 10:20:28.925 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 118053.SZ 450股 @1.00 → order_id=403701925
+2026-09-01 10:20:28.926 | INFO     | execution.trader:_execute_bull:187 - 卖出 118053.SZ 450股 @1.00
+2026-09-01 10:20:28.951 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 123064.SZ 630股 @1.00 → order_id=403701926
+2026-09-01 10:20:28.952 | INFO     | execution.trader:_execute_bull:187 - 卖出 123064.SZ 630股 @1.00
+2026-09-01 10:20:28.976 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 123065.SZ 590股 @1.00 → order_id=403701927
+2026-09-01 10:20:28.977 | INFO     | execution.trader:_execute_bull:187 - 卖出 123065.SZ 590股 @1.00
+2026-09-01 10:20:28.977 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 123107.SZ 1240股: 单笔金额 141,364 超过上限 100,000
+2026-09-01 10:20:28.999 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 123188.SZ 480股 @1.00 → order_id=403701928
+2026-09-01 10:20:29.000 | INFO     | execution.trader:_execute_bull:187 - 卖出 123188.SZ 480股 @1.00
+2026-09-01 10:20:29.000 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 127027.SZ 1260股: 单笔金额 140,688 超过上限 100,000
+2026-09-01 10:20:29.000 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 127040.SZ 1120股: 单笔金额 135,809 超过上限 100,000
+2026-09-01 10:20:29.000 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 127061.SZ 950股: 单笔金额 110,444 超过上限 100,000
+2026-09-01 10:20:29.025 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128127.SZ 600股 @1.00 → order_id=403701929
+2026-09-01 10:20:29.025 | INFO     | execution.trader:_execute_bull:187 - 卖出 128127.SZ 600股 @1.00
+2026-09-01 10:20:29.049 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128128.SZ 630股 @1.00 → order_id=403701930
+2026-09-01 10:20:29.049 | INFO     | execution.trader:_execute_bull:187 - 卖出 128128.SZ 630股 @1.00
+2026-09-01 10:20:29.074 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128129.SZ 660股 @1.00 → order_id=403701931
+2026-09-01 10:20:29.074 | INFO     | execution.trader:_execute_bull:187 - 卖出 128129.SZ 660股 @1.00
+2026-09-01 10:20:29.075 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 128134.SZ 1140股: 单笔金额 137,589 超过上限 100,000
+2026-09-01 10:20:29.075 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 128142.SZ 1220股: 单笔金额 136,529 超过上限 100,000
+2026-09-01 10:20:29.101 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113658 190股 @128.30 → order_id=403701932
+2026-09-01 10:20:29.101 | INFO     | execution.trader:_execute_bull:207 - 买入 113658 190股 @122.19
+2026-09-01 10:20:29.127 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 118027 290股 @84.50 → order_id=403701933
+2026-09-01 10:20:29.128 | INFO     | execution.trader:_execute_bull:207 - 买入 118027 290股 @80.48
+2026-09-01 10:20:29.155 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127061 210股 @119.97 → order_id=403701934
+2026-09-01 10:20:29.156 | INFO     | execution.trader:_execute_bull:207 - 买入 127061 210股 @114.26
+2026-09-01 10:20:29.182 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110081 220股 @113.47 → order_id=403701935
+2026-09-01 10:20:29.183 | INFO     | execution.trader:_execute_bull:207 - 买入 110081 220股 @108.07
+2026-09-01 10:20:29.215 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110092 320股 @76.99 → order_id=403701936
+2026-09-01 10:20:29.215 | INFO     | execution.trader:_execute_bull:207 - 买入 110092 320股 @73.32
+2026-09-01 10:20:29.248 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113042 200股 @123.15 → order_id=403701937
+2026-09-01 10:20:29.248 | INFO     | execution.trader:_execute_bull:207 - 买入 113042 200股 @117.29
+2026-09-01 10:20:29.281 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113605 200股 @120.14 → order_id=403701938
+2026-09-01 10:20:29.281 | INFO     | execution.trader:_execute_bull:207 - 买入 113605 200股 @114.42
+2026-09-01 10:20:29.316 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128128 210股 @115.45 → order_id=403701939
+2026-09-01 10:20:29.316 | INFO     | execution.trader:_execute_bull:207 - 买入 128128 210股 @109.95
+2026-09-01 10:20:29.351 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128134 190股 @126.42 → order_id=403701940
+2026-09-01 10:20:29.352 | INFO     | execution.trader:_execute_bull:207 - 买入 128134 190股 @120.40
+2026-09-01 10:20:29.376 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128127 200股 @120.46 → order_id=403701941
+2026-09-01 10:20:29.376 | INFO     | execution.trader:_execute_bull:207 - 买入 128127 200股 @114.72
+2026-09-01 10:20:29.400 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113056 180股 @133.70 → order_id=403701942
+2026-09-01 10:20:29.400 | INFO     | execution.trader:_execute_bull:207 - 买入 113056 180股 @127.33
+2026-09-01 10:20:29.424 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110075 220股 @111.73 → order_id=403701943
+2026-09-01 10:20:29.424 | INFO     | execution.trader:_execute_bull:207 - 买入 110075 220股 @106.41
+2026-09-01 10:20:29.447 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113062 180股 @134.98 → order_id=403701944
+2026-09-01 10:20:29.447 | INFO     | execution.trader:_execute_bull:207 - 买入 113062 180股 @128.55
+2026-09-01 10:20:29.470 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123188 160股 @149.95 → order_id=403701945
+2026-09-01 10:20:29.471 | INFO     | execution.trader:_execute_bull:207 - 买入 123188 160股 @142.81
+2026-09-01 10:20:29.494 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128142 210股 @117.33 → order_id=403701946
+2026-09-01 10:20:29.494 | INFO     | execution.trader:_execute_bull:207 - 买入 128142 210股 @111.74
+2026-09-01 10:20:29.519 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123065 200股 @120.70 → order_id=403701947
+2026-09-01 10:20:29.519 | INFO     | execution.trader:_execute_bull:207 - 买入 123065 200股 @114.95
+2026-09-01 10:20:29.544 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128129 220股 @113.34 → order_id=403701948
+2026-09-01 10:20:29.544 | INFO     | execution.trader:_execute_bull:207 - 买入 128129 220股 @107.94
+2026-09-01 10:20:29.568 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110076 210股 @118.10 → order_id=403701949
+2026-09-01 10:20:29.568 | INFO     | execution.trader:_execute_bull:207 - 买入 110076 210股 @112.48
+2026-09-01 10:20:29.592 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127027 210股 @116.98 → order_id=403701950
+2026-09-01 10:20:29.592 | INFO     | execution.trader:_execute_bull:207 - 买入 127027 210股 @111.41
+2026-09-01 10:20:29.616 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123064 210股 @115.45 → order_id=403701951
+2026-09-01 10:20:29.616 | INFO     | execution.trader:_execute_bull:207 - 买入 123064 210股 @109.95
+2026-09-01 10:20:29.644 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113052 210股 @119.68 → order_id=403701952
+2026-09-01 10:20:29.644 | INFO     | execution.trader:_execute_bull:207 - 买入 113052 210股 @113.98
+2026-09-01 10:20:29.670 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123107 210股 @119.70 → order_id=403701953
+2026-09-01 10:20:29.670 | INFO     | execution.trader:_execute_bull:207 - 买入 123107 210股 @114.00
+2026-09-01 10:20:29.701 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127040 190股 @127.67 → order_id=403701954
+2026-09-01 10:20:29.701 | INFO     | execution.trader:_execute_bull:207 - 买入 127040 190股 @121.59
+2026-09-01 10:20:29.725 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 118053 140股 @177.35 → order_id=403701955
+2026-09-01 10:20:29.725 | INFO     | execution.trader:_execute_bull:207 - 买入 118053 140股 @168.90
+2026-09-01 10:20:29.750 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113681 170股 @146.54 → order_id=403701956
+2026-09-01 10:20:29.750 | INFO     | execution.trader:_execute_bull:207 - 买入 113681 170股 @139.56
+2026-09-01 10:20:29.751 | WARNING  | execution.trader:_execute_bull:224 - [对账未收敛] 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320（等待下次对账修正，不自动重试）
+2026-09-01 10:20:29.752 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock] ⚠️ [track_cb] 对账未收敛 25只: 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320
+2026-09-01 10:20:29.752 | INFO     | execution.trader:_execute_bull:233 - [track_cb] 调仓完成 (2026-09-01)
+卖出 19 笔 / 买入 25 笔 / 风控拦截 6 笔
+2026-09-01 10:20:29.752 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [track_cb] 调仓完成 (2026-09-01)
+卖出 19 笔 / 买入 25 笔 / 风控拦截 6 笔
+2026-09-01 10:20:29.752 | INFO     | __main__:execute:218 - 委托提交完成，等待 300s 后采集成交价...
+2026-09-01 10:25:29.754 | INFO     | __main__:execute:283 - 执行结果已保存: H:\quant\logs\execution_result_20260901.json
+2026-09-01 10:25:29.754 | INFO     | __main__:execute:284 - 成交率: 0%  平均滑点: +0.000%
+2026-09-01 10:25:30.777 | INFO     | __main__:push_result_to_linux:52 - 执行结果已推送至 Linux: execution_result_20260901.json
+2026-09-01 10:25:30.778 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [Track CB 调仓完成] 2026-09-01
+买入: 25 只  卖出: 0 只
+成交率: 0%  平均滑点: +0.000%
+信号日期: 2026-09-01
+2026-09-01 10:27:20.419 | INFO     | __main__:execute:138 - ============================================================
+2026-09-01 10:27:20.420 | INFO     | __main__:execute:139 - Track CB 信号执行  模式=正式执行
+2026-09-01 10:27:20.420 | INFO     | __main__:execute:140 - ============================================================
+2026-09-01 10:27:20.420 | INFO     | __main__:fetch_signal_from_linux:76 - 从 Linux 拉取 Track CB 信号...
+2026-09-01 10:27:21.459 | INFO     | __main__:fetch_signal_from_linux:83 - 信号拉取成功: 2026-09-01，持仓 25 只，买入 25 只，卖出 0 只
+2026-09-01 10:27:21.459 | INFO     | __main__:execute:178 - 交易计划：买入 25 只，卖出 0 只
+2026-09-01 10:27:21.459 | INFO     | __main__:execute:182 -   买入：['110075', '110076', '110081', '110092', '113042', '113052', '113056', '113062', '113605', '113658', '113681', '118027', '118053', '123064', '123065', '123107', '123188', '127027', '127040', '127061', '128127', '128128', '128129', '128134', '128142']
+2026-09-01 10:27:28.644 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:27:32.712 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:27:32.712 | INFO     | execution.trader:execute_signal:73 - [track_cb] 读取信号: 2026-09-01 regime=None holdings=25
+2026-09-01 10:27:32.753 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 110075.SZ 880股 @1.00 → order_id=403701957
+2026-09-01 10:27:32.753 | INFO     | execution.trader:_execute_bull:187 - 卖出 110075.SZ 880股 @1.00
+2026-09-01 10:27:32.791 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 110076.SZ 820股 @1.00 → order_id=403701958
+2026-09-01 10:27:32.791 | INFO     | execution.trader:_execute_bull:187 - 卖出 110076.SZ 820股 @1.00
+2026-09-01 10:27:32.814 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 110081.SZ 890股 @1.00 → order_id=403701959
+2026-09-01 10:27:32.815 | INFO     | execution.trader:_execute_bull:187 - 卖出 110081.SZ 890股 @1.00
+2026-09-01 10:27:32.838 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 110092.SZ 1280股 @1.00 → order_id=403701960
+2026-09-01 10:27:32.839 | INFO     | execution.trader:_execute_bull:187 - 卖出 110092.SZ 1280股 @1.00
+2026-09-01 10:27:32.862 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113042.SZ 800股 @1.00 → order_id=403701961
+2026-09-01 10:27:32.862 | INFO     | execution.trader:_execute_bull:187 - 卖出 113042.SZ 800股 @1.00
+2026-09-01 10:27:32.887 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113052.SZ 830股 @1.00 → order_id=403701962
+2026-09-01 10:27:32.887 | INFO     | execution.trader:_execute_bull:187 - 卖出 113052.SZ 830股 @1.00
+2026-09-01 10:27:32.911 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113056.SZ 720股 @1.00 → order_id=403701963
+2026-09-01 10:27:32.912 | INFO     | execution.trader:_execute_bull:187 - 卖出 113056.SZ 720股 @1.00
+2026-09-01 10:27:32.937 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113062.SZ 720股 @1.00 → order_id=403701964
+2026-09-01 10:27:32.937 | INFO     | execution.trader:_execute_bull:187 - 卖出 113062.SZ 720股 @1.00
+2026-09-01 10:27:32.962 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113605.SZ 800股 @1.00 → order_id=403701965
+2026-09-01 10:27:32.962 | INFO     | execution.trader:_execute_bull:187 - 卖出 113605.SZ 800股 @1.00
+2026-09-01 10:27:32.986 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113658.SZ 790股 @1.00 → order_id=403701966
+2026-09-01 10:27:32.986 | INFO     | execution.trader:_execute_bull:187 - 卖出 113658.SZ 790股 @1.00
+2026-09-01 10:27:33.012 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 113681.SZ 680股 @1.00 → order_id=403701967
+2026-09-01 10:27:33.012 | INFO     | execution.trader:_execute_bull:187 - 卖出 113681.SZ 680股 @1.00
+2026-09-01 10:27:33.036 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 118027.SZ 1160股 @1.00 → order_id=403701968
+2026-09-01 10:27:33.037 | INFO     | execution.trader:_execute_bull:187 - 卖出 118027.SZ 1160股 @1.00
+2026-09-01 10:27:33.061 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 118053.SZ 590股 @1.00 → order_id=403701969
+2026-09-01 10:27:33.061 | INFO     | execution.trader:_execute_bull:187 - 卖出 118053.SZ 590股 @1.00
+2026-09-01 10:27:33.086 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 123064.SZ 840股 @1.00 → order_id=403701970
+2026-09-01 10:27:33.086 | INFO     | execution.trader:_execute_bull:187 - 卖出 123064.SZ 840股 @1.00
+2026-09-01 10:27:33.112 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 123065.SZ 790股 @1.00 → order_id=403701971
+2026-09-01 10:27:33.112 | INFO     | execution.trader:_execute_bull:187 - 卖出 123065.SZ 790股 @1.00
+2026-09-01 10:27:33.112 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 123107.SZ 1660股: 单笔金额 189,230 超过上限 100,000
+2026-09-01 10:27:33.136 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 123188.SZ 640股 @1.00 → order_id=403701972
+2026-09-01 10:27:33.136 | INFO     | execution.trader:_execute_bull:187 - 卖出 123188.SZ 640股 @1.00
+2026-09-01 10:27:33.136 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 127027.SZ 1680股: 单笔金额 187,580 超过上限 100,000
+2026-09-01 10:27:33.137 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 127040.SZ 1500股: 单笔金额 181,932 超过上限 100,000
+2026-09-01 10:27:33.137 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 127061.SZ 1370股: 单笔金额 159,621 超过上限 100,000
+2026-09-01 10:27:33.160 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128127.SZ 800股 @1.00 → order_id=403701973
+2026-09-01 10:27:33.160 | INFO     | execution.trader:_execute_bull:187 - 卖出 128127.SZ 800股 @1.00
+2026-09-01 10:27:33.184 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128128.SZ 840股 @1.00 → order_id=403701974
+2026-09-01 10:27:33.184 | INFO     | execution.trader:_execute_bull:187 - 卖出 128128.SZ 840股 @1.00
+2026-09-01 10:27:33.210 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128129.SZ 880股 @1.00 → order_id=403701975
+2026-09-01 10:27:33.211 | INFO     | execution.trader:_execute_bull:187 - 卖出 128129.SZ 880股 @1.00
+2026-09-01 10:27:33.211 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 128134.SZ 1520股: 单笔金额 183,548 超过上限 100,000
+2026-09-01 10:27:33.211 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 128142.SZ 1640股: 单笔金额 184,448 超过上限 100,000
+2026-09-01 10:27:33.234 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113658 190股 @128.30 → order_id=403701976
+2026-09-01 10:27:33.235 | INFO     | execution.trader:_execute_bull:207 - 买入 113658 190股 @122.19
+2026-09-01 10:27:33.259 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 118027 290股 @84.50 → order_id=403701977
+2026-09-01 10:27:33.260 | INFO     | execution.trader:_execute_bull:207 - 买入 118027 290股 @80.48
+2026-09-01 10:27:33.284 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127061 210股 @119.97 → order_id=403701978
+2026-09-01 10:27:33.285 | INFO     | execution.trader:_execute_bull:207 - 买入 127061 210股 @114.26
+2026-09-01 10:27:33.310 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110081 220股 @113.47 → order_id=403701979
+2026-09-01 10:27:33.310 | INFO     | execution.trader:_execute_bull:207 - 买入 110081 220股 @108.07
+2026-09-01 10:27:33.335 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110092 320股 @76.99 → order_id=403701980
+2026-09-01 10:27:33.335 | INFO     | execution.trader:_execute_bull:207 - 买入 110092 320股 @73.32
+2026-09-01 10:27:33.361 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113042 200股 @123.15 → order_id=403701981
+2026-09-01 10:27:33.361 | INFO     | execution.trader:_execute_bull:207 - 买入 113042 200股 @117.29
+2026-09-01 10:27:33.385 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113605 200股 @120.14 → order_id=403701982
+2026-09-01 10:27:33.385 | INFO     | execution.trader:_execute_bull:207 - 买入 113605 200股 @114.42
+2026-09-01 10:27:33.409 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128128 210股 @115.45 → order_id=403701983
+2026-09-01 10:27:33.410 | INFO     | execution.trader:_execute_bull:207 - 买入 128128 210股 @109.95
+2026-09-01 10:27:33.434 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128134 190股 @126.42 → order_id=403701984
+2026-09-01 10:27:33.435 | INFO     | execution.trader:_execute_bull:207 - 买入 128134 190股 @120.40
+2026-09-01 10:27:33.460 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128127 200股 @120.46 → order_id=403701985
+2026-09-01 10:27:33.460 | INFO     | execution.trader:_execute_bull:207 - 买入 128127 200股 @114.72
+2026-09-01 10:27:33.484 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113056 180股 @133.70 → order_id=403701986
+2026-09-01 10:27:33.484 | INFO     | execution.trader:_execute_bull:207 - 买入 113056 180股 @127.33
+2026-09-01 10:27:33.509 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110075 220股 @111.73 → order_id=403701987
+2026-09-01 10:27:33.510 | INFO     | execution.trader:_execute_bull:207 - 买入 110075 220股 @106.41
+2026-09-01 10:27:33.535 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113062 180股 @134.98 → order_id=403701988
+2026-09-01 10:27:33.535 | INFO     | execution.trader:_execute_bull:207 - 买入 113062 180股 @128.55
+2026-09-01 10:27:33.561 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123188 160股 @149.95 → order_id=403701989
+2026-09-01 10:27:33.561 | INFO     | execution.trader:_execute_bull:207 - 买入 123188 160股 @142.81
+2026-09-01 10:27:33.584 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128142 210股 @117.33 → order_id=403701990
+2026-09-01 10:27:33.584 | INFO     | execution.trader:_execute_bull:207 - 买入 128142 210股 @111.74
+2026-09-01 10:27:33.610 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123065 200股 @120.70 → order_id=403701991
+2026-09-01 10:27:33.610 | INFO     | execution.trader:_execute_bull:207 - 买入 123065 200股 @114.95
+2026-09-01 10:27:33.634 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128129 220股 @113.34 → order_id=403701992
+2026-09-01 10:27:33.635 | INFO     | execution.trader:_execute_bull:207 - 买入 128129 220股 @107.94
+2026-09-01 10:27:33.659 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110076 210股 @118.10 → order_id=403701993
+2026-09-01 10:27:33.660 | INFO     | execution.trader:_execute_bull:207 - 买入 110076 210股 @112.48
+2026-09-01 10:27:33.685 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127027 210股 @116.98 → order_id=403701994
+2026-09-01 10:27:33.685 | INFO     | execution.trader:_execute_bull:207 - 买入 127027 210股 @111.41
+2026-09-01 10:27:33.710 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123064 210股 @115.45 → order_id=403701995
+2026-09-01 10:27:33.710 | INFO     | execution.trader:_execute_bull:207 - 买入 123064 210股 @109.95
+2026-09-01 10:27:33.737 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113052 210股 @119.68 → order_id=403701996
+2026-09-01 10:27:33.737 | INFO     | execution.trader:_execute_bull:207 - 买入 113052 210股 @113.98
+2026-09-01 10:27:33.760 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123107 210股 @119.70 → order_id=403701997
+2026-09-01 10:27:33.760 | INFO     | execution.trader:_execute_bull:207 - 买入 123107 210股 @114.00
+2026-09-01 10:27:33.784 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127040 190股 @127.67 → order_id=403701998
+2026-09-01 10:27:33.785 | INFO     | execution.trader:_execute_bull:207 - 买入 127040 190股 @121.59
+2026-09-01 10:27:33.808 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 118053 140股 @177.35 → order_id=403701999
+2026-09-01 10:27:33.808 | INFO     | execution.trader:_execute_bull:207 - 买入 118053 140股 @168.90
+2026-09-01 10:27:33.832 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113681 170股 @146.54 → order_id=403702000
+2026-09-01 10:27:33.833 | INFO     | execution.trader:_execute_bull:207 - 买入 113681 170股 @139.56
+2026-09-01 10:27:33.833 | WARNING  | execution.trader:_execute_bull:224 - [对账未收敛] 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320（等待下次对账修正，不自动重试）
+2026-09-01 10:27:33.833 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock] ⚠️ [track_cb] 对账未收敛 25只: 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320
+2026-09-01 10:27:33.834 | INFO     | execution.trader:_execute_bull:233 - [track_cb] 调仓完成 (2026-09-01)
+卖出 19 笔 / 买入 25 笔 / 风控拦截 6 笔
+2026-09-01 10:27:33.834 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [track_cb] 调仓完成 (2026-09-01)
+卖出 19 笔 / 买入 25 笔 / 风控拦截 6 笔
+2026-09-01 10:27:33.834 | INFO     | __main__:execute:218 - 委托提交完成，等待 300s 后采集成交价...
+2026-09-01 10:32:33.836 | INFO     | __main__:execute:283 - 执行结果已保存: H:\quant\logs\execution_result_20260901.json
+2026-09-01 10:32:33.836 | INFO     | __main__:execute:284 - 成交率: 0%  平均滑点: +0.000%
+2026-09-01 10:32:34.886 | INFO     | __main__:push_result_to_linux:52 - 执行结果已推送至 Linux: execution_result_20260901.json
+2026-09-01 10:32:34.887 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [Track CB 调仓完成] 2026-09-01
+买入: 25 只  卖出: 0 只
+成交率: 0%  平均滑点: +0.000%
+信号日期: 2026-09-01
+2026-09-01 10:33:53.334 | INFO     | __main__:execute:138 - ============================================================
+2026-09-01 10:33:53.335 | INFO     | __main__:execute:139 - Track CB 信号执行  模式=正式执行
+2026-09-01 10:33:53.335 | INFO     | __main__:execute:140 - ============================================================
+2026-09-01 10:33:53.335 | INFO     | __main__:fetch_signal_from_linux:76 - 从 Linux 拉取 Track CB 信号...
+2026-09-01 10:33:54.385 | INFO     | __main__:fetch_signal_from_linux:83 - 信号拉取成功: 2026-09-01，持仓 25 只，买入 25 只，卖出 0 只
+2026-09-01 10:33:54.385 | INFO     | __main__:execute:178 - 交易计划：买入 25 只，卖出 0 只
+2026-09-01 10:33:54.386 | INFO     | __main__:execute:182 -   买入：['110075', '110076', '110081', '110092', '113042', '113052', '113056', '113062', '113605', '113658', '113681', '118027', '118053', '123064', '123065', '123107', '123188', '127027', '127040', '127061', '128127', '128128', '128129', '128134', '128142']
+2026-09-01 10:34:01.649 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:34:05.712 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:34:05.712 | INFO     | execution.trader:execute_signal:73 - [track_cb] 读取信号: 2026-09-01 regime=None holdings=25
+2026-09-01 10:34:05.737 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 123107 1260股: 单笔金额 143,640 超过上限 100,000
+2026-09-01 10:34:05.737 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 127027 1260股: 单笔金额 140,377 超过上限 100,000
+2026-09-01 10:34:05.737 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 127040 1140股: 单笔金额 138,613 超过上限 100,000
+2026-09-01 10:34:05.738 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 127061 1370股: 单笔金额 156,536 超过上限 100,000
+2026-09-01 10:34:05.738 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 128134 1140股: 单笔金额 137,256 超过上限 100,000
+2026-09-01 10:34:05.738 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 128142 1260股: 单笔金额 140,792 超过上限 100,000
+2026-09-01 10:34:05.762 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113658 600股 @128.30 → order_id=403702001
+2026-09-01 10:34:05.762 | INFO     | execution.trader:_execute_bull:210 - 买入 113658 600股 @122.19
+2026-09-01 10:34:05.786 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 118027 870股 @84.50 → order_id=403702002
+2026-09-01 10:34:05.786 | INFO     | execution.trader:_execute_bull:210 - 买入 118027 870股 @80.48
+2026-09-01 10:34:05.812 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110081 670股 @113.47 → order_id=403702003
+2026-09-01 10:34:05.812 | INFO     | execution.trader:_execute_bull:210 - 买入 110081 670股 @108.07
+2026-09-01 10:34:05.837 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110092 960股 @76.99 → order_id=403702004
+2026-09-01 10:34:05.837 | INFO     | execution.trader:_execute_bull:210 - 买入 110092 960股 @73.32
+2026-09-01 10:34:05.863 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113042 600股 @123.15 → order_id=403702005
+2026-09-01 10:34:05.863 | INFO     | execution.trader:_execute_bull:210 - 买入 113042 600股 @117.29
+2026-09-01 10:34:05.887 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113605 600股 @120.14 → order_id=403702006
+2026-09-01 10:34:05.888 | INFO     | execution.trader:_execute_bull:210 - 买入 113605 600股 @114.42
+2026-09-01 10:34:05.913 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128128 630股 @115.45 → order_id=403702007
+2026-09-01 10:34:05.913 | INFO     | execution.trader:_execute_bull:210 - 买入 128128 630股 @109.95
+2026-09-01 10:34:05.943 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128127 600股 @120.46 → order_id=403702008
+2026-09-01 10:34:05.943 | INFO     | execution.trader:_execute_bull:210 - 买入 128127 600股 @114.72
+2026-09-01 10:34:05.968 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113056 540股 @133.70 → order_id=403702009
+2026-09-01 10:34:05.968 | INFO     | execution.trader:_execute_bull:210 - 买入 113056 540股 @127.33
+2026-09-01 10:34:05.993 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110075 660股 @111.73 → order_id=403702010
+2026-09-01 10:34:05.993 | INFO     | execution.trader:_execute_bull:210 - 买入 110075 660股 @106.41
+2026-09-01 10:34:06.017 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113062 540股 @134.98 → order_id=403702011
+2026-09-01 10:34:06.017 | INFO     | execution.trader:_execute_bull:210 - 买入 113062 540股 @128.55
+2026-09-01 10:34:06.041 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123188 480股 @149.95 → order_id=403702012
+2026-09-01 10:34:06.041 | INFO     | execution.trader:_execute_bull:210 - 买入 123188 480股 @142.81
+2026-09-01 10:34:06.064 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123065 590股 @120.70 → order_id=403702013
+2026-09-01 10:34:06.064 | INFO     | execution.trader:_execute_bull:210 - 买入 123065 590股 @114.95
+2026-09-01 10:34:06.088 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128129 660股 @113.34 → order_id=403702014
+2026-09-01 10:34:06.088 | INFO     | execution.trader:_execute_bull:210 - 买入 128129 660股 @107.94
+2026-09-01 10:34:06.114 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 110076 610股 @118.10 → order_id=403702015
+2026-09-01 10:34:06.114 | INFO     | execution.trader:_execute_bull:210 - 买入 110076 610股 @112.48
+2026-09-01 10:34:06.145 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123064 630股 @115.45 → order_id=403702016
+2026-09-01 10:34:06.145 | INFO     | execution.trader:_execute_bull:210 - 买入 123064 630股 @109.95
+2026-09-01 10:34:06.171 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113052 620股 @119.68 → order_id=403702017
+2026-09-01 10:34:06.171 | INFO     | execution.trader:_execute_bull:210 - 买入 113052 620股 @113.98
+2026-09-01 10:34:06.199 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 118053 450股 @177.35 → order_id=403702018
+2026-09-01 10:34:06.199 | INFO     | execution.trader:_execute_bull:210 - 买入 118053 450股 @168.90
+2026-09-01 10:34:06.224 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 113681 510股 @146.54 → order_id=403702019
+2026-09-01 10:34:06.224 | INFO     | execution.trader:_execute_bull:210 - 买入 113681 510股 @139.56
+2026-09-01 10:34:06.225 | WARNING  | execution.trader:_execute_bull:227 - [对账未收敛] 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320（等待下次对账修正，不自动重试）
+2026-09-01 10:34:06.225 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock] ⚠️ [track_cb] 对账未收敛 25只: 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320
+2026-09-01 10:34:06.225 | INFO     | execution.trader:_execute_bull:236 - [track_cb] 调仓完成 (2026-09-01)
+卖出 0 笔 / 买入 19 笔 / 风控拦截 6 笔
+2026-09-01 10:34:06.225 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [track_cb] 调仓完成 (2026-09-01)
+卖出 0 笔 / 买入 19 笔 / 风控拦截 6 笔
+2026-09-01 10:34:06.225 | INFO     | __main__:execute:218 - 委托提交完成，等待 300s 后采集成交价...
+2026-09-01 10:38:46.684 | INFO     | __main__:execute:138 - ============================================================
+2026-09-01 10:38:46.685 | INFO     | __main__:execute:139 - Track CB 信号执行  模式=正式执行
+2026-09-01 10:38:46.685 | INFO     | __main__:execute:140 - ============================================================
+2026-09-01 10:38:46.685 | INFO     | __main__:fetch_signal_from_linux:76 - 从 Linux 拉取 Track CB 信号...
+2026-09-01 10:38:47.764 | INFO     | __main__:fetch_signal_from_linux:83 - 信号拉取成功: 2026-09-01，持仓 25 只，买入 25 只，卖出 0 只
+2026-09-01 10:38:47.764 | INFO     | __main__:execute:178 - 交易计划：买入 25 只，卖出 0 只
+2026-09-01 10:38:47.764 | INFO     | __main__:execute:182 -   买入：['110075', '110076', '110081', '110092', '113042', '113052', '113056', '113062', '113605', '113658', '113681', '118027', '118053', '123064', '123065', '123107', '123188', '127027', '127040', '127061', '128127', '128128', '128129', '128134', '128142']
+2026-09-01 10:38:55.106 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:38:59.172 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:38:59.173 | INFO     | execution.trader:execute_signal:73 - [track_cb] 读取信号: 2026-09-01 regime=None holdings=25
+2026-09-01 10:38:59.181 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 123107 1260股: 单笔金额 143,640 超过上限 100,000
+2026-09-01 10:38:59.181 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 127027 1260股: 单笔金额 140,377 超过上限 100,000
+2026-09-01 10:38:59.181 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 127040 1140股: 单笔金额 138,613 超过上限 100,000
+2026-09-01 10:38:59.181 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 127061 1370股: 单笔金额 156,536 超过上限 100,000
+2026-09-01 10:38:59.181 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 128134 1140股: 单笔金额 137,256 超过上限 100,000
+2026-09-01 10:38:59.181 | WARNING  | execution.risk:check:72 - [风控拦截] track_cb sell 128142 1260股: 单笔金额 140,792 超过上限 100,000
+2026-09-01 10:38:59.182 | WARNING  | execution.trader:_execute_bull:227 - [对账未收敛] 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320（等待下次对账修正，不自动重试）
+2026-09-01 10:38:59.182 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock] ⚠️ [track_cb] 对账未收敛 25只: 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320
+2026-09-01 10:38:59.182 | INFO     | execution.trader:_execute_bull:236 - [track_cb] 调仓完成 (2026-09-01)
+卖出 0 笔 / 买入 0 笔 / 风控拦截 6 笔
+2026-09-01 10:38:59.182 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [track_cb] 调仓完成 (2026-09-01)
+卖出 0 笔 / 买入 0 笔 / 风控拦截 6 笔
+2026-09-01 10:38:59.182 | INFO     | __main__:execute:218 - 委托提交完成，等待 300s 后采集成交价...
+2026-09-01 10:39:06.227 | INFO     | __main__:execute:283 - 执行结果已保存: H:\quant\logs\execution_result_20260901.json
+2026-09-01 10:39:06.227 | INFO     | __main__:execute:284 - 成交率: 0%  平均滑点: +0.000%
+2026-09-01 10:39:06.969 | INFO     | __main__:push_result_to_linux:52 - 执行结果已推送至 Linux: execution_result_20260901.json
+2026-09-01 10:39:06.969 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [Track CB 调仓完成] 2026-09-01
+买入: 25 只  卖出: 0 只
+成交率: 0%  平均滑点: +0.000%
+信号日期: 2026-09-01
+2026-09-01 10:43:59.183 | INFO     | __main__:execute:283 - 执行结果已保存: H:\quant\logs\execution_result_20260901.json
+2026-09-01 10:43:59.184 | INFO     | __main__:execute:284 - 成交率: 0%  平均滑点: +0.000%
+2026-09-01 10:44:00.181 | INFO     | __main__:push_result_to_linux:52 - 执行结果已推送至 Linux: execution_result_20260901.json
+2026-09-01 10:44:00.182 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [Track CB 调仓完成] 2026-09-01
+买入: 25 只  卖出: 0 只
+成交率: 0%  平均滑点: +0.000%
+信号日期: 2026-09-01
+2026-09-01 10:46:50.653 | INFO     | __main__:execute:138 - ============================================================
+2026-09-01 10:46:50.672 | INFO     | __main__:execute:139 - Track CB 信号执行  模式=正式执行
+2026-09-01 10:46:50.673 | INFO     | __main__:execute:140 - ============================================================
+2026-09-01 10:46:50.673 | INFO     | __main__:fetch_signal_from_linux:76 - 从 Linux 拉取 Track CB 信号...
+2026-09-01 10:46:51.764 | INFO     | __main__:fetch_signal_from_linux:83 - 信号拉取成功: 2026-09-01，持仓 25 只，买入 25 只，卖出 0 只
+2026-09-01 10:46:51.765 | INFO     | __main__:execute:178 - 交易计划：买入 25 只，卖出 0 只
+2026-09-01 10:46:51.765 | INFO     | __main__:execute:182 -   买入：['110075', '110076', '110081', '110092', '113042', '113052', '113056', '113062', '113605', '113658', '113681', '118027', '118053', '123064', '123065', '123107', '123188', '127027', '127040', '127061', '128127', '128128', '128129', '128134', '128142']
+2026-09-01 10:47:00.113 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:47:04.311 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 10:47:04.677 | INFO     | execution.trader:execute_signal:73 - [track_cb] 读取信号: 2026-09-01 regime=None holdings=25
+2026-09-01 10:47:05.175 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 123107 877股 @113.77 → order_id=403702020
+2026-09-01 10:47:05.175 | INFO     | execution.trader:_execute_bull:199 - 卖出 123107 877股 @114.00
+2026-09-01 10:47:05.240 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 123107 383股 @113.77 → order_id=403702021
+2026-09-01 10:47:05.241 | INFO     | execution.trader:_execute_bull:199 - 卖出 123107 383股 @114.00
+2026-09-01 10:47:05.267 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 127027 897股 @111.19 → order_id=403702022
+2026-09-01 10:47:05.268 | INFO     | execution.trader:_execute_bull:199 - 卖出 127027 897股 @111.41
+2026-09-01 10:47:05.332 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 127027 363股 @111.19 → order_id=403702023
+2026-09-01 10:47:05.332 | INFO     | execution.trader:_execute_bull:199 - 卖出 127027 363股 @111.41
+2026-09-01 10:47:05.355 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 127040 822股 @121.35 → order_id=403702024
+2026-09-01 10:47:05.356 | INFO     | execution.trader:_execute_bull:199 - 卖出 127040 822股 @121.59
+2026-09-01 10:47:05.380 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 127040 318股 @121.35 → order_id=403702025
+2026-09-01 10:47:05.380 | INFO     | execution.trader:_execute_bull:199 - 卖出 127040 318股 @121.59
+2026-09-01 10:47:05.403 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 127061 875股 @114.03 → order_id=403702026
+2026-09-01 10:47:05.404 | INFO     | execution.trader:_execute_bull:199 - 卖出 127061 875股 @114.26
+2026-09-01 10:47:05.429 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 127061 495股 @114.03 → order_id=403702027
+2026-09-01 10:47:05.430 | INFO     | execution.trader:_execute_bull:199 - 卖出 127061 495股 @114.26
+2026-09-01 10:47:05.458 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128134 830股 @120.16 → order_id=403702028
+2026-09-01 10:47:05.458 | INFO     | execution.trader:_execute_bull:199 - 卖出 128134 830股 @120.40
+2026-09-01 10:47:05.482 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128134 310股 @120.16 → order_id=403702029
+2026-09-01 10:47:05.482 | INFO     | execution.trader:_execute_bull:199 - 卖出 128134 310股 @120.40
+2026-09-01 10:47:05.505 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128142 894股 @111.52 → order_id=403702030
+2026-09-01 10:47:05.506 | INFO     | execution.trader:_execute_bull:199 - 卖出 128142 894股 @111.74
+2026-09-01 10:47:05.531 | INFO     | execution.qmt_client:place_order:107 - 下单: sell 128142 366股 @111.52 → order_id=403702031
+2026-09-01 10:47:05.531 | INFO     | execution.trader:_execute_bull:199 - 卖出 128142 366股 @111.74
+2026-09-01 10:47:05.532 | WARNING  | execution.trader:_execute_bull:235 - [对账未收敛] 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320（等待下次对账修正，不自动重试）
+2026-09-01 10:47:05.532 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock] ⚠️ [track_cb] 对账未收敛 25只: 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320
+2026-09-01 10:47:05.532 | INFO     | execution.trader:_execute_bull:244 - [track_cb] 调仓完成 (2026-09-01)
+卖出 12 笔 / 买入 0 笔 / 风控拦截 0 笔
+2026-09-01 10:47:05.532 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [track_cb] 调仓完成 (2026-09-01)
+卖出 12 笔 / 买入 0 笔 / 风控拦截 0 笔
+2026-09-01 10:47:05.532 | INFO     | __main__:execute:218 - 委托提交完成，等待 300s 后采集成交价...
+2026-09-01 10:54:05.632 | INFO     | __main__:execute:283 - 执行结果已保存: H:\quant\logs\execution_result_20260901.json
+2026-09-01 10:54:05.632 | INFO     | __main__:execute:284 - 成交率: 0%  平均滑点: +0.000%
+2026-09-01 10:54:06.661 | INFO     | __main__:push_result_to_linux:52 - 执行结果已推送至 Linux: execution_result_20260901.json
+2026-09-01 10:54:06.661 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [Track CB 调仓完成] 2026-09-01
+买入: 25 只  卖出: 0 只
+成交率: 0%  平均滑点: +0.000%
+信号日期: 2026-09-01
+2026-09-01 14:30:08.256 | INFO     | __main__:execute:138 - ============================================================
+2026-09-01 14:30:08.283 | INFO     | __main__:execute:139 - Track A 信号执行  模式=正式执行
+2026-09-01 14:30:08.284 | INFO     | __main__:execute:140 - ============================================================
+2026-09-01 14:30:08.284 | INFO     | __main__:fetch_signal_from_linux:76 - 从 Linux 拉取 Track A 信号...
+2026-09-01 14:30:09.453 | INFO     | __main__:fetch_signal_from_linux:83 - 信号拉取成功: 2026-09-01，持仓 24 只，买入 0 只，卖出 0 只
+2026-09-01 14:30:09.454 | INFO     | __main__:execute:178 - 交易计划：买入 0 只，卖出 0 只
+2026-09-01 14:30:18.328 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 14:30:22.372 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 14:30:22.372 | INFO     | execution.trader:execute_signal:73 - [track_a] 读取信号: 2026-09-01 regime=bull holdings=24
+2026-09-01 14:30:22.453 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 600176 800股 @44.77 → order_id=403702032
+2026-09-01 14:30:22.453 | INFO     | execution.trader:_execute_bull:218 - 买入 600176 800股 @42.64
+2026-09-01 14:30:22.478 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 000725 5900股 @6.24 → order_id=403702033
+2026-09-01 14:30:22.478 | INFO     | execution.trader:_execute_bull:218 - 买入 000725 5900股 @5.94
+2026-09-01 14:30:22.504 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 601899 1100股 @36.30 → order_id=403702034
+2026-09-01 14:30:22.504 | INFO     | execution.trader:_execute_bull:218 - 买入 601899 1100股 @34.57
+2026-09-01 14:30:22.529 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 601138 500股 @67.05 → order_id=403702035
+2026-09-01 14:30:22.529 | INFO     | execution.trader:_execute_bull:218 - 买入 601138 500股 @63.86
+2026-09-01 14:30:22.552 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 600522 1100股 @37.88 → order_id=403702036
+2026-09-01 14:30:22.552 | INFO     | execution.trader:_execute_bull:218 - 买入 600522 1100股 @36.08
+2026-09-01 14:30:22.577 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 300408 300股 @118.10 → order_id=403702037
+2026-09-01 14:30:22.577 | INFO     | execution.trader:_execute_bull:218 - 买入 300408 300股 @112.48
+2026-09-01 14:30:22.600 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 002281 200股 @185.20 → order_id=403702038
+2026-09-01 14:30:22.600 | INFO     | execution.trader:_execute_bull:218 - 买入 002281 200股 @176.38
+2026-09-01 14:30:22.625 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 002475 600股 @60.04 → order_id=403702039
+2026-09-01 14:30:22.625 | INFO     | execution.trader:_execute_bull:218 - 买入 002475 600股 @57.18
+2026-09-01 14:30:22.650 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 301526 1400股 @32.70 → order_id=403702040
+2026-09-01 14:30:22.650 | INFO     | execution.trader:_execute_bull:218 - 买入 301526 1400股 @31.14
+2026-09-01 14:30:22.675 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 600105 1500股 @43.05 → order_id=403702041
+2026-09-01 14:30:22.675 | INFO     | execution.trader:_execute_bull:218 - 买入 600105 1500股 @41.00
+2026-09-01 14:30:22.700 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 002463 200股 @128.12 → order_id=403702042
+2026-09-01 14:30:22.700 | INFO     | execution.trader:_execute_bull:218 - 买入 002463 200股 @122.02
+2026-09-01 14:30:22.725 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 002407 900股 @36.88 → order_id=403702043
+2026-09-01 14:30:22.725 | INFO     | execution.trader:_execute_bull:218 - 买入 002407 900股 @35.12
+2026-09-01 14:30:22.749 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 300274 200股 @103.78 → order_id=403702044
+2026-09-01 14:30:22.749 | INFO     | execution.trader:_execute_bull:218 - 买入 300274 200股 @98.84
+2026-09-01 14:30:22.773 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 000988 300股 @110.15 → order_id=403702045
+2026-09-01 14:30:22.773 | INFO     | execution.trader:_execute_bull:218 - 买入 000988 300股 @104.90
+2026-09-01 14:30:22.798 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 002185 2200股 @18.04 → order_id=403702046
+2026-09-01 14:30:22.798 | INFO     | execution.trader:_execute_bull:218 - 买入 002185 2200股 @17.18
+2026-09-01 14:30:22.823 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 600276 600股 @49.99 → order_id=403702047
+2026-09-01 14:30:22.823 | INFO     | execution.trader:_execute_bull:218 - 买入 600276 600股 @47.61
+2026-09-01 14:30:22.846 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 300059 2200股 @20.60 → order_id=403702048
+2026-09-01 14:30:22.846 | INFO     | execution.trader:_execute_bull:218 - 买入 300059 2200股 @19.62
+2026-09-01 14:30:22.870 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 002409 200股 @151.11 → order_id=403702049
+2026-09-01 14:30:22.870 | INFO     | execution.trader:_execute_bull:218 - 买入 002409 200股 @143.91
+2026-09-01 14:30:22.871 | WARNING  | execution.trader:_execute_bull:235 - [对账未收敛] 600176:实盘0≠目标500; 000725:实盘0≠目标3900; 601899:实盘0≠目标600; 601138:实盘0≠目标300; 600522:实盘0≠目标600（等待下次对账修正，不自动重试）
+2026-09-01 14:30:22.871 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock] ⚠️ [track_a] 对账未收敛 18只: 600176:实盘0≠目标500; 000725:实盘0≠目标3900; 601899:实盘0≠目标600; 601138:实盘0≠目标300; 600522:实盘0≠目标600
+2026-09-01 14:30:22.871 | INFO     | execution.trader:_execute_bull:244 - [track_a] 调仓完成 (2026-09-01)
+卖出 0 笔 / 买入 18 笔 / 风控拦截 0 笔
+2026-09-01 14:30:22.872 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [track_a] 调仓完成 (2026-09-01)
+卖出 0 笔 / 买入 18 笔 / 风控拦截 0 笔
+2026-09-01 14:30:22.872 | INFO     | __main__:execute:218 - 委托提交完成，等待 300s 后采集成交价...
+2026-09-01 14:37:22.717 | INFO     | __main__:execute:283 - 执行结果已保存: H:\quant\logs\execution_result_20260901.json
+2026-09-01 14:37:22.721 | INFO     | __main__:execute:284 - 成交率: 100%  平均滑点: +0.000%  时延: 5772.2min
+2026-09-01 14:37:23.772 | INFO     | __main__:push_result_to_linux:52 - 执行结果已推送至 Linux: execution_result_20260901.json
+2026-09-01 14:37:23.773 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [Track A 调仓完成] 2026-09-01
+买入: 0 只  卖出: 0 只
+成交率: 100%  平均滑点: +0.000%  时延: 5772.2min
+信号日期: 2026-09-01
+2026-09-01 14:37:25.271 | INFO     | __main__:execute:138 - ============================================================
+2026-09-01 14:37:25.272 | INFO     | __main__:execute:139 - Track CB 信号执行  模式=正式执行
+2026-09-01 14:37:25.272 | INFO     | __main__:execute:140 - ============================================================
+2026-09-01 14:37:25.273 | INFO     | __main__:fetch_signal_from_linux:76 - 从 Linux 拉取 Track CB 信号...
+2026-09-01 14:37:26.072 | INFO     | __main__:fetch_signal_from_linux:83 - 信号拉取成功: 2026-09-01，持仓 25 只，买入 25 只，卖出 0 只
+2026-09-01 14:37:26.072 | INFO     | __main__:execute:178 - 交易计划：买入 25 只，卖出 0 只
+2026-09-01 14:37:26.072 | INFO     | __main__:execute:182 -   买入：['110075', '110076', '110081', '110092', '113042', '113052', '113056', '113062', '113605', '113658', '113681', '118027', '118053', '123064', '123065', '123107', '123188', '127027', '127040', '127061', '128127', '128128', '128129', '128134', '128142']
+2026-09-01 14:37:34.070 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 14:37:38.147 | INFO     | execution.qmt_client:__init__:51 - QMT 连接成功: account=1633013579
+2026-09-01 14:37:38.147 | INFO     | execution.trader:execute_signal:73 - [track_cb] 读取信号: 2026-09-01 regime=None holdings=25
+2026-09-01 14:37:38.208 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127061 395股 @119.97 → order_id=403702050
+2026-09-01 14:37:38.208 | INFO     | execution.trader:_execute_bull:218 - 买入 127061 395股 @114.26
+2026-09-01 14:37:38.233 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128134 830股 @126.42 → order_id=403702051
+2026-09-01 14:37:38.234 | INFO     | execution.trader:_execute_bull:218 - 买入 128134 830股 @120.40
+2026-09-01 14:37:38.256 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 128142 894股 @117.33 → order_id=403702052
+2026-09-01 14:37:38.256 | INFO     | execution.trader:_execute_bull:218 - 买入 128142 894股 @111.74
+2026-09-01 14:37:38.280 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127027 897股 @116.98 → order_id=403702053
+2026-09-01 14:37:38.280 | INFO     | execution.trader:_execute_bull:218 - 买入 127027 897股 @111.41
+2026-09-01 14:37:38.306 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 123107 877股 @119.70 → order_id=403702054
+2026-09-01 14:37:38.306 | INFO     | execution.trader:_execute_bull:218 - 买入 123107 877股 @114.00
+2026-09-01 14:37:38.330 | INFO     | execution.qmt_client:place_order:107 - 下单: buy 127040 822股 @127.67 → order_id=403702055
+2026-09-01 14:37:38.331 | INFO     | execution.trader:_execute_bull:218 - 买入 127040 822股 @121.59
+2026-09-01 14:37:38.331 | WARNING  | execution.trader:_execute_bull:235 - [对账未收敛] 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320（等待下次对账修正，不自动重试）
+2026-09-01 14:37:38.332 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock] ⚠️ [track_cb] 对账未收敛 25只: 113658:实盘0≠目标190; 118027:实盘0≠目标290; 127061:实盘0≠目标210; 110081:实盘0≠目标220; 110092:实盘0≠目标320
+2026-09-01 14:37:38.332 | INFO     | execution.trader:_execute_bull:244 - [track_cb] 调仓完成 (2026-09-01)
+卖出 0 笔 / 买入 6 笔 / 风控拦截 0 笔
+2026-09-01 14:37:38.332 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [track_cb] 调仓完成 (2026-09-01)
+卖出 0 笔 / 买入 6 笔 / 风控拦截 0 笔
+2026-09-01 14:37:38.332 | INFO     | __main__:execute:218 - 委托提交完成，等待 300s 后采集成交价...
+2026-09-01 14:44:37.966 | INFO     | __main__:execute:283 - 执行结果已保存: H:\quant\logs\execution_result_20260901.json
+2026-09-01 14:44:37.967 | INFO     | __main__:execute:284 - 成交率: 0%  平均滑点: +0.000%
+2026-09-01 14:44:39.007 | INFO     | __main__:push_result_to_linux:52 - 执行结果已推送至 Linux: execution_result_20260901.json
+2026-09-01 14:44:39.007 | INFO     | monitoring.alerts:send_alert:52 - [Alert-Mock]  [Track CB 调仓完成] 2026-09-01
+买入: 25 只  卖出: 0 只
+成交率: 0%  平均滑点: +0.000%
+信号日期: 2026-09-01
