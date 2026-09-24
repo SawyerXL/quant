@@ -74,6 +74,8 @@ def main():
 
     # 交集
     j = pd.DataFrame({"s": ret_s, "cb": ret_cb}).dropna()
+    # 2026-09-24: 联合日收益落盘(网格补跑/后续重算免重载股票引擎)
+    j.to_csv("logs/stock_cb_joint_returns.csv")
     print(f"组合窗口 {j.index[0].date()} → {j.index[-1].date()}, {len(j)}天")
 
     # MA200 pos_ratio 序列(动态配比用)
@@ -103,7 +105,7 @@ def main():
         return pd.Series(out, index=j.index)
 
     # 直接实现: 日频按上月设定的权重漂移, 月初再平衡
-    def combo2(mode, fixed_w=None):
+    def combo2(mode, fixed_w=None, rebal_cost=0.0):
         nav = 1.0
         w_s = 0.5
         results = []
@@ -112,12 +114,11 @@ def main():
             ym = (dt.year, dt.month)
             if ym != month_cur:
                 month_cur = ym
-                if mode == "fixed":
-                    w_s = fixed_w
-                else:
-                    w_s = float(pos[dt])
-                # 再平衡成本: 权重偏离调整支付佣金
-                pass
+                target = fixed_w if mode == "fixed" else float(pos[dt])
+                # 再平衡成本(可复算核对用, 主表为0保持定案口径; backtest_alloc_verify
+                # 曾收0.13%——两脚本口径差异记入账本)
+                nav *= (1 - abs(w_s - target) * rebal_cost)
+                w_s = target
             r = row["s"] * w_s + row["cb"] * (1 - w_s)
             nav *= (1 + r)
             # 权重漂移
@@ -137,10 +138,20 @@ def main():
     for name, nav in [
         ("股票单独(现金2%)", nav_s.reindex(j.index).ffill()),
         ("CB单独", nav_cb.reindex(j.index).ffill()),
+        ("固定30/70", combo2("fixed", 0.3)),
         ("固定50/50", combo2("fixed", 0.5)),
         ("固定60/40(股/CB)", combo2("fixed", 0.6)),
         ("固定40/60", combo2("fixed", 0.4)),
         ("动态(股=pos_ratio)", combo2("dyn")),
+    ]:
+        ann, sr, dd = m(nav)
+        halt = " ⚠≥15%熔断线" if dd <= -0.15 else ""
+        print(f"{name:<28}{ann*100:>+8.2f}%{sr:>8.2f}{dd*100:>9.2f}%{halt}")
+    print()
+    print("再平衡成本敏感性(月频0.13%双边, 与 backtest_alloc_verify 同档):")
+    for name, nav in [
+        ("固定30/70", combo2("fixed", 0.3, rebal_cost=0.0013)),
+        ("固定40/60", combo2("fixed", 0.4, rebal_cost=0.0013)),
     ]:
         ann, sr, dd = m(nav)
         print(f"{name:<28}{ann*100:>+8.2f}%{sr:>8.2f}{dd*100:>9.2f}%")
