@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent))
 
 import pandas as pd
-from data.storage import load_daily
+from data.storage import load_daily, load_meta
 
 OUT = Path("logs/daily_health_line.json")
 
@@ -127,15 +127,30 @@ def main():
     # CB 数据侧新鲜度(2026-09-14): 与信号侧分离——数据层停摆晚一个月才
     # 被信号层"快照过期"报出(下游症状非上游原因); 每一层都要有自己的
     # 新鲜度字段。注意 stage3 对已有文件只增不更(文件冻结在首次下载),
-    # 单看 max 会假健康 → 主判据=陈旧文件占比
+    # 单看 max 会假健康 → 主判据=陈旧文件占比。
+    # 2026-09-24 修: 分母限定为存续券(最新快照成员)——741/1051 的"陈旧"
+    # 大部分是已退市券(数据合法终止在退市日), 结构性永久告警同型闸门十四;
+    # 退市券不进分母后, 告警才能真正反映数据链停摆。
     cb_data_max = "?"
     cb_stale_files = 0
     cb_total_files = 0
     try:
         cb_daily_dir = Path("data_store/convertible_bonds/daily")
+        active_codes = set()
+        try:
+            snaps_meta = load_meta("cb_snapshots")
+            if not snaps_meta.empty:
+                snaps_meta["snap_date"] = pd.to_datetime(snaps_meta["snap_date"])
+                latest = snaps_meta["snap_date"].max()
+                active_codes = set(snaps_meta[snaps_meta["snap_date"] == latest]
+                                   ["code"].astype(str).tolist())
+        except Exception:
+            active_codes = set()
         mx = ""
         cutoff10 = (pd.Timestamp(now[:10]) - pd.Timedelta(days=10)).strftime("%Y-%m-%d")
         for f in cb_daily_dir.glob("*.parquet"):
+            if active_codes and f.stem not in active_codes:
+                continue
             cb_total_files += 1
             try:
                 d = pd.read_parquet(f, columns=["date"])
@@ -151,11 +166,15 @@ def main():
     except Exception:
         pass
     cb_unknown = 0
+    cb_unknown_recent = 0
     cbs = Path("logs/cb_data_state.json")
     if cbs.exists():
         try:
-            cb_unknown = int(json.loads(cbs.read_text(encoding="utf-8"))
-                             .get("unknown_daily_gaps", 0))
+            st = json.loads(cbs.read_text(encoding="utf-8"))
+            cb_unknown = int(st.get("unknown_daily_gaps", 0))
+            # 2026-09-24: 告警判据改用 recent(近90-60天变安静=可疑数据停摆);
+            # 总量被已退市无记录券占满(705/724), 用作告警=永久假警
+            cb_unknown_recent = int(st.get("unknown_recent", cb_unknown))
         except Exception:
             pass
 
@@ -189,8 +208,9 @@ def main():
     if cb_total_files and cb_stale_files / cb_total_files > 0.10:
         alerts.append(f"CB数据停滞: {cb_stale_files}/{cb_total_files} 只文件"
                       f"陈旧(>10天), max={cb_data_max}")
-    if cb_unknown > 50:
-        alerts.append(f"CB日线缺口(未知)计数: {cb_unknown} 只(阈值50)")
+    if cb_unknown_recent > 5:
+        alerts.append(f"CB日线近90天可疑缺口(未知): {cb_unknown_recent} 只"
+                      f"(阈值5; 未知总量{cb_unknown}只多为已退市无记录)")
     if snap_state.get("date") == now[:10] and not snap_state.get("ok"):
         alerts.append(f"今日快照 {snap_state.get('attempts', '?')} 次尝试全败, "
                       f"持仓不可观测")
@@ -283,7 +303,8 @@ def main():
             "last_data_update": last_update, "tunnel": tunnel,
             "audit": audit, "positions_snapshot": snap_time,
             "cb_signal_date": cb_date, "cb_data_max_date": cb_data_max,
-            "cb_unknown_gaps": cb_unknown, "guard_rejected_rows": guard_rej, "snapshot_state": snap_state,
+            "cb_unknown_gaps": cb_unknown, "cb_unknown_recent": cb_unknown_recent,
+            "guard_rejected_rows": guard_rej, "snapshot_state": snap_state,
             "cb_holdings_frozen": cb_frozen, "index_members_as_of": members_asof,
             "win_sync": win_sync, "live_reconcile": lvbc,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}

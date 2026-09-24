@@ -216,11 +216,15 @@ def build_redemption():
     #   历史(< today-60): 只用当时数据; 缺失 → 标未知, 不推断
     universe = load_meta("cb_universe")
     unknown_count = 0
+    unknown_recent_count = 0
     if not universe.empty:
         from datetime import date as _date, timedelta
         _today = _date.today()
         _cut30 = (_today - timedelta(days=30)).strftime("%Y-%m-%d")
         _cut60 = (_today - timedelta(days=60)).strftime("%Y-%m-%d")
+        # 2026-09-24: 未知总量被已退市无记录券占满(705/724), 恒报假警——拆出
+        # "近90-60天变安静"的可疑子集(数据停摆 vs 已退市的判别正是这一窗)
+        _cut90 = (_today - timedelta(days=90)).strftime("%Y-%m-%d")
         # 当前存续列表(仅用于近端交叉)
         cur_codes = set(universe["code"].astype(str).tolist())
         for _, r in universe.iterrows():
@@ -234,8 +238,11 @@ def build_redemption():
                         continue  # 近期活跃 → 存续
                     if any(rd['code'] == code for rd in redemptions):
                         continue  # 强赎记录已覆盖
-                    if _cut60 <= last_date < _cut30:
-                        # 近端: 交叉当前存续列表
+                    if _cut90 <= last_date < _cut30:
+                        # 近端(90-30天): 交叉当前存续列表——"现在不在列表"是
+                        # 当下事实, 90 天窗口同样无前视问题(2026-09-24 由 60
+                        # 天扩到 90: 60-90 天前退市的券因 jsl 仅回 10 行无记录
+                        # 被标未知, 恒报假警; 与 30-60 窗同一 PIT 论据)
                         if code in cur_codes:
                             continue  # 仍在列表 → 数据停摆, 存续
                         redemptions.append({
@@ -245,10 +252,14 @@ def build_redemption():
                     else:
                         # 历史段: 数据缺失 → 未知, 不推断退市
                         unknown_count += 1
-    # 未知计数落盘(健康行消费, 超阈值=P0; 2026-09-14)
+                        if last_date >= _cut90:
+                            unknown_recent_count += 1
+    # 未知计数落盘(健康行消费, 超阈值=P0; 2026-09-14;
+    # 2026-09-24 增 unknown_recent 供健康行做"数据停摆"判据)
     import json
     try:
         json.dump({"unknown_daily_gaps": unknown_count,
+                   "unknown_recent": unknown_recent_count,
                    "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
                   open("logs/cb_data_state.json", "w"))
     except Exception:
