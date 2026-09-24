@@ -17,10 +17,16 @@ ENGINE = DEFAULT_CONFIG
 
 # 实盘信号参数(daily_signal_a_v2 常量)
 import daily_signal_a_v2 as sig
+import run_backtest_a2 as rba
 LIVE = {
     "pool_size": getattr(sig, "N_HOLDINGS", None),
     "max_vol20": getattr(sig, "MAX_VOL20", None),
     "ma10_exit_days": getattr(sig, "MA10_EXIT_DAYS", None),
+    # 2026-09-24 补: 档位平移常量在 run_backtest_a2(信号链 import 其 get_position_ratio)
+    # ——此前实盘侧 None=检查器盲区(查不到≠对齐, 闸门七同型)。commission 不在此
+    # 比对: 引擎 0.0013=双边佣金+印花+滑点打包口径, 实盘 COMMISSION_RATE=万2.5
+    # 仅是佣金单项, 数值不可比(实测成本归 measure_execution_costs 18bp 裁决管)。
+    "ma200_thresh_shift": getattr(rba, "MA200_THRESH_SHIFT", None),
 }
 
 # spec 定案口径(qmt_strategy_spec 手动登记, 改动须过参数三件套)

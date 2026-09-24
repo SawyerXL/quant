@@ -3402,3 +3402,23 @@ backtest_cb_sched_compare.py / cb_combo_live_adjusted.py。
   一次性刷新顶到 10-05 周更。
 - 注: 日线尾部 09-18→09-24 延长 4 bar, 本会话 CB 核对四件套数字 as_of=09-18
   口径, 尾部延长影响 ~0.001 夏普量级, 不重跑, 以 as_of 声明为准。
+
+## 五档降档状态澄清 + M 网格出数(2026-09-24 21:5x, 机器值)
+- **P0二 事实前提澄清**: "五档-更早降档"已于 **2026-09-04 定案并实装**——ma200_thresh_shift
+  =−0.03 三方一致: 引擎 DEFAULT_CONFIG(backtest_config.py) / 实盘信号链(run_backtest_a2.py
+  MA200_THRESH_SHIFT, daily_signal_a_v2 经 import 使用) / spec。CLAUDE.md"意外发现待用户
+  决策"为过期字样(同日定案未回写), 已更正为"已定案实装+遗留熔断网格重校"。**唯一遗留=
+  熔断网格重校**(15% 线校定于 09-02 旧档位画像)——今晚重跑中(END 字面量已修, as_of 冻结
+  2026-09-24)。
+- **配置一致性检查链路双修**:
+  ① cron 行缺 `cd /root/quant &&` → 09-13 安装起每日 "can't open file /root/scripts/
+  check_config_alignment.py"——**闸门四静默死 11 天**(日志有记录无人读, cb_signal 五天
+  告警同型); spool+master(/tmp/quantcron.txt)已修+reload, 明日 17:50 起生效。
+  ② 检查器实盘侧盲区补入: ma200_thresh_shift 实盘提取(run_backtest_a2 常量)→ 三方 ✅;
+  commission 不做数值比对(引擎 0.0013=佣金+印花+滑点打包 vs 实盘万2.5 仅佣金, 口径
+  不可比), 已注释(实测成本归 18bp 裁决管)。
+- **M 网格出数(判据 09-24 收工两记预登记, 出数前锁)**: 参照 N=60 无带 1.424; M=90
+  1.490 / **M=120 1.514(中位表现者)** / M=150 1.518, 三值全过线(≥1.374)。**裁定: M=120
+  维持**——暂定值获判据确认, 09-30 换血买入名单的 120 天禁买线不改。as_of=09-24 刷新后
+  数据(参照值 1.424 vs N 网格 09-24 晨 1.434 的差=尾部 4 bar+实现微差, 不改变裁定)。
+  产出: scripts/cb_maturity_m_grid.py + logs/cb_maturity_m_grid_nav.csv。
