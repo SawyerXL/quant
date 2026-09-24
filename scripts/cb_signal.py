@@ -33,6 +33,21 @@ TRADABLE_MAX_GAP_DAYS = 10
 # 距最后交易日(无则到期日−10天) < N 天 → 剔除(期权时间价值归零, 牛市掉队)。
 # 数据=cb_expiry_watch.parquet(每日 09:05 cron 刷新, 含 jsl 公告日期)。
 MATURITY_EXCLUDE_DAYS = 60
+# 2026-09-24 用户裁定: 禁买阈值 M=120——新建仓时到期前 120 天内不买入
+# (新建仓位要能持有至少一个完整调仓周期+N=60 剔除线≈两个月有效持有期)。
+# N~M 之间=缓冲带: 可持有但不加仓(目标=当前持仓)。M 值后续网格验证, 暂定。
+MATURITY_NO_BUY_DAYS = 120
+
+
+def maturity_band(days_left: float, is_held: bool) -> str:
+    """到期三档分类(纯函数, 可测): days_left=距交易末日天数。
+    "exclude"=剔除卖出(已持有<60天) / "hold_no_buy"=可持有不加仓(60~120) /
+    "ok"=正常。未持有的券在 60~120 带=禁买 → "exclude"。"""
+    if days_left < MATURITY_EXCLUDE_DAYS:
+        return "exclude"
+    if days_left < MATURITY_NO_BUY_DAYS:
+        return "hold_no_buy" if is_held else "exclude"
+    return "ok"
 SIGNAL_FILE = Path("data_store/meta/signal_cb_latest.json")
 CB_DIR = Path("data_store/convertible_bonds")
 
@@ -133,6 +148,10 @@ def run():
     snap_price = {}
     codes = []
     _tradable_cache = {}   # code -> (ok, reason|None, close|None), 供非调仓日路径复用
+    _buffer_codes = set()  # 60~120天缓冲带: 可持有但不加仓
+    # 提前加载上一信号(缓冲带判定需要"是否已持有")
+    prev = _load_prev()
+    prev_hold = set(prev.get("holdings", []))
 
     # 到期过滤表: {code: 交易末日}(最后交易日, 无则到期日−10天)
     expiry_watch = {}
@@ -154,8 +173,13 @@ def run():
         结果 memo 到 _tradable_cache; akshare 优先, 失败回退本地 parquet。"""
         if c in suspended_now:
             return False, "停牌(新浪实时价=0)", None
-        if c in expiry_watch and (expiry_watch[c] - today_ts).days < MATURITY_EXCLUDE_DAYS:
-            return False, f"临期(交易末日{expiry_watch[c].date()}, <{MATURITY_EXCLUDE_DAYS}天)", None
+        if c in expiry_watch:
+            days_left = (expiry_watch[c] - today_ts).days
+            band = maturity_band(days_left, c in prev_hold)
+            if band == "exclude":
+                return False, f"临期(交易末日{expiry_watch[c].date()}, 剩{days_left}天)", None
+            if band == "hold_no_buy":
+                _buffer_codes.add(c)   # 可持有不加仓, 目标钳到当前持仓
         last_date = None
         p = None
         try:
@@ -205,19 +229,26 @@ def run():
         logger.error("全部候选被排除, 信号中止")
         return
 
-    # 等权股数(转债一手=10张)
+    # 等权股数(转债一手=10张); 缓冲带券(60~120天)目标钳到上一信号张数=不加仓
     budget = CB_CAPITAL / len(codes)
     shares, prices = {}, {}
+    buffer_targets = {}
+    for c in _buffer_codes:
+        ps = prev.get("shares", {}).get(c, 0)
+        if ps and ps > 0:
+            buffer_targets[c] = ps
     for c in codes:
         p = snap_price.get(c)
         if not p or p <= 0:
+            continue
+        if c in buffer_targets:
+            shares[c] = buffer_targets[c]
+            prices[c] = round(p, 2)
             continue
         lots = int(budget / p / 10)
         shares[c] = lots * 10
         prices[c] = round(p, 2)
 
-    prev = _load_prev()
-    prev_hold = set(prev.get("holdings", []))
     new_hold = set(shares.keys())
     actual_cb = _load_actual_cb()
     # 月度调仓日才全量轮换；非调仓日保持持仓(仅输出状态)

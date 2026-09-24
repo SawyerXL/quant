@@ -101,3 +101,16 @@ def test_tier1_and_tier2():
     mid = {"sells": [{"code": "128134", "direction": "sell", "shares": 190,
                       "est_amount": 23047}], "buys": []}
     assert classify_tier(mid, sig)[0] == 2       # 单笔>2万 → 档2(今日实盘形态)
+
+
+def test_maturity_band():
+    from scripts.cb_signal import maturity_band
+    # 剔除线 N=60: 已持有 <60 天 → 卖出
+    assert maturity_band(59, True) == "exclude"
+    assert maturity_band(59, False) == "exclude"
+    # 缓冲带 60~120: 已持有 → 可持有不加仓; 未持有 → 禁买
+    assert maturity_band(71, True) == "hold_no_buy"
+    assert maturity_band(79, False) == "exclude"
+    # 正常
+    assert maturity_band(121, False) == "ok"
+    assert maturity_band(300, True) == "ok"
