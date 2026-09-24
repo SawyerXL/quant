@@ -249,6 +249,21 @@ def load_close(code: str, d: str) -> float | None:
             return float(df["close"].iloc[-1])
     except Exception:
         pass
+    # CB/转债参考价(2026-09-24 补): 股票库无转债代码, 走可转债日线。
+    # 只取当日 bar(禁 ≤ 前推): CB 日线链条时滞(如 max=09-18)时旧收盘会把
+    # 数日市场漂移算进"滑点"——宁可无参考价, 不制造假滑点(与报告数字纪律同族)
+    try:
+        fpath = Path("data_store/convertible_bonds/daily") / f"{code}.parquet"
+        if fpath.exists():
+            df = pd.read_parquet(fpath)
+            df["date"] = pd.to_datetime(df["date"])
+            sub = df[df["date"] == pd.to_datetime(d)]
+            if not sub.empty:
+                c = float(sub.iloc[-1]["close"])
+                if c > 0:
+                    return c
+    except Exception:
+        pass
     return None
 
 
