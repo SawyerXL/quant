@@ -29,6 +29,10 @@ TOP_N = 25
 # 2026-09-22 停牌过滤(甲乙丙定案=甲, N=10 与回测 V3 一致, 判据出数前锁):
 # 候选最新日线 bar 距今 >N 个交易日 → 排除, 从全排名向下补足 25 只。
 TRADABLE_MAX_GAP_DAYS = 10
+# 2026-09-24 到期过滤(立项批准, 网格 N=60 暂定, 判据用户锁死):
+# 距最后交易日(无则到期日−10天) < N 天 → 剔除(期权时间价值归零, 牛市掉队)。
+# 数据=cb_expiry_watch.parquet(每日 09:05 cron 刷新, 含 jsl 公告日期)。
+MATURITY_EXCLUDE_DAYS = 60
 SIGNAL_FILE = Path("data_store/meta/signal_cb_latest.json")
 CB_DIR = Path("data_store/convertible_bonds")
 
@@ -130,11 +134,28 @@ def run():
     codes = []
     _tradable_cache = {}   # code -> (ok, reason|None, close|None), 供非调仓日路径复用
 
+    # 到期过滤表: {code: 交易末日}(最后交易日, 无则到期日−10天)
+    expiry_watch = {}
+    try:
+        _ew = pd.read_parquet(Path("data_store/meta/cb_expiry_watch.parquet"))
+        for _, r in _ew.iterrows():
+            c = str(r["代码"])
+            last = pd.Timestamp(r["最后交易日"]) if pd.notna(r["最后交易日"]) else None
+            exp = pd.Timestamp(r["到期日"]) if pd.notna(r["到期日"]) else None
+            if last is not None:
+                expiry_watch[c] = last
+            elif exp is not None:
+                expiry_watch[c] = exp - pd.Timedelta(days=10)
+    except Exception:
+        pass
+
     def _check_tradable(c):
-        """单券可交易检查: 停牌/日线停更/无数据/价格无效 → (False, 原因)。
+        """单券可交易检查: 停牌/临期/日线停更/无数据/价格无效 → (False, 原因)。
         结果 memo 到 _tradable_cache; akshare 优先, 失败回退本地 parquet。"""
         if c in suspended_now:
             return False, "停牌(新浪实时价=0)", None
+        if c in expiry_watch and (expiry_watch[c] - today_ts).days < MATURITY_EXCLUDE_DAYS:
+            return False, f"临期(交易末日{expiry_watch[c].date()}, <{MATURITY_EXCLUDE_DAYS}天)", None
         last_date = None
         p = None
         try:
@@ -202,6 +223,7 @@ def run():
     # 月度调仓日才全量轮换；非调仓日保持持仓(仅输出状态)
     from daily_signal_a_v2 import _get_trade_calendar, is_rebalance_day
     cal = _get_trade_calendar()
+    interim = False  # 2026-09-24: 过渡期标记(非调仓日沿用旧持仓=部分部署)
     if is_rebalance_day(today, cal):
         buy = sorted(new_hold - prev_hold)
         sell = sorted(prev_hold - new_hold)
@@ -235,11 +257,16 @@ def run():
             shares = {c: prev.get("shares", {}).get(c, 0) for c in codes}
             prices = {c: snap_price.get(c) or prev.get("prices", {}).get(c, 0)
                       for c in codes}
+            # 2026-09-24: 过渡期部分部署(停牌/临期剔除后张数未重配)——capital
+            # 保持 60万(风控单券上限的分母=轨道全量资金, 不可缩小), 另置
+            # interim_deployment 标记供预检豁免低配拦截(预检按实际比对)。
+            interim = True
 
     signal = {
         "signal_date": today,
         "track": "cb",
         "capital": CB_CAPITAL,
+        "interim_deployment": interim,
         "holdings": codes,
         "buy": buy,
         "sell": sell,

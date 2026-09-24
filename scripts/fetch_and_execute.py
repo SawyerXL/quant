@@ -191,7 +191,15 @@ def preflight(signal: dict, track: str) -> list[str]:
         if dev > 0.20:
             issues.append(f"资金超配: 目标市值{total:,.0f} vs capital{capital:,.0f} ({dev*100:+.0f}%)")
         elif dev < -0.35:
-            issues.append(f"资金低配异常: 目标市值{total:,.0f} vs capital{capital:,.0f} ({dev*100:+.0f}%, 超出lot跳票正常范围)")
+            # 2026-09-24: 过渡期豁免——信号带 interim_deployment 标记且持仓非空
+            # 时(停牌/临期剔除后的部分部署, capital 仍是轨道全量 60 万), 低配
+            # 只告警不拦截; 持仓为空的信号任何情况下都拦(防"信号坏了"导致
+            # 差量逻辑清空账户)。
+            if signal.get("interim_deployment") and holdings:
+                logger.warning(f"资金低配(过渡期豁免): 目标市值{total:,.0f} vs "
+                               f"capital{capital:,.0f} ({dev*100:+.0f}%)")
+            else:
+                issues.append(f"资金低配异常: 目标市值{total:,.0f} vs capital{capital:,.0f} ({dev*100:+.0f}%, 超出lot跳票正常范围)")
     return issues
 
 

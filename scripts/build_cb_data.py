@@ -18,6 +18,7 @@ import pandas as pd, numpy as np
 from datetime import datetime, timedelta, date
 from loguru import logger
 from data.storage import save_meta, load_meta
+from monitoring.alerts import send_alert
 import time
 import akshare as ak
 
@@ -163,19 +164,45 @@ def build_redemption():
 
     redemptions = []
 
-    # 尝试 bond_cb_redeem_jsl — 强赎记录
+    # 尝试 bond_cb_redeem_jsl — 强赎/到期记录
+    # 2026-09-23 列名变更修复: jsl 接口 09-21 起返回 代码/名称/现价/.../最后交易日/
+    # 到期日/强赎价/强赎状态 (旧列名 债券代码/债券简称/强赎日期/强赎价格 已失效,
+    # 旧解析把 317 行空字段静默入库 → 快照退市判定失效, 与闸门十四/十六同族)。
+    # 语义: redeem_date=最后交易日(该日起不可持有); 无最后交易日的行=未临近
+    # 到期, 仍在交易, 不记退市。解析后 0 有效行即抛(禁止再静默覆盖)。
     try:
         redeem = ak.bond_cb_redeem_jsl()
         if not redeem.empty:
             logger.info(f"  bond_cb_redeem_jsl: {len(redeem)}条")
+            parsed = 0
             for _, r in redeem.iterrows():
+                code = str(r.get('代码', '')).strip()
+                name = str(r.get('名称', '')).strip()
+                last_d = str(r.get('最后交易日', '')).strip()
+                if not last_d or last_d.lower() in ("nat", "nan", "none", ""):
+                    continue  # 无最后交易日 → 未临近, 不记
+                if len(code) != 6 or not code.isdigit():
+                    continue
+                try:
+                    pd.Timestamp(last_d)
+                except Exception:
+                    continue
+                px = r.get('强赎价', 0)
+                try:
+                    redeem_price = float(px) if pd.notna(px) else 0.0
+                except Exception:
+                    redeem_price = 0.0
                 redemptions.append({
-                    'code': str(r.get('债券代码', '')),
-                    'name': str(r.get('债券简称', '')),
-                    'redeem_date': str(r.get('强赎日期', '')),
-                    'redeem_price': float(r.get('强赎价格', 0) or 0),
-                    'type': '强赎',
+                    'code': code, 'name': name,
+                    'redeem_date': last_d[:10],
+                    'redeem_price': redeem_price,
+                    'type': '强赎/到期',
                 })
+                parsed += 1
+            if parsed == 0:
+                raise ValueError("bond_cb_redeem_jsl 解析出 0 条有效记录"
+                                 "(列名/格式疑似再变), 拒绝覆盖赎回表")
+            logger.info(f"  解析有效 {parsed} 条(最后交易日已定)")
     except Exception as e:
         logger.warning(f"  bond_cb_redeem_jsl失败: {e}")
 
@@ -230,7 +257,8 @@ def build_redemption():
     if redemptions:
         df_r = pd.DataFrame(redemptions)
         save_meta("cb_redemptions", df_r)
-        logger.info(f"  ✓ 退市记录: {len(df_r)}条 (强赎{len(df_r[df_r['type']=='强赎'])}只 + 推断{len(df_r[df_r['type']!='强赎'])}只)")
+        n_event = int((df_r['type'] == '强赎/到期').sum())
+        logger.info(f"  ✓ 退市记录: {len(df_r)}条 (强赎/到期{n_event}只 + 推断{len(df_r)-n_event}只)")
     else:
         logger.info("  ⚠ 无退市记录")
 
@@ -347,14 +375,42 @@ def build_snapshots(start="2019-01-01", end=None, freq="MS", append=True,
                              f"请检查 end 参数/数据源")
         if old_snaps is not None and not old_snaps.empty:
             old_n, new_n = len(old_snaps), len(all_snaps)
+            # 2026-09-24 修订(用户裁定): 行数硬检查改相对阈值——09-23 实锤
+            # 重拉日线清洗冻结价尾行使行数合法下降(−284/−0.8%), 硬检查误报;
+            # 总行数 −2% / 单月 −5% 才拒(仍拦"中段删空")。行数下降但未超
+            # 阈值时, 打印被删行明细摘要进日志+邮件(不阻断)——阈值管拒绝,
+            # 摘要管可解释性。
             if new_n < old_n:
-                raise ValueError(f"单调性闸门: 新行数 {new_n} < 库内 {old_n}, "
-                                 f"拒绝写入(中段可能被删空)")
+                ok_idx = old_snaps.set_index(["code", "snap_date"])
+                nk_idx = all_snaps.set_index(["code", "snap_date"])
+                removed = ok_idx.index.difference(nk_idx.index)
+                detail = []
+                for code, sd in list(removed)[:20]:
+                    p_old = ok_idx.loc[(code, sd), "price"]
+                    try:
+                        f = pd.read_parquet(DAILY_DIR / f"{code}.parquet")
+                        f = f.sort_values("date")
+                        last_c = float(f["close"].iloc[-1])
+                        last_d = str(f["date"].iloc[-1])[:10]
+                        tail = abs(float(p_old) - last_c) < 0.01
+                    except Exception:
+                        last_c, last_d, tail = None, "?", False
+                    detail.append(f"{code}@{str(sd.date())[:7]} 旧价{p_old:.2f}"
+                                  f" 尾行={tail} (文件止{last_d})")
+                rel = (old_n - new_n) / old_n
+                msg = (f"快照行数下降 {old_n}→{new_n} ({rel:.1%}), "
+                       f"被删 {len(removed)} 行. 明细(前20): " + " | ".join(detail))
+                if rel > 0.02:
+                    raise ValueError(f"单调性闸门: {msg} —— 超过2%阈值, 拒绝写入")
+                logger.warning(msg)
+                send_alert(f"[CB快照] 行数下降未超阈值(不阻断): {msg}",
+                           level="warning")
             old_m = old_snaps["snap_date"].astype(str).str[:7].value_counts()
             new_m = all_snaps["snap_date"].astype(str).str[:7].value_counts()
-            fewer = [k for k in old_m.index if new_m.get(k, 0) < old_m[k]]
-            if fewer:
-                raise ValueError(f"单调性闸门: 月度覆盖减少 {fewer[:5]}, "
+            bad = [k for k in old_m.index
+                   if new_m.get(k, 0) < old_m[k] * 0.95]
+            if bad:
+                raise ValueError(f"单调性闸门: 月度覆盖下降超5% {bad[:5]}, "
                                  f"拒绝写入(中段缺失)")
         # 第四条: 相邻月成分 churn(2026-09-14)——三条单调闸门保护"库不得
         # 变旧", 保护不了"新数据不得是坏的"(影子重建 01→09 近 100% churn

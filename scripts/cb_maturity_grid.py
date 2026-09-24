@@ -54,6 +54,21 @@ for code in snap_codes:
 
 all_dates = sorted(price_panel.keys())
 logger.info(f"  面板: {len(price_panel)}交易日")
+PANEL_END = all_dates[-1]
+
+# 2026-09-24 修正①: 叠加 jsl 当前公告的最后交易日(真实事前日期)覆盖
+# 死亡日代理(全部≥面板末端的当前公告暂不影响样本内, 为未来长样本准备)
+try:
+    jsl = pd.read_parquet("data_store/meta/cb_expiry_watch.parquet")
+    jsl = jsl[jsl["最后交易日"].notna()]
+    for _, r in jsl.iterrows():
+        c = str(r["代码"])
+        d = pd.Timestamp(r["最后交易日"])
+        if c in death_date:
+            death_date[c] = d
+    logger.info(f"  叠加公告最后交易日 {len(jsl)} 条")
+except Exception as e:
+    logger.warning(f"jsl 缓存不可用, 纯死亡日代理: {e}")
 
 
 def run_bt(maturity_days=None, stats=None):
@@ -111,10 +126,14 @@ def run_bt(maturity_days=None, stats=None):
                 continue
             avails = [c for c in snap["code"].unique() if c in prices_today]
             if maturity_days is not None:
-                # 到期代理过滤: 最后有价日 - 快照日 < N 天 → 剔除
+                # 到期代理过滤: 最后有价日 - 快照日 < N 天 → 剔除。
+                # 2026-09-24 修正②: 仅对"真实死亡"(死亡日<面板末端)生效——
+                # 存续券的死亡日=面板末端, 旧代码把样本最后2个月的所有存续
+                # 券当"临期"剔除(设计缺陷, 09-22 三臂都带此伪影)
                 avails = [
                     c for c in avails
                     if not (c in death_date
+                            and death_date[c] < PANEL_END
                             and 0 <= (death_date[c] - last_snap_date).days
                             < maturity_days)
                 ]
@@ -194,6 +213,9 @@ else:
     verdict = (f"中位者 N={M_med} 不过线({results[M_med][1]:.3f} < {bar:.3f})"
                f"——结构性理由仍主张剔除, 需人工裁定具体 N")
 print(f"\n★ 裁定: {verdict}")
+print("  口径标注(2026-09-24 用户定): N 值基于死亡日代理+当前公告最后交易日, "
+      "非全部真实 EXPIRE_DATE——暂定参数, 不作长期定案; jsl 每日 PIT 快照已开始"
+      "积累(cb_expiry_jsl_history.parquet), 一年后以真实到期日重跑验证。")
 
 out = pd.DataFrame({"nav_base": nav0})
 for M in [30, 60, 90]:
