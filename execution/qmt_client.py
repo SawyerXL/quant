@@ -141,6 +141,7 @@ class QMTClient:
                 "direction":   "buy" if o.order_type == xtc.STOCK_BUY else "sell",
                 "shares":      o.order_volume,
                 "price":       o.price,
+                "traded_price": o.traded_price,   # 2026-09-24: 成交回报价(滑点真值)
                 "filled":      o.traded_volume,
                 "status":      o.order_status,
             }

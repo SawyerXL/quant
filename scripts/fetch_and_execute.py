@@ -193,11 +193,14 @@ def preflight(signal: dict, track: str) -> list[str]:
         elif dev < -0.35:
             # 2026-09-24: 过渡期豁免——信号带 interim_deployment 标记且持仓非空
             # 时(停牌/临期剔除后的部分部署, capital 仍是轨道全量 60 万), 低配
-            # 只告警不拦截; 持仓为空的信号任何情况下都拦(防"信号坏了"导致
-            # 差量逻辑清空账户)。
-            if signal.get("interim_deployment") and holdings:
-                logger.warning(f"资金低配(过渡期豁免): 目标市值{total:,.0f} vs "
-                               f"capital{capital:,.0f} ({dev*100:+.0f}%)")
+            # 只告警不拦截。豁免仅在人工触发路径生效(手动触发时设
+            # MANUAL_TRIGGER=1), 链自动路径不豁免——防止豁免被自动链静默
+            # 沿用(用户裁定 2026-09-24); 持仓为空的信号任何情况下都拦。
+            if (signal.get("interim_deployment") and holdings
+                    and os.environ.get("MANUAL_TRIGGER") == "1"):
+                logger.warning(f"资金低配(过渡期豁免, 人工触发): 目标市值"
+                               f"{total:,.0f} vs capital{capital:,.0f} "
+                               f"({dev*100:+.0f}%)")
             else:
                 issues.append(f"资金低配异常: 目标市值{total:,.0f} vs capital{capital:,.0f} ({dev*100:+.0f}%, 超出lot跳票正常范围)")
     return issues
@@ -357,9 +360,22 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
                          if r.get("code")}
         target_buys   = {str(c).split(".")[0] for c in buy_list} | trader_buys
 
+        # 滑点口径(2026-09-24 修复): 成交价用订单 traded_price——持仓
+        # cost_price 在 T+5min 时点仍可能是委托价(9/24 实锤: 三笔买入
+        # 报假滑点+4.06%, 实际成交=市价110.876等), 订单成交回报才是柜台
+        # 真实成交价。cost_price 仅作 traded_price 缺失时的兜底。
+        try:
+            todays_orders = client.get_today_orders() or []
+            fill_px = {}
+            for o in todays_orders:
+                tp = o.get("traded_price", 0)
+                if tp and tp > 0:
+                    fill_px[str(o.get("code", "")).split(".")[0]] = tp
+        except Exception:
+            fill_px = {}
         for code in target_buys:
             assumed = assumed_prices.get(code)
-            actual  = actual_positions.get(code, {}).get("cost_price")
+            actual  = fill_px.get(code) or actual_positions.get(code, {}).get("cost_price")
             if assumed and actual and assumed > 0:
                 slip_pct = (actual - assumed) / assumed * 100
                 slippage_data.append({
