@@ -216,7 +216,34 @@ def check_signal_fresh(signal: dict) -> bool:
     return True
 
 
-def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
+def classify_tier(plan: dict, sig: dict) -> tuple:
+    """档位分流(2026-09-24 用户裁定):
+    档3 逐笔(任一触发): 总交易额>30万 / 新增标的>8只 / 单笔>5万 / 闲置资金首次部署
+    档1 免确认: 全部单笔<2万 且 券非新增(不在信号 buy/sell 列表)
+    档2 清单确认: 其余(默认)。确认的对象是清单, 不是"要不要跑"。"""
+    entries = list(plan.get("sells", [])) + list(plan.get("buys", []))
+    total = sum(e.get("est_amount", 0) for e in entries)
+    max_one = max((e.get("est_amount", 0) for e in entries), default=0)
+    new_codes = set(sig.get("buy", [])) | set(sig.get("sell", []))
+    reasons = []
+    if total > 300_000:
+        reasons.append(f"总交易额{total:,.0f}>30万")
+    if len(new_codes) > 8:
+        reasons.append(f"新增标的{len(new_codes)}只>8")
+    if max_one > 50_000:
+        reasons.append(f"单笔{max_one:,.0f}>5万")
+    if (not sig.get("interim_deployment", False) and total > 100_000):
+        reasons.append("闲置资金首次部署(过渡期结束满配)")
+    if reasons:
+        return 3, reasons
+    if entries and all(e.get("est_amount", 0) < 20_000
+                       and e["code"] not in new_codes for e in entries):
+        return 1, []
+    return 2, []
+
+
+def execute(track: str = "a", dry_run: bool = False, setup: bool = False,
+           plan_only: bool = False, approve: bool = False):
     """
     拉取信号并执行调仓。
     setup=True：建仓模式，跳过新鲜度检查，买入全部 holdings（适合首次初始化）。
@@ -297,6 +324,60 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False):
 
         trader = Trader()
         client = get_client()
+
+        # ── 档位分流(2026-09-24 用户裁定): 确认的对象是清单, 不是"要不要跑" ──
+        # 档1 免确认自动执行 / 档2 清单确认(先出清单, --approve 才执行) /
+        # 档3 逐笔人工(拒绝自动执行)。--plan-only 只出清单不执行。
+        if not setup:
+            plan = trader.compute_plan(strategy_id, signal)
+            tier, reasons = classify_tier(plan, signal)
+            plan_doc = {
+                "date": date.today().strftime("%Y-%m-%d"),
+                "track": track,
+                "tier": tier,
+                "tier_reasons": reasons,
+                "total_est": sum(e.get("est_amount", 0)
+                                 for e in plan["sells"] + plan["buys"]),
+                "sells": plan["sells"],
+                "buys": plan["buys"],
+                "skipped_rejected": plan["skipped_rejected"],
+                "missing_shares": plan["missing_shares"],
+                "signal_excluded": signal.get("excluded", {}),
+                "signal_note": signal.get("note", ""),
+            }
+            import json as _json
+            plan_file = EXEC_RESULT_DIR / (
+                f"trade_plan_{date.today().strftime('%Y%m%d')}_{track}.json")
+            EXEC_RESULT_DIR.mkdir(parents=True, exist_ok=True)
+            plan_file.write_text(
+                _json.dumps(plan_doc, ensure_ascii=False, indent=2),
+                encoding="utf-8")
+            push_result_to_linux(plan_file)
+            tier_tag = {1: "档1免确认", 2: "档2清单确认", 3: "档3逐笔人工"}[tier]
+            n_s = len(plan["sells"])
+            n_b = len(plan["buys"])
+            send_alert(
+                f"[{track}] 交易清单 {date.today()} 档位={tier_tag} "
+                f"(卖{n_s} 买{n_b} 预估{plan_doc['total_est']:,.0f}元"
+                f"{'; ' + '; '.join(reasons) if reasons else ''}) —— "
+                f"见 {plan_file.name}",
+                level="info" if tier == 1 else "warning")
+            logger.info(f"交易清单已落盘并推送: {plan_file.name} "
+                        f"档位={tier_tag} 卖{n_s} 买{n_b}")
+            if plan_only:
+                return
+            if tier == 3:
+                send_alert(f"[{track}] 档3逐笔人工: 拒绝自动执行, 请按清单逐笔下单"
+                           f"({'; '.join(reasons)})", level="error")
+                logger.error(f"档3 拒绝自动执行: {reasons}")
+                return
+            if tier == 2 and not approve:
+                send_alert(f"[{track}] 档2清单确认: 已生成清单, 人工审阅后以 "
+                           f"--approve 重跑执行(或拒绝)", level="warning")
+                logger.warning("档2 未批准, 不执行")
+                return
+            if tier == 2 and approve:
+                logger.info("档2 已批准(--approve), 继续执行")
 
         if setup:
             import json as _json
@@ -508,12 +589,17 @@ def main():
                         help="建仓初始化：跳过日期检查，全量买入holdings（首次使用）")
     parser.add_argument("--backfill", action="store_true",
                         help="收盘后补拉成交数据，覆盖执行记录(fill_rate/滑点)")
+    parser.add_argument("--plan-only", action="store_true",
+                        help="只生成交易清单(档位分流), 不下单")
+    parser.add_argument("--approve", action="store_true",
+                        help="档2清单已人工审阅批准, 允许执行")
     args = parser.parse_args()
 
     if args.backfill:
         backfill_fills()
     else:
-        execute(track=args.track, dry_run=args.dry_run, setup=args.setup)
+        execute(track=args.track, dry_run=args.dry_run, setup=args.setup,
+                plan_only=args.plan_only, approve=args.approve)
 
 
 if __name__ == "__main__":

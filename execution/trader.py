@@ -251,6 +251,101 @@ class Trader:
             return cb
         return not cb
 
+    def compute_plan(self, strategy_id: str, sig: dict) -> dict:
+        """差量计划(不下单, 2026-09-24 档位机制): 与 _execute_bull 完全同口径——
+        卖=清仓票全卖/目标<实际减仓(CB<10张死区), 买=目标−持仓(CB取整10),
+        当日废单买入跳过。输出逐笔 {code, direction, shares, price, est_amount},
+        供档位分流/清单确认/调仓预览。不连风控、不下单。
+        """
+        def _norm(c):
+            return str(c).split(".")[0]
+        raw_positions = self.client.get_positions()
+        positions = {_norm(k): v for k, v in raw_positions.items()
+                     if self._in_scope(k, strategy_id)}
+        try:
+            OPEN_STATUS = (50, 52, 54)
+            today_orders = self.client.get_today_orders() or []
+            rejected_buys = {
+                _norm(o.get("code"))
+                for o in today_orders
+                if o.get("status") == 57 and o.get("direction") == "buy"
+            }
+            for o in today_orders:
+                code = _norm(o.get("code"))
+                if not self._in_scope(code, strategy_id):
+                    continue
+                if o.get("status") not in OPEN_STATUS:
+                    continue
+                d = o.get("direction")
+                net = max(0, o.get("shares", 0) - o.get("filled", 0))
+                cur = positions.setdefault(code, {"volume": 0, "market_value": 0})
+                if d == "buy":
+                    cur["volume"] += net
+                elif d == "sell":
+                    cur["volume"] -= net
+        except Exception:
+            rejected_buys = set()
+        target_shares = {_norm(k): v for k, v in sig.get("shares", {}).items()}
+        holdings = {_norm(c) for c in sig.get("holdings", [])}
+        sell_set = {_norm(c) for c in sig.get("sell", [])}
+        ref_prices = {_norm(k): v for k, v in sig.get("prices", {}).items()}
+
+        plan = {"sells": [], "buys": [], "skipped_rejected": [],
+                "missing_shares": []}
+        for code in sorted(set(positions) | set(target_shares)):
+            cur = positions.get(code, {}).get("volume", 0)
+            if code in sell_set or (cur > 0 and code not in holdings):
+                sell_qty = cur
+            elif code in holdings and code not in target_shares:
+                if cur > 0:
+                    plan["missing_shares"].append(code)
+                sell_qty = 0
+            elif cur > target_shares.get(code, 0):
+                sell_qty = cur - target_shares.get(code, 0)
+            else:
+                sell_qty = 0
+            if sell_qty <= 0:
+                continue
+            if (strategy_id == "track_cb" and sell_qty < 10
+                    and code not in sell_set and code in holdings):
+                continue
+            pos_live = positions.get(code, {})
+            if pos_live.get("volume") and pos_live.get("market_value"):
+                live_px = float(pos_live["market_value"]) / pos_live["volume"]
+                price = (live_px if live_px > 0
+                         else ref_prices.get(code)
+                         or pos_live.get("cost_price", 1.0))
+            else:
+                price = ref_prices.get(code) or pos_live.get("cost_price", 1.0)
+            plan["sells"].append({
+                "code": code, "direction": "sell", "shares": sell_qty,
+                "price": round(price, 2),
+                "est_amount": round(sell_qty * price, 0),
+                "held": cur, "target": target_shares.get(code, 0),
+            })
+        for code, tgt in target_shares.items():
+            if code in sell_set:
+                continue
+            cur = positions.get(code, {}).get("volume", 0)
+            buy_qty = tgt - cur
+            if strategy_id == "track_cb":
+                buy_qty = _round_cb_lot(buy_qty)
+            if code in rejected_buys:
+                plan["skipped_rejected"].append(
+                    {"code": code, "direction": "buy",
+                     "reason": "当日已废单, 不重试"})
+                continue
+            price = ref_prices.get(code, 0)
+            if buy_qty <= 0 or price <= 0:
+                continue
+            plan["buys"].append({
+                "code": code, "direction": "buy", "shares": buy_qty,
+                "price": round(price, 2),
+                "est_amount": round(buy_qty * price, 0),
+                "held": cur, "target": tgt,
+            })
+        return plan
+
     def _execute_bull(self, strategy_id: str, sig: dict, capital: float) -> dict:
         """目标仓位 diff 式下单（2026-08-31 幂等化改造）。
 
