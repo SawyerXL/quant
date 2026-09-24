@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "apocdata": {
+      "command": "node",
+      "args": [
+        "/root/quant/.claude/mcp/node_modules/@apocdata-info/mcp-server/dist/index.js"
+      ]
+    }
+  }
+}
