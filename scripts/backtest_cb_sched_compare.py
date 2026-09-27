@@ -151,6 +151,12 @@ def run_bt(schedule="monthly", recovery="zero", stats=None):
             # 每个快照日后的首个交易日调仓(隔离"快照日非交易日被跳过"的效应)
             is_rb = (last_snap_date is not None
                      and last_acted_snap != last_snap_date)
+        if schedule == "quarterly":
+            # 每季首快照(1/4/7/10月)后首个交易日调仓(2026-09-27 补:
+            # 调仓频率待测登记的第三臂; nextday 式触发防快照日非交易日跳过)
+            is_rb = (last_snap_date is not None
+                     and last_acted_snap != last_snap_date
+                     and last_snap_date.month in (1, 4, 7, 10))
 
         if is_rb:
             snap = snapshots[snapshots["snap_date"] == last_snap_date]
@@ -207,7 +213,7 @@ arms = {}
 biweekly_events_zero = []
 print(f"\n{'臂':<34}{'年化':>8}{'夏普':>7}{'回撤':>9}{'换手/年':>9}{'pop':>6}{'临时':>5}{'调仓次数':>8}")
 rows = []
-for schedule in ["monthly", "nextday", "biweekly"]:
+for schedule in ["monthly", "nextday", "biweekly", "quarterly"]:
     for recovery in ["zero", "last", "par"]:
         st = {}
         nav = run_bt(schedule, recovery, stats=st)
