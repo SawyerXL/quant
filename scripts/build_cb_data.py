@@ -106,6 +106,19 @@ def build_universe():
 # ══════════════════════════════════════════════════════════════════
 def build_daily(batch_size=50, sleep_sec=2, force_refresh=False):
     """下载每只可转债的日线数据(含价格/溢价率)。"""
+    # 2026-09-27: 非交易日跳过——国庆 10-01~10-08 长假期间 19:45 日更 cron
+    # 会空转 8 次×1051 次 API 且 akshare 返回同一份旧数据(无意义重写+限流风险);
+    # 交易日 19:45 时 17:00 日更链已把今日写入日历, 本检查不误伤
+    try:
+        from data.storage import load_meta as _lm
+        _cal = _lm("trade_calendar")
+        if not _cal.empty:
+            _tds = set(_cal["trade_date"].astype(str).tolist())
+            if _tds and date.today().strftime("%Y-%m-%d") not in _tds:
+                logger.info(f"{date.today()} 非交易日，跳过日线刷新")
+                return
+    except Exception:
+        pass  # 日历不可用时不拦(周更 cron 在周一 06:30, 日历由日更链维护)
     logger.info("Stage 3: 逐只日线数据...")
 
     universe = load_meta("cb_universe")
