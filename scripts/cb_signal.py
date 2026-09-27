@@ -80,6 +80,13 @@ def _load_actual_cb():
 def run():
     from datetime import date
     today = str(date.today())
+    # 2026-09-27: 非交易日跳过(与股票链同款)——09-25 中秋实证: 不跳过会生成
+    # 幽灵信号(日期领先交易日历)+健康行假"CB信号停滞"告警; 国庆长假前必修
+    from daily_signal_a_v2 import _get_trade_calendar
+    _cal = _get_trade_calendar()
+    if _cal and today not in _cal:
+        logger.info(f"{today} 非交易日，跳过")
+        return
     snaps = load_meta("cb_snapshots")
     if snaps.empty:
         logger.error("cb_snapshots 为空，请先跑 build_cb_data.py")

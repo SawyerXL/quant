@@ -198,9 +198,13 @@ def main():
         alerts.append(f"最新bar({latest_bar})落后于今日交易日{now[:10]}, "
                       f"日更未完成或失败")
     # CB 信号与上一交易日差 > 1 → 告警(执行链会静默跳过, 见闸门十二)
+    # 2026-09-27: 日期领先日历末(=节假日幽灵信号)不算停滞——09-25 中秋
+    # 实证 cb_date 领先 tds 末端被报"停滞"假警
     if cb_date != "?" and tds:
         cb_pos = [i for i, d in enumerate(tds) if d == cb_date]
-        stale = not cb_pos or (len(tds) - 1 - cb_pos[0]) > 1
+        ahead = cb_date > tds[-1]
+        stale = ((not cb_pos) and (not ahead)) or (
+            bool(cb_pos) and (len(tds) - 1 - cb_pos[0]) > 1)
         if stale:
             alerts.append(f"CB信号停滞: signal_date={cb_date}, "
                           f"上一交易日={last_td}")
@@ -285,11 +289,14 @@ def main():
             lvbc = {"error": "对账产物不可读"}
         if lvbc.get("events"):
             alerts.append(f"实盘对账事件: {'; '.join(lvbc['events'])}")
-        elif str(lvbc.get("snapshot", "")) != last_td:
+        elif (now[:10] in tds
+              and str(lvbc.get("snapshot", "")) != last_td):
             # 2026-09-20 修复: 对账 cron 仅交易日跑, 周末 snapshot 停在
-            # 上一交易日属正常——基准改最近交易日(原 now[:10] 周末恒误报)
+            # 上一交易日属正常——基准改最近交易日(原 now[:10] 周末恒误报);
+            # 2026-09-27 补: 非交易日(周末/假日)整个新鲜度检查豁免——
+            # 09-25 中秋假日快照被报"对账不可行"假警, 国庆长假前必修
             alerts.append(f"实盘对账陈旧/不可行: snapshot={lvbc.get('snapshot')}")
-    else:
+    elif now[:10] in tds:
         alerts.append("实盘对账产物缺失(17:55 cron 未跑或失败)")
     for msg in alerts:
         try:

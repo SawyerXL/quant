@@ -232,7 +232,13 @@ def main(report=False):
         events.append(f"CB名单差: 缺{len(cb_missing)} 多{len(cb_extra)}")
     if cb_vol_diff:
         events.append(f"CB张数差>10%: {len(cb_vol_diff)}只")
-    if sig_date != today:
+    # 2026-09-27: 非交易日信号不更新属正常(09-25 中秋实证假警: 信号正确
+    # 跳过生成却被报"信号陈旧")——只在交易日比
+    try:
+        cal_days = set(load_meta("trade_calendar")["trade_date"].tolist())
+    except Exception:
+        cal_days = set()
+    if (not cal_days or today in cal_days) and sig_date != today:
         events.append(f"信号陈旧: signal_date={sig_date} ≠ {today}")
     if len(list_extra) + len(list_missing) > 2:
         events.append(f"名单差 {len(list_extra)}+{len(list_missing)} > 2")
