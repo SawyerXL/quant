@@ -476,12 +476,16 @@ if __name__ == "__main__":
     import argparse
     p = argparse.ArgumentParser()
     p.add_argument("--stage", type=int, default=0, help="1-5, 0=all")
+    # 2026-09-28: 受控实验用——长假后统一状态强制全库重拉(stage 3 专用)
+    p.add_argument("--force-refresh", action="store_true",
+                   help="stage3: 全量重拉所有日线(忽略10天新鲜度)")
     args = p.parse_args()
 
     stages = {
         1: build_index,
         2: build_universe,
-        3: build_daily,
+        3: (lambda: build_daily(force_refresh=True)) if args.force_refresh
+            else build_daily,
         4: build_redemption,
         5: build_snapshots,
     }

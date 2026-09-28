@@ -3789,3 +3789,21 @@ backtest_cb_sched_compare.py / cb_combo_live_adjusted.py。
   拥挤度过滤线**——真实信号链在 pool30 之后还有拥挤度过滤, 从未持有。
   pool30 并集 121 ≠ 实盘持仓(30×月频+过滤)。
 - **判读: PASS, P3 降级销案成立**(用户预登记判据)。产出: scripts/st_pool30_probe.py。
+
+## 10-09 CB 重拉受控实验入 run-book(2026-09-28 18:0x, 用户裁定立项)
+背景(用户): 10 天新鲜度阈值在国庆长假边界行为突变——10-09~10-12 期间库里会
+混着"已重拉/未重拉"的券, 次周一快照重建基于不一致数据状态; 且 10-12 全库重拉
+的漂移量级可能远超 0.011(09-24 部分券重拉=0.011 → 308 只全库可能 0.03~0.05),
+若真到 0.05, 所有 0.02~0.05 量级判据(含到期网格 +0.042)需重判。
+**处置(用户裁定): 把 10-12 的涌现漂移变成 10-09 的受控实验。**
+10-09(节后首日) 步骤:
+  ① 备份日线目录:  data_store/convertible_bonds/daily → daily_backup_20261009/
+     (1055 parquet ≈ 100~200MB, 一次拷贝)
+  ② 统一状态强制全库重拉: python scripts/build_cb_data.py --stage 3 --force-refresh
+     (CLI 旗标已加, 2026-09-28)
+  ③ 逐券 diff: python scripts/cb_daily_diff.py --old daily_backup_20261009 --new daily
+     → 多少只历史 bar 变了/变了多少(直接回答 A 源修订, 免费关闭)
+  ④ 结果记漂移日志+账本; 之后周一 06:30 快照重建的 monthly_zero 变化记漂移日志第 3 行
+(10-09 08:30 持久提醒已排)。
+挂账(节后顺手): logs/ 与纪律工件混同——漂移日志/账本/判据登记表迁 docs/discipline/
+或 records/ 纳入版本控制, 免 -f 逐个救。
