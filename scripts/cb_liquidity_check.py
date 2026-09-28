@@ -52,9 +52,13 @@ logger.info(f"  面板: {len(price_panel)}交易日")
 
 
 # ── 逐月选股(甲: 补足25), 收集 (调仓日, code) ──
-instances = []  # (date_str, code)
+# 2026-09-28 扩容评估(ed1a430/836510b 预登记): 同时收集卖出实例——
+# 调仓日轮出券(前一期持仓∩新名单补集), 硬约束第四条(卖出侧占比须更严)。
+instances = []      # 买入实例 (date_str, code)
+sell_instances = []  # 卖出实例 (date_str, code)
 snap_idx = 0
 last_snap_date = None
+prev_selected = None
 for i, date in enumerate(all_dates):
     date_str = str(date.date())[:10]
     prices_today = price_panel.get(date, {})
@@ -71,11 +75,16 @@ for i, date in enumerate(all_dates):
             if len(selected) >= TOP_N:
                 for c in selected:
                     instances.append((date_str, c))
+                if prev_selected is not None:
+                    for c in prev_selected:
+                        if c not in selected:
+                            sell_instances.append((date_str, c))
+                prev_selected = selected
 
-logger.info(f"  调仓实例: {len(instances)} (券,月)")
+logger.info(f"  买入实例: {len(instances)} (券,月), 卖出实例: {len(sell_instances)}")
 
-# ── 读取入选券的 (date, volume), 计算 amount=volume×close ──
-union = sorted({c for _, c in instances})
+# ── 读取入选/轮出券的 (date, volume), 计算 amount=volume×close ──
+union = sorted({c for _, c in instances + sell_instances})
 vol_map = {}
 no_vol_cols = set()
 for code in union:
@@ -91,37 +100,62 @@ for code in union:
 if no_vol_cols:
     logger.warning(f"  {len(no_vol_cols)}只券无volume列: {sorted(no_vol_cols)[:10]}")
 
-amounts = []
-missing = 0
-for date_str, code in instances:
-    v = vol_map.get(code, {}).get(date_str)
-    cp = price_panel.get(pd.Timestamp(date_str), {}).get(code)
-    if v is None or not cp:
-        missing += 1
-        continue
-    amounts.append(float(v) * float(cp))
 
-amounts = np.array(amounts)
+def collect_amounts(inst):
+    """返回 (金额数组, 缺失数, 对齐后的实例列表)——金额数组跳过缺失行,
+    必须保留对齐实例供最差例回标(索引错位=标签错贴, 2026-09-28 实测)。"""
+    out, miss, kept = [], 0, []
+    for date_str, code in inst:
+        v = vol_map.get(code, {}).get(date_str)
+        cp = price_panel.get(pd.Timestamp(date_str), {}).get(code)
+        if v is None or not cp:
+            miss += 1
+            continue
+        out.append(float(v) * float(cp))
+        kept.append((date_str, code))
+    return np.array(out), miss, kept
+
+
+amounts, missing, kept_inst = collect_amounts(instances)
+sell_amounts, sell_missing, kept_sell = collect_amounts(sell_instances)
+# 对齐守卫(2026-09-28 标签错位教训): 金额数组与标签数组长度必须一致,
+# 任一缺失行跳过都会造成"最差例贴错券"——数值不变归属变, 最难发现的错位。
+assert len(amounts) == len(kept_inst), "买入金额/标签对齐失败"
+assert len(sell_amounts) == len(kept_sell), "卖出金额/标签对齐失败"
+
 print("=" * 80)
-print(f"CB双低入选券调仓日成交额分布 (N={len(amounts)}实例, 缺{missing})")
+print(f"CB双低调仓日成交额分布 (买入实例 N={len(amounts)}缺{missing}, "
+      f"卖出实例 N={len(sell_amounts)}缺{sell_missing})")
 print("=" * 80)
 for p in [1, 5, 10, 25, 50, 75, 90]:
-    print(f"  P{p:>2}: {np.percentile(amounts, p)/1e4:>12.0f} 万元")
-print(f"  <50万:   {(amounts < 5e5).mean()*100:5.1f}%")
-print(f"  <100万:  {(amounts < 1e6).mean()*100:5.1f}%")
-print(f"  <200万:  {(amounts < 2e6).mean()*100:5.1f}%")
-print(f"  <500万:  {(amounts < 5e6).mean()*100:5.1f}%")
+    print(f"  P{p:>2}: 买入 {np.percentile(amounts, p)/1e4:>11.0f} 万元"
+          f" | 卖出 {np.percentile(sell_amounts, p)/1e4:>11.0f} 万元")
 
-# 3.8万买入占成交额比例(当前实盘口径: 96万腿/25只≈3.8万; 0.5%冲击阈值粗标)
-BUY = 38_000
-ratios = BUY / amounts
-print(f"\n单券{BUY/1e4:.1f}万买入占当日成交额比例:")
-for p in [50, 75, 90, 95, 99]:
-    print(f"  P{p:>2}: {np.percentile(ratios, p)*100:6.2f}%")
-print(f"  占比>0.5%的实例: {(ratios > 0.005).mean()*100:5.1f}%")
-print(f"  占比>1%的实例:   {(ratios > 0.01).mean()*100:5.1f}%")
-worst = np.argsort(ratios)[-10:][::-1]
-print("\n  占比最高的10个实例(调仓日, 券, 成交额, 占比):")
-for idx in worst:
-    print(f"    {instances[idx][0]} {instances[idx][1]} "
-          f"{amounts[idx]/1e4:>9.0f}万 {ratios[idx]*100:5.2f}%")
+# ── 扩容三档占比 (2026-09-28, ed1a430 预登记: 60/80/100万 → 2.4/3.2/4.0万/券;
+#    3.8万=96万满配旧口径仅作参考线) ──
+TIERS = [("60万档 2.4万/券", 24_000),
+         ("80万档 3.2万/券", 32_000),
+         ("100万档 4.0万/券", 40_000),
+         ("参考:96万满配 3.8万/券(旧审计口径)", 38_000)]
+
+
+def tier_report(label, buy_amt):
+    r_buy = buy_amt / amounts
+    r_sell = buy_amt / sell_amounts
+    print(f"\n【{label}】 买入占比(硬约束: P95<3%) / 卖出占比(硬约束: P95<3% 且最差单例<15%):")
+    for p in [50, 90, 95, 99]:
+        print(f"  P{p:>2}: 买入 {np.percentile(r_buy, p)*100:6.2f}%"
+              f" | 卖出 {np.percentile(r_sell, p)*100:6.2f}%")
+    print(f"  买入占比>3%实例: {(r_buy > 0.03).mean()*100:5.1f}%"
+          f" ({int((r_buy > 0.03).sum())}/{len(r_buy)})")
+    print(f"  卖出占比>3%实例: {(r_sell > 0.03).mean()*100:5.1f}%"
+          f" ({int((r_sell > 0.03).sum())}/{len(r_sell)})")
+    ws = np.argsort(r_sell)[-5:][::-1]
+    print("  卖出最差5例(调仓日, 券, 成交额, 占比):")
+    for idx in ws:
+        print(f"    {kept_sell[idx][0]} {kept_sell[idx][1]} "
+              f"{sell_amounts[idx]/1e4:>9.0f}万 {r_sell[idx]*100:5.2f}%")
+
+
+for label, amt in TIERS:
+    tier_report(label, amt)
