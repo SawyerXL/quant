@@ -43,6 +43,10 @@ class BacktestConfig:
     # ── 交易成本 ──
     commission: float = 0.0013        # 双边(佣金+印花+滑点)
     cash_yield: float = 0.02          # 现金年化收益
+    # 涨跌停闸(F区P1, 2026-09-29 实装代码, 节后批启用): 调仓日涨停禁买/
+    # 跌停禁卖(止损/MA10/轮出遇跌停顺延持有, 次日条件仍在再触发)。
+    # 默认False=零行为变更; 触发计数必报(0触发=未验证)。
+    limit_gate: bool = False
     min_bars: int = 250               # 最少K线数
     # ── lot约束(0=关闭): 一手=lot_size股(688板200股), 调仓按
     # initial_capital资金floor-to-lot, 买不起一手的票跳过不重归一

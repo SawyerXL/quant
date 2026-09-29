@@ -22,6 +22,40 @@ from loguru import logger; logger.remove(); logger.add(sys.stderr, level='ERROR'
 from scripts.backtest_config import BacktestConfig
 
 
+def limit_status(panel, idx, code):
+    """涨跌停判定(F区P1, 2026-09-29): 返回 "up"/"down"/None。
+    涨停价/跌停价=昨收×(1±幅度)四舍五入到0.01(交易所口径), 收盘触及=封板。
+    幅度按板块: 688/300/301=20%, 8xx/4xx/920=30%(北交所), 其余=10%。
+    盲区声明: ST 5% 不区分(无历史ST库, P3降级已判; pool30罕见ST)。
+    昨收取 idx 之前最后一个有效收盘(ffill 语义, 停牌无昨收→None)。
+    模块级(可单测); 引擎内经 _limit_status 闭包调用。"""
+    if code not in panel.columns or idx < 1:
+        return None
+    cp = panel.iloc[idx].get(code)
+    if pd.isna(cp) or cp <= 0:
+        return None
+    col = panel[code]
+    prev = None
+    for j in range(idx - 1, -1, -1):
+        v = col.iloc[j]
+        if not pd.isna(v) and v > 0:
+            prev = float(v)
+            break
+    if prev is None:
+        return None
+    c = str(code)
+    pct = 0.30 if (c.startswith("8") or c.startswith("4") or c.startswith("92")) \
+        else 0.20 if (c.startswith("688") or c.startswith("300") or c.startswith("301")) \
+        else 0.10
+    up_lim = round(prev * (1 + pct), 2)
+    dn_lim = round(prev * (1 - pct), 2)
+    if float(cp) >= up_lim - 1e-9:
+        return "up"
+    if float(cp) <= dn_lim + 1e-9:
+        return "down"
+    return None
+
+
 def apply_filters(pool_codes, panel, idx, config, return_tags=False):
     """
     三层漏斗过滤。
@@ -152,6 +186,8 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                              # {date, tier, enter_w, exit_w}——纯记录不改行为
     total_commission_paid = 0.0  # track cumulative commission
     lot_skip_total = 0           # lot约束: 买不起一手被跳过的票次数
+    limit_up_blocked = 0         # 涨跌停闸: 涨停买不进跳过的次数(F区P1)
+    limit_down_blocked = 0       # 涨跌停闸: 跌停卖不出顺延的次数
     exposure_ts = []             # 敞口诊断: (date, 实际权重, 目标权重, nav)
     skip_ts = []                 # 敞口诊断: (date, 该调仓跳票数)
     # MA10重入冷却: code -> 冷却截止日索引(2026-09-02 修复: 原引用未定义
@@ -165,6 +201,10 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
         if config.diag_holding_spans and code in span_entry:
             ed, w, ep = span_entry.pop(code)
             holding_spans.append((code, ed, dstr, w, ep))
+
+    def _limit_status(code, idx):
+        return limit_status(panel, idx, code)
+
     max_single_track = []; top3_track = []
 
     for i, date in enumerate(all_dates):
@@ -368,6 +408,12 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 abs_stop = config.absolute_stop * stop_tighten
                 trail_stop = config.trailing_stop * stop_tighten
 
+                # 涨跌停闸(2026-09-29): 跌停日禁卖——止损/MA10 触发顺延持有,
+                # 次日条件仍在再触发(实盘跌停卖不出的同构)
+                if config.limit_gate and _limit_status(code, i) == "down":
+                    limit_down_blocked += 1
+                    continue
+
                 # Absolute stop
                 if config.enable_absolute_stop and cp/ep - 1 <= abs_stop:
                     exits.append(code); continue
@@ -524,6 +570,14 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
 
                 new_set = set(selected[:n])
 
+                # 涨跌停闸(2026-09-29): 跌停日轮出券禁卖——顺延持有
+                # (并入new_set走保留路径, 下一调仓日不在名单再卖)
+                if config.limit_gate:
+                    for c in old_set - new_set:
+                        if _limit_status(c, i) == "down":
+                            limit_down_blocked += 1
+                            new_set.add(c)
+
                 # Keep existing weights for stocks that stay, cap at max_single
                 new_w = {}
                 # 切档显性化(2026-08-31): 换档降仓必须真卖并付佣金——
@@ -544,6 +598,16 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 # Remaining cash = pos_ratio - old_weights + excess from capping
                 remaining_cash = pos_ratio - sum(new_w.values())
                 new_only = [c for c in selected[:n] if c not in old_set]
+                # 涨跌停闸(2026-09-29): 涨停日禁买——跳过不重归一
+                # (与lot跳过同语义: 现金拖累, 实盘涨停买不进同构)
+                if config.limit_gate:
+                    _no = []
+                    for c in new_only:
+                        if _limit_status(c, i) == "up":
+                            limit_up_blocked += 1
+                            continue
+                        _no.append(c)
+                    new_only = _no
                 if new_only and remaining_cash > 0.01:
                     w_per_base = min(config.max_position_pct, remaining_cash / len(new_only))
                     for c in new_only:
@@ -705,6 +769,8 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
         "total_commission": total_commission_paid,
         "annual_cost_drag": annual_cost_drag,
         "lot_skips": lot_skip_total,
+        "limit_up_blocked": limit_up_blocked,
+        "limit_down_blocked": limit_down_blocked,
         "exposure_ts": exposure_ts, "skip_ts": skip_ts,
         "holding_spans": holding_spans,
         "max_single_weight": max_single_seen,
