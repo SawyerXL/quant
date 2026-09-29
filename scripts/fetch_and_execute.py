@@ -466,10 +466,12 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False,
 
         fill_count = len(target_buys & filled_codes)
         fill_rate  = fill_count / len(target_buys) * 100 if target_buys else 100.0
+        # 2026-09-29: 无滑点数据写 None 禁写 0——"0 和空必须可区分"
+        # (0 看起来像"无滑点"而非"无数据", 已丢一整期成本样本)
         avg_slip   = (sum(d["slippage_pct"] for d in slippage_data) / len(slippage_data)
-                      if slippage_data else 0.0)
+                      if slippage_data else None)
         max_slip   = (max(abs(d["slippage_pct"]) for d in slippage_data)
-                      if slippage_data else 0.0)
+                      if slippage_data else None)
 
         # 计算全链路时延（信号生成→成交确认）
         gen_at = signal.get("generated_at", "")
