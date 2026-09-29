@@ -293,6 +293,13 @@ class Trader:
         plan = {"sells": [], "buys": [], "skipped_rejected": [],
                 "missing_shares": []}
         for code in sorted(set(positions) | set(target_shares)):
+            # 2026-09-29: 熊市清仓豁免传导到差量路径——BEAR_EXEMPT_CODES 的
+            # sweep 管理持仓(511360 打新底仓)不得进卖出计划。09-15 豁免只落在
+            # legacy _execute_bear, 档位机制的 compute_plan 漏带(09-29 A-track
+            # 清单实锤"卖511360 6100")——档1/档2自动执行时=69.5万底仓被自动
+            # 卖出的潜伏风险, 硬拦截不回退。
+            if code in BEAR_EXEMPT_CODES:
+                continue
             cur = positions.get(code, {}).get("volume", 0)
             if code in sell_set or (cur > 0 and code not in holdings):
                 sell_qty = cur
