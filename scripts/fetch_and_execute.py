@@ -329,7 +329,7 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False,
         # 档1 免确认自动执行 / 档2 清单确认(先出清单, --approve 才执行) /
         # 档3 逐笔人工(拒绝自动执行)。--plan-only 只出清单不执行。
         if not setup:
-            plan = trader.compute_plan(strategy_id, signal)
+            plan = trader.compute_plan(f"track_{track}", signal)
             tier, reasons = classify_tier(plan, signal)
             plan_doc = {
                 "date": date.today().strftime("%Y-%m-%d"),
