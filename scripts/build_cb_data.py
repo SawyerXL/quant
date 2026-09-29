@@ -130,9 +130,29 @@ def build_daily(batch_size=50, sleep_sec=2, force_refresh=False):
     total = len(codes)
     done = 0
     skip = 0
+    term = 0
+
+    # 2026-09-28: 退市终态券跳过——文件永远"陈旧"(末bar=退市日), 每夜被
+    # 全史重拉无新bar纯浪费(09-28 首跑实测 741/1059 重拉, 739=退市)。
+    # 判据=不在最新快照(存续口径, 与健康行陈旧判据同源); 仅文件已存在者
+    # 跳过(新上市券无文件→照常下载); force_refresh 例外(10-09 受控实验
+    # 需全量); 存续停牌券仍在重拉集合(复牌后靠重拉拾回新bar)。
+    live_codes = None
+    if not force_refresh:
+        try:
+            _snaps = load_meta("cb_snapshots")
+            if not _snaps.empty:
+                _snaps["snap_date"] = pd.to_datetime(_snaps["snap_date"])
+                live_codes = set(
+                    _snaps[_snaps["snap_date"] == _snaps["snap_date"].max()]["code"])
+        except Exception:
+            live_codes = None  # 快照不可用时不拦(宁可重拉)
 
     for i, code in enumerate(codes):
         fpath = DAILY_DIR / f"{code}.parquet"
+        if live_codes is not None and code not in live_codes and fpath.exists():
+            term += 1
+            continue
         if fpath.exists():
             # 2026-09-20 修复: 旧逻辑对已有文件一律跳过——CB 日线自
             # 08-06 起整体冻结无人察觉(闸门十二形状), 快照链随之停摆。
@@ -163,10 +183,10 @@ def build_daily(batch_size=50, sleep_sec=2, force_refresh=False):
             pass  # bond may be delisted, skip
 
         if (i + 1) % batch_size == 0:
-            logger.info(f"  {i+1}/{total}: 新增{done}, 跳过{skip}")
+            logger.info(f"  {i+1}/{total}: 新增{done}, 跳过{skip}, 退市终态{term}")
             time.sleep(sleep_sec)
 
-    logger.info(f"  ✓ 日线: 新增{done}只, 已有{skip}只, 共{total}只")
+    logger.info(f"  ✓ 日线: 新增{done}只, 已有{skip}只, 退市终态{term}只, 共{total}只")
 
 # ══════════════════════════════════════════════════════════════════
 # Stage 4: 强赎/退市记录
