@@ -155,6 +155,15 @@ def tier_report(label, buy_amt):
     for idx in ws:
         print(f"    {kept_sell[idx][0]} {kept_sell[idx][1]} "
               f"{sell_amounts[idx]/1e4:>9.0f}万 {r_sell[idx]*100:5.2f}%")
+    # 分年份 P99 序列(约束修订草案第四节"分年份条款"测量件, 2026-10-01):
+    # 独立评估"不同市场状态下约束是否该不同"; 任一年 P99>20% 触发单独说明
+    yrs = [k[0][:4] for k in kept_sell]
+    print(f"  卖出占比分年份 P99(条款: 任一年>20% 单独说明):")
+    for y in sorted(set(yrs)):
+        ry = r_sell[np.array([k[0][:4] for k in kept_sell]) == y]
+        p99y = np.percentile(ry, 99) if len(ry) >= 5 else float("nan")
+        flag = " ⚠>20%单独说明" if (not np.isnan(p99y) and p99y > 0.20) else ""
+        print(f"    {y}: P99={p99y*100:5.2f}% (N={len(ry)}){flag}")
 
 
 for label, amt in TIERS:
