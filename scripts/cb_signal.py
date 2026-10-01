@@ -182,7 +182,14 @@ def run():
 
     def _check_tradable(c):
         """单券可交易检查: 停牌/临期/日线停更/无数据/价格无效 → (False, 原因)。
-        结果 memo 到 _tradable_cache; akshare 优先, 失败回退本地 parquet。"""
+        结果 memo 到 _tradable_cache。
+
+        2026-09-29 用户裁定(任务#21, 10-01 实装): 两用途分源——
+        ①新鲜度判定(last_date/N=10 停牌)读本地日线优先: 19:45 日更已保
+          新鲜, 不受 akshare 陈旧缓存影响(选券级误排除 bug 的根因);
+        ②定价用 akshare 当日实时 close: T-1 本地价会错算张数(127083 实例,
+          T-1 119.03 会算 200, 当日 120.81 算 190=正确)。
+        akshare 在本地缺失/价格缺失时兜底(原回退链保留)。"""
         if c in suspended_now:
             return False, "停牌(新浪实时价=0)", None
         if c in expiry_watch:
@@ -192,29 +199,37 @@ def run():
                 return False, f"临期(交易末日{expiry_watch[c].date()}, 剩{days_left}天)", None
             if band == "hold_no_buy":
                 _buffer_codes.add(c)   # 可持有不加仓, 目标钳到当前持仓
+        # ① 新鲜度: 本地日线优先
         last_date = None
+        local = CB_DIR / "daily" / f"{c}.parquet"
+        if local.exists():
+            try:
+                ld = pd.read_parquet(local, columns=["date"])
+                if not ld.empty:
+                    last_date = pd.Timestamp(ld["date"].max())
+            except Exception:
+                pass
+        # ② 定价: akshare 当日实时(本地仅作价格兜底)
         p = None
         try:
             sym = ("sh" if str(c).startswith(("11",)) else "sz") + str(c)
             d = _ak.bond_zh_hs_cov_daily(symbol=sym)
             if d is not None and len(d) > 0:
                 d = d.sort_values("date")
-                last_date = pd.Timestamp(d.iloc[-1]["date"])
                 p = float(d.iloc[-1]["close"])
+                if last_date is None:
+                    last_date = pd.Timestamp(d.iloc[-1]["date"])
             _t.sleep(0.8)
         except Exception:
             pass
-        if last_date is None:
-            local = CB_DIR / "daily" / f"{c}.parquet"
-            if local.exists():
-                try:
-                    ld = pd.read_parquet(local)
-                    dc = "date" if "date" in ld.columns else ld.columns[0]
-                    ld = ld.sort_values(dc)
-                    last_date = pd.Timestamp(ld.iloc[-1][dc])
-                    p = float(ld.iloc[-1]["close"])
-                except Exception:
-                    pass
+        if p is None and local.exists():
+            try:
+                ld = pd.read_parquet(local)
+                dc = "date" if "date" in ld.columns else ld.columns[0]
+                ld = ld.sort_values(dc)
+                p = float(ld.iloc[-1]["close"])
+            except Exception:
+                pass
         if last_date is None:
             return False, "无日线数据", None
         gap = _trading_days_between(last_date)
