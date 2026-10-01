@@ -32,6 +32,17 @@ def main():
     buys = [(b.get("code"), b.get("shares")) for b in plan["buys"]]
     print(f"事件复核 | plan: {len(buys)} 笔买入 | 只删不改 | 停止线 >{MAX_DELETES} 笔")
 
+    # run-book 步骤②: 快照核验(路径一——ranked 由 09-01 快照构造, 变了=意外)
+    try:
+        snaps = load_meta("cb_snapshots")
+        snaps["snap_date"] = pd.to_datetime(snaps["snap_date"])
+        snap_max = snaps["snap_date"].max()
+        ok = str(snap_max.date()) == "2026-09-01"
+        print(f"快照核验: 最新 snap_date = {snap_max.date()} "
+              f"{'✓ 与路径一一致' if ok else '⚠ 停止判据②: 快照已变, 停查因(ranked 可能已换)'}")
+    except Exception:
+        print("快照核验: 读取失败(按异常处理, 停查)")
+
     # 到期表(09:05 cron 产物)
     expiry = {}
     try:
