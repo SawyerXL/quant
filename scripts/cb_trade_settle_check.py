@@ -24,6 +24,47 @@ def load_pos(p: Path) -> dict:
     return {str(k).split(".")[0]: v for k, v in d.get("positions", {}).items()}
 
 
+def selftest():
+    """闸门十六自测(2026-10-01): 内置已知应当失败/通过的用例——失败分支不触发=
+    校验器本身失效。用例: ①买100成交100, 持仓差量+100 → 判据②③应PASS
+    ②某券持仓差量+50 但无对应订单 → 判据③应FAIL。"""
+    import tempfile
+    tmp = Path(tempfile.mkdtemp())
+    orders = {"orders": [
+        {"code": "110001", "direction": "buy", "shares": 100, "filled": 100,
+         "status": 56},
+        {"code": "110002", "direction": "sell", "shares": 50, "filled": 50,
+         "status": 56},
+    ]}
+    pre = {"positions": {"110001": {"volume": 200}, "110002": {"volume": 80}}}
+    # 正确落账: 110001 +100 → 300; 110002 −50 → 30
+    post_ok = {"positions": {"110001": {"volume": 300}, "110002": {"volume": 30}}}
+    # 错误落账: 110001 +100 → 300 ✓, 但 110002 变 80(订单卖了50却未落账)
+    post_bad = {"positions": {"110001": {"volume": 300}, "110002": {"volume": 80}}}
+    o = tmp / "o.json"; p1 = tmp / "pre.json"; ok = tmp / "ok.json"; bad = tmp / "bad.json"
+    o.write_text(json.dumps(orders), encoding="utf-8")
+    p1.write_text(json.dumps(pre), encoding="utf-8")
+    ok.write_text(json.dumps(post_ok), encoding="utf-8")
+    bad.write_text(json.dumps(post_bad), encoding="utf-8")
+
+    import io
+    from contextlib import redirect_stdout
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        run_check(o, p1, ok)
+    out_ok = buf.getvalue()
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        run_check(o, p1, bad)
+    out_bad = buf.getvalue()
+
+    if "判据③: PASS" not in out_ok:
+        print("SELFTEST_FAIL: 正确落账用例未判 PASS"); raise SystemExit(1)
+    if "判据③: FAIL" not in out_bad:
+        print("SELFTEST_FAIL: 错误落账用例未判 FAIL(校验器失效)"); raise SystemExit(1)
+    print("SELFTEST PASS: 已知通过用例判 PASS / 已知失败用例判 FAIL")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--orders", default=None)
@@ -31,7 +72,12 @@ def main():
     ap.add_argument("--post", default=None)
     ap.add_argument("--date", default=None,
                     help="YYYYMMDD: 自动找 logs/*orders_<date>.json 与前后快照")
+    ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args()
+
+    if args.selftest:
+        selftest()
+        return
 
     if args.date:
         from datetime import datetime, timedelta
