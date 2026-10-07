@@ -42,11 +42,13 @@ class BacktestConfig:
 
     # ── 交易成本 ──
     commission: float = 0.0013        # 双边(佣金+印花+滑点)
-    cash_yield: float = 0.02          # 现金年化收益
-    # 涨跌停闸(F区P1, 2026-09-29 实装代码, 节后批启用): 调仓日涨停禁买/
-    # 跌停禁卖(止损/MA10/轮出遇跌停顺延持有, 次日条件仍在再触发)。
-    # 默认False=零行为变更; 触发计数必报(0触发=未验证)。
-    limit_gate: bool = False
+    cash_yield: float = 0.014         # 现金年化收益(2026-10-07 定案: 2%→1.4%
+                                      # 对齐实盘 ~1.4%, 第七次订正, 三跑判读通过)
+    # 涨跌停闸(F区P1, 2026-09-29 实装代码): 调仓日涨停禁买/跌停禁卖
+    # (止损/MA10/轮出遇跌停顺延持有, 次日条件仍在再触发)。
+    # 2026-10-07 三跑判读通过后启用(预登记判读矩阵: 归因过关→启用,
+    # 启用理由=正确性非效应, 负Δ启用)。触发计数必报(0触发=未验证)。
+    limit_gate: bool = True
     min_bars: int = 250               # 最少K线数
     # ── lot约束(0=关闭): 一手=lot_size股(688板200股), 调仓按
     # initial_capital资金floor-to-lot, 买不起一手的票跳过不重归一
@@ -174,7 +176,7 @@ DEFAULT_CONFIG = BacktestConfig(
     ma200_thresh_shift=-0.03,
     # ── 成本 ──
     commission=0.0013,
-    cash_yield=0.02,
+    cash_yield=0.014,
     min_bars=250,
     # ── 过热模式：不适用(已关) ──
     overheat_mode="eliminate",
