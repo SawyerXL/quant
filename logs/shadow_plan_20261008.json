@@ -1,0 +1,256 @@
+{
+  "date": "2026-10-08",
+  "track": "cb",
+  "tier": 3,
+  "tier_reasons": [
+    "总交易额551,649>30万"
+  ],
+  "total_est": 551649.0,
+  "sells": [
+    {
+      "code": "110081",
+      "direction": "sell",
+      "shares": 220,
+      "price": 100.34,
+      "est_amount": 22075.0,
+      "held": 220,
+      "target": 0
+    },
+    {
+      "code": "113056",
+      "direction": "sell",
+      "shares": 180,
+      "price": 124.73,
+      "est_amount": 22451.0,
+      "held": 180,
+      "target": 0
+    },
+    {
+      "code": "113062",
+      "direction": "sell",
+      "shares": 180,
+      "price": 126.1,
+      "est_amount": 22698.0,
+      "held": 180,
+      "target": 0
+    },
+    {
+      "code": "113681",
+      "direction": "sell",
+      "shares": 170,
+      "price": 135.41,
+      "est_amount": 23020.0,
+      "held": 170,
+      "target": 0
+    },
+    {
+      "code": "127027",
+      "direction": "sell",
+      "shares": 153,
+      "price": 109.92,
+      "est_amount": 16818.0,
+      "held": 153,
+      "target": 0
+    },
+    {
+      "code": "127040",
+      "direction": "sell",
+      "shares": 188,
+      "price": 114.77,
+      "est_amount": 21576.0,
+      "held": 188,
+      "target": 0
+    }
+  ],
+  "buys": [
+    {
+      "code": "110085",
+      "direction": "buy",
+      "shares": 210,
+      "price": 112.78,
+      "est_amount": 23684.0,
+      "held": 0,
+      "target": 210
+    },
+    {
+      "code": "110095",
+      "direction": "buy",
+      "shares": 210,
+      "price": 112.56,
+      "est_amount": 23638.0,
+      "held": 0,
+      "target": 210
+    },
+    {
+      "code": "113048",
+      "direction": "buy",
+      "shares": 210,
+      "price": 113.0,
+      "est_amount": 23730.0,
+      "held": 0,
+      "target": 210
+    },
+    {
+      "code": "113049",
+      "direction": "buy",
+      "shares": 220,
+      "price": 106.02,
+      "est_amount": 23324.0,
+      "held": 0,
+      "target": 220
+    },
+    {
+      "code": "113053",
+      "direction": "buy",
+      "shares": 210,
+      "price": 113.98,
+      "est_amount": 23936.0,
+      "held": 0,
+      "target": 210
+    },
+    {
+      "code": "113059",
+      "direction": "buy",
+      "shares": 200,
+      "price": 116.23,
+      "est_amount": 23246.0,
+      "held": 0,
+      "target": 200
+    },
+    {
+      "code": "113625",
+      "direction": "buy",
+      "shares": 200,
+      "price": 115.57,
+      "est_amount": 23114.0,
+      "held": 0,
+      "target": 200
+    },
+    {
+      "code": "113627",
+      "direction": "buy",
+      "shares": 210,
+      "price": 110.0,
+      "est_amount": 23099.0,
+      "held": 0,
+      "target": 210
+    },
+    {
+      "code": "113633",
+      "direction": "buy",
+      "shares": 210,
+      "price": 111.34,
+      "est_amount": 23382.0,
+      "held": 0,
+      "target": 210
+    },
+    {
+      "code": "113647",
+      "direction": "buy",
+      "shares": 200,
+      "price": 115.92,
+      "est_amount": 23184.0,
+      "held": 0,
+      "target": 200
+    },
+    {
+      "code": "113648",
+      "direction": "buy",
+      "shares": 210,
+      "price": 113.28,
+      "est_amount": 23790.0,
+      "held": 0,
+      "target": 210
+    },
+    {
+      "code": "113656",
+      "direction": "buy",
+      "shares": 200,
+      "price": 116.42,
+      "est_amount": 23283.0,
+      "held": 0,
+      "target": 200
+    },
+    {
+      "code": "118022",
+      "direction": "buy",
+      "shares": 200,
+      "price": 116.6,
+      "est_amount": 23319.0,
+      "held": 0,
+      "target": 200
+    },
+    {
+      "code": "123113",
+      "direction": "buy",
+      "shares": 210,
+      "price": 112.58,
+      "est_amount": 23642.0,
+      "held": 0,
+      "target": 210
+    },
+    {
+      "code": "123117",
+      "direction": "buy",
+      "shares": 210,
+      "price": 109.47,
+      "est_amount": 22988.0,
+      "held": 0,
+      "target": 210
+    },
+    {
+      "code": "127044",
+      "direction": "buy",
+      "shares": 210,
+      "price": 113.1,
+      "est_amount": 23751.0,
+      "held": 0,
+      "target": 210
+    },
+    {
+      "code": "127049",
+      "direction": "buy",
+      "shares": 220,
+      "price": 108.33,
+      "est_amount": 23833.0,
+      "held": 0,
+      "target": 220
+    },
+    {
+      "code": "127061",
+      "direction": "buy",
+      "shares": 10,
+      "price": 108.0,
+      "est_amount": 1080.0,
+      "held": 210,
+      "target": 220
+    },
+    {
+      "code": "127083",
+      "direction": "buy",
+      "shares": 190,
+      "price": 120.99,
+      "est_amount": 22988.0,
+      "held": 0,
+      "target": 190
+    }
+  ],
+  "skipped_rejected": [],
+  "missing_shares": [],
+  "signal_excluded": {
+    "127025": "临期(交易末日2026-10-30, 剩22天)",
+    "110075": "临期(交易末日2026-10-09, 剩1天)",
+    "128136": "临期(交易末日2026-10-28, 剩20天)",
+    "113043": "临期(交易末日2026-11-30, 剩53天)",
+    "113616": "临期(交易末日2026-12-18, 剩71天)",
+    "127027": "临期(交易末日2026-11-30, 剩53天)",
+    "110076": "临期(交易末日2026-10-27, 剩19天)",
+    "113605": "临期(交易末日2026-10-16, 剩8天)",
+    "123090": "临期(交易末日2026-12-11, 剩64天)",
+    "123088": "临期(交易末日2026-12-05, 剩58天)",
+    "128135": "临期(交易末日2026-10-14, 剩6天)",
+    "123071": "临期(交易末日2026-10-15, 剩7天)",
+    "123092": "临期(交易末日2026-12-14, 剩67天)"
+  },
+  "signal_note": "CB双低25只月调仓 | 资金60万 | 最新快照2026-10-01"
+}
