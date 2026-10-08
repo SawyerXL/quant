@@ -1,0 +1,74 @@
+[
+  {
+    "order_id": 135266305,
+    "code": "110081.SH",
+    "direction": "sell",
+    "volume": 220,
+    "filled": 0,
+    "status": 57,
+    "msg": "[AGENT][COUNTER]尚不"
+  },
+  {
+    "order_id": 135266306,
+    "code": "110081.SH",
+    "direction": "sell",
+    "volume": 220,
+    "filled": 0,
+    "status": 57,
+    "msg": "[AGENT][COUNTER]交易"
+  },
+  {
+    "order_id": 135266307,
+    "code": "110081.SH",
+    "direction": "sell",
+    "volume": 220,
+    "filled": 0,
+    "status": 57,
+    "msg": "[AGENT][COUNTER]交易"
+  },
+  {
+    "order_id": 135266308,
+    "code": "110081.SH",
+    "direction": "sell",
+    "volume": 220,
+    "filled": 0,
+    "status": 57,
+    "msg": "[AGENT][COUNTER]尚不"
+  },
+  {
+    "order_id": 135266309,
+    "code": "110081.SH",
+    "direction": "sell",
+    "volume": 220,
+    "filled": 0,
+    "status": 57,
+    "msg": "[AGENT][COUNTER]交易"
+  },
+  {
+    "order_id": 135266310,
+    "code": "110081.SH",
+    "direction": "sell",
+    "volume": 220,
+    "filled": 0,
+    "status": 57,
+    "msg": "[AGENT][COUNTER]交易"
+  },
+  {
+    "order_id": 135266311,
+    "code": "113056.SH",
+    "direction": "sell",
+    "volume": 180,
+    "filled": 0,
+    "status": 57,
+    "msg": "[AGENT][COUNTER]交易"
+  },
+  {
+    "order_id": 135266312,
+    "code": "113062.SH",
+    "direction": "sell",
+    "volume": 180,
+    "filled": 0,
+    "status": 57,
+    "msg": "[AGENT][COUNTER]交易"
+  }
+]
