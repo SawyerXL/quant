@@ -4,7 +4,15 @@ QMT 交易客户端封装。
 本地 Mac 开发时导入会失败，用 MockQMTClient 替代。
 """
 from loguru import logger
+from pathlib import Path
 from config.settings import QMT_PATH, QMT_ACCOUNT_ID, IS_PROD
+
+# 链隔离锁路径(2026-10-09 用户裁定): 人工档3执行会话开始时置锁,
+# 结束时解锁; place_order 见锁即拒绝全部自动委托。共享库目录使
+# Linux/Windows 同一路径语义(H:/quant 与 /root/quant 各自读各自锁,
+# 故锁文件由人工会话在**执行侧**(Windows)与本地同步设置——人工执行
+# 时无自动任务并行, Windows 侧锁为真拦截点, Linux 侧锁为双保险)。
+MANUAL_EXEC_LOCK = "logs/manual_exec_lock.json"
 
 try:
     # 注意：不导入 xtdata（行情模块，需要QMT行情服务，会导致ImportError）
@@ -102,6 +110,15 @@ class QMTClient:
         if shares <= 0:
             return -1
 
+        # 2026-10-09 链隔离锁(用户裁定): 人工执行时段锁文件在场 → 拒绝所有
+        # 自动委托(F2 考试日 127027 档1自动卖出事故的机制修复)。锁含日期+
+        # 会话ID; 人工会话开始时置锁、结束时解锁; 拒绝是可见事件记日志。
+        lock = Path(MANUAL_EXEC_LOCK)
+        if lock.exists():
+            logger.error(f"[链隔离锁] 拒绝下单 {direction} {code} {shares}股: "
+                         f"人工执行锁在场({lock.name})——自动链静默")
+            return -1
+
         xt_direction = xtc.STOCK_BUY if direction == "buy" else xtc.STOCK_SELL
         if order_type == "market":
             xt_price_type = getattr(xtc, "LATEST_PRICE", 5)
@@ -177,6 +194,10 @@ class MockQMTClient:
         }
 
     def place_order(self, code, direction, shares, price, order_type="limit") -> int:
+        if Path(MANUAL_EXEC_LOCK).exists():
+            logger.error(f"[链隔离锁] Mock 拒绝下单 {direction} {code} {shares}股: "
+                         f"人工执行锁在场")
+            return -1
         order_id = len(self._orders) + 1
         value = shares * price
         if direction == "buy":
