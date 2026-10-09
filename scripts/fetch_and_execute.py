@@ -496,8 +496,8 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False,
             # 与信号 buy[] 路径分开, 防止"报告0交易实际在交易"再现
             "signal_buy_count":   len(buy_list),
             "trader_diff_buys":   sorted(trader_buys),
-            "avg_slippage_pct":   round(avg_slip, 4),
-            "max_slippage_pct":   round(max_slip, 4),
+            "avg_slippage_pct":   round(avg_slip, 4) if avg_slip is not None else None,
+            "max_slippage_pct":   round(max_slip, 4) if max_slip is not None else None,
             "slippage_detail":    slippage_data,
             "blocked":            result.get("blocked", []),
             # 2026-09-22: 当日已废单跳过重试(停牌/无行情类)可见性
