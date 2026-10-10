@@ -41,7 +41,7 @@ def is_trade_day(today: str, calendar: list[str]) -> bool:
     return today in calendar
 
 def is_rebalance_day(today: str, calendar: list[str]) -> bool:
-    """双周调仓: 月末倒数第二 + 月中"""
+    """双周调仓: 月末倒数第二 + 月中(交易日中点 n//2−1, 非固定日)"""
     year_month  = today[:7]
     month_dates = sorted([d for d in calendar if d.startswith(year_month)])
     if not month_dates: return False
