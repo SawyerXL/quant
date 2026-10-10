@@ -90,6 +90,7 @@ def run_bt(schedule="monthly", recovery="zero", stats=None):
     turnover = 0.0
     n_rebal = 0
     events = []  # (date_str, snap_date_str, enter_w) 事件级证据
+    pop_events = []  # (date_str, code, weight, last_price) 退市事件级证据
     # 每只券记录"最后可见价"供回收臂用(退市券的最后日线价)
     final_last = {}
 
@@ -121,6 +122,8 @@ def run_bt(schedule="monthly", recovery="zero", stats=None):
                     gone.append(c)
         for c in gone:
             w = cur_weights.pop(c)
+            pop_events.append((date_str, c, round(w, 4),
+                               round(final_last.get(c, 0), 3)))
             nav.iloc[i] -= w * REAL_COST
             if recovery == "last":
                 nav.iloc[i] += w * 1.0  # 头寸价值保留(按最后可见价)
@@ -191,7 +194,7 @@ def run_bt(schedule="monthly", recovery="zero", stats=None):
     if stats is not None:
         stats.update(pops=pops, temp_pops=temp_pops, skip_rebal=skip_rebal,
                      blocked_top=blocked_top, turnover=turnover, n_rebal=n_rebal,
-                     events=events)
+                     events=events, pop_events=pop_events)
     return nav
 
 
@@ -211,6 +214,7 @@ print("=" * 100)
 
 arms = {}
 biweekly_events_zero = []
+biweekly_pop_events = {}
 print(f"\n{'臂':<34}{'年化':>8}{'夏普':>7}{'回撤':>9}{'换手/年':>9}{'pop':>6}{'临时':>5}{'调仓次数':>8}")
 rows = []
 for schedule in ["monthly", "nextday", "biweekly", "quarterly"]:
@@ -222,6 +226,8 @@ for schedule in ["monthly", "nextday", "biweekly", "quarterly"]:
         arms[key] = nav
         if key == "biweekly_zero":
             biweekly_events_zero = st["events"]
+        if schedule == "biweekly":
+            biweekly_pop_events[key] = st["pop_events"]
         t1 = st["turnover"] / max(st["n_rebal"], 1) * 12
         tag = " (V3现状)" if key == "monthly_zero" else ""
         print(f"{key:<34}{ar*100:>+7.1f}%{sr:>7.3f}{dd*100:>+8.1f}%"
@@ -246,5 +252,12 @@ pd.DataFrame(rows).to_csv("logs/cb_sched_compare_stats.csv", index=False)
 pd.DataFrame(biweekly_events_zero,
              columns=["date", "snap", "enter_w"]).to_csv(
     "logs/cb_sched_compare_events.csv", index=False)
+# 退市事件级证据(双周三臂): (date, code, weight, last_price)
+pop_rows = []
+for arm_name, evs in biweekly_pop_events.items():
+    for d, c, w, lp in evs:
+        pop_rows.append({"arm": arm_name, "date": d, "code": c,
+                         "weight": w, "last_price": lp})
+pd.DataFrame(pop_rows).to_csv("logs/cb_sched_pop_events.csv", index=False)
 print("\n已保存 logs/cb_sched_compare_nav.csv / logs/cb_sched_compare_stats.csv"
-      " / logs/cb_sched_compare_events.csv")
+      " / logs/cb_sched_compare_events.csv / logs/cb_sched_pop_events.csv")
