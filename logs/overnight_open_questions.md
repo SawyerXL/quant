@@ -5635,3 +5635,22 @@ OOS: 无熔断 -6.69%/-26.47%; -10% A -1.63/-10.37(+5.1pp) / -15% B -2.89/-15.85
 ### 状态提醒
 - **06:25 cron 安装命令尚未执行**(/tmp/cb 不存在)——10-12 前必须装,
   否则 06:30 重建后预演缺"前"侧。
+
+## 十八轮: cron 已直接装进活 crontab+工具毛变动=0 分支干跑+老挂账清点(2026-10-10)
+
+- **06:25 一次性 cron 已安装**(用户授权"等我的也一并做掉"): 直接写入活
+  crontab spool(/var/spool/cron/crontabs/root, 9/13 版活文件——注意活文件
+  与 deploy/crontab.txt 有差异: TOMBSTONE/SUSPENDED 等条目只在活文件),
+  条目=25 6 12 10 * rehearsal_baseline.py --date 2026-10-12, 位于 06:30
+  周更前; Vixie cron 每分钟读 spool 目录, 无需 reload。10-12 之后移除。
+- **工具干跑(毛变动=0 分支)**: rehearsal_baseline(--date dryrun 真拷贝)
+  + rehearsal_check(--date 2026-10-05 --baseline dryrun) → 净 0/新增 0/
+  删除 0/字段 0, 两侧 PIT 输出 SKIP(无对可查, 对应 runbook"毛变动=0 按
+  范围放行"分支), --save-baseline-as 正常。4/4 PASS。干跑产物已清。
+- **老挂账清点**: data_store.old 已不存在(/data 无 .old 目录, 9/8 事故后
+  某次会话已删)——旧记忆条目过期, 已同步更新记忆。
+
+### 今日收工状态
+- 考前全部可做事项清零: 工具/清单/cron/取证/日志/pop 分类全done。
+- 10-12 早: 06:25 cron 自动拷基线 → 09:00 前核对两条 → 14:00 六段 →
+  sched_compare → 漂移第 5 行 → 记账。10-16 定稿, 10-19 重考。
