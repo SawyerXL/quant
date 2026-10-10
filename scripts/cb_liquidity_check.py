@@ -142,14 +142,16 @@ TIERS = [("60万档 2.4万/券", 24_000),
 def tier_report(label, buy_amt):
     r_buy = buy_amt / amounts
     r_sell = buy_amt / sell_amounts
-    print(f"\n【{label}】 买入占比(硬约束: P95<3%) / 卖出占比(硬约束: P95<3% 且最差单例<15%):")
+    # 2026-10-10 合入(用户确认, N=47): 卖出侧口径改为 P99<10% 且 超10%笔数<0.5%
+    # 且分年份(任一年P99>20%单独说明); 旧"最差单例<15%"无锚定性值废止
+    print(f"\n【{label}】 买入占比(硬约束: P95<3%) / 卖出占比(修订口径: P99<10% 且 超10%<0.5% 且分年份):")
     for p in [50, 90, 95, 99]:
         print(f"  P{p:>2}: 买入 {np.percentile(r_buy, p)*100:6.2f}%"
               f" | 卖出 {np.percentile(r_sell, p)*100:6.2f}%")
     print(f"  买入占比>3%实例: {(r_buy > 0.03).mean()*100:5.1f}%"
           f" ({int((r_buy > 0.03).sum())}/{len(r_buy)})")
-    print(f"  卖出占比>3%实例: {(r_sell > 0.03).mean()*100:5.1f}%"
-          f" ({int((r_sell > 0.03).sum())}/{len(r_sell)})")
+    print(f"  卖出占比>10%实例(判据<0.5%): {(r_sell > 0.10).mean()*100:5.2f}%"
+          f" ({int((r_sell > 0.10).sum())}/{len(r_sell)})")
     ws = np.argsort(r_sell)[-5:][::-1]
     print("  卖出最差5例(调仓日, 券, 成交额, 占比):")
     for idx in ws:

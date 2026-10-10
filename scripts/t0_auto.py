@@ -2,8 +2,9 @@
 做T自动执行器 — QMT仿真盘验证版
 状态机: 每只持仓票独立跟踪 做T生命周期
 铁律: 1/3仓位 | ±2%触发±1%了结 | 挂单 | 14:50尾盘了结(次日开盘兜底)
-影子: G1止损口径(-1%含费-1.26%)只记录不执行, 验证"先触止损还是先触了结"
-      (backtest_t0_tail_stop.py 两判读假设跨零轴+0.085%/-0.121%, 需实盘tick裁定)
+2026-10-10 实装(5分钟线裁决, 用户确认): ①G1止损(-1%)正式执行(原只记不执行,
+      四切面单笔均值一致改善+0.09~+0.20pp/leg) ②13:00后不开新仓(命中率0%)
+影子: 与实装止损同口径对照记录保留(exit_kind=止损了结)
 
 用法:
   python scripts/t0_auto.py --once    # 跑一轮检查
@@ -34,6 +35,8 @@ SHADOW_STOP = 0.01  # 影子止损: 反T买价×0.99 / 正T卖价×1.01 触到�
 GAP_SKIP_POS = 0.005  # 高开>0.5%不做正T
 GAP_SKIP_NEG = 0.01   # 低开>1%不做反T
 TAIL_CLOSE = dtime(14, 50)  # 尾盘了结时刻(机构标准做法: 不留隔夜T仓)
+# 13:00后新信号命中率0%(26笔全灭, 5分钟裁决2026-10-10)——零成本过滤
+NEW_SIGNAL_DEADLINE = dtime(13, 0)
 _last_empty_warn = 0.0  # 空持仓告警节流(秒时间戳)
 
 # 板块涨跌停幅度(与execution/trader.py _BOARD_BANDS一致; ST票在此错算会被柜台拒,
@@ -311,10 +314,22 @@ def run_cycle(client, quiet=False):
                     logger.info(f"{code} 卖单成交@{sell_p} → 挂接回@{buy_p}")
                     break
         elif phase == "waiting_buyback":
-            # 影子止损(G1口径, 只记不执行): 正T卖飞, 价涨超卖价1%→记shadow_touched
+            # G1止损实装(2026-10-10, 5分钟裁决四切面占优): 正T卖飞, 价涨超卖价1%
+            # → 撤了结挂单, 按止损价限价买回(市场已越过该价, 立即成交≈市价)
             cur_sh, _, _ = rt_price(code)
             if cur_sh and cur_sh >= st["price"] * (1 + SHADOW_STOP):
                 st["shadow_stop_touched"] = True
+                if oid:
+                    client.cancel_order(oid)
+                stop_px = round(st["price"] * (1 + SHADOW_STOP), 2)
+                nb = client.place_order(code, "buy", st["shares"], stop_px)
+                if nb and nb > 0:
+                    st["phase"] = "force_settle_pending"
+                    st["order_id"] = nb
+                    st["stop_close"] = True
+                    save_state(state)
+                    logger.warning(f"{code} 正T止损触发 买回@{stop_px}")
+                    continue
             # 兜底: 订单状态查不到成交, 但实仓已回base → 视为已接回
             base = int(st.get("base", 0))
             filled = any(o.get("order_id") == oid and _is_filled(o.get("status")) for o in orders)
@@ -340,10 +355,21 @@ def run_cycle(client, quiet=False):
                     logger.info(f"{code} 买单成交@{buy_p} → 挂卖出@{sell_p}")
                     break
         elif phase == "waiting_sellout":
-            # 影子止损(G1口径, 只记不执行): 反T买套, 价跌破买价1%→记shadow_touched
+            # G1止损实装(2026-10-10): 反T买套, 价跌破买价1%→撤了结挂单按止损价卖出
             cur_sh, _, _ = rt_price(code)
             if cur_sh and cur_sh <= st["price"] * (1 - SHADOW_STOP):
                 st["shadow_stop_touched"] = True
+                if oid:
+                    client.cancel_order(oid)
+                stop_px = round(st["price"] * (1 - SHADOW_STOP), 2)
+                ns = client.place_order(code, "sell", st["shares"], stop_px)
+                if ns and ns > 0:
+                    st["phase"] = "force_settle_pending"
+                    st["order_id"] = ns
+                    st["stop_close"] = True
+                    save_state(state)
+                    logger.warning(f"{code} 反T止损触发 卖出@{stop_px}")
+                    continue
             # 兜底: 订单状态查不到成交, 但实仓已回base → 视为已卖出
             base = int(st.get("base", 0))
             filled = any(o.get("order_id") == oid and _is_filled(o.get("status")) for o in orders)
@@ -367,13 +393,15 @@ def run_cycle(client, quiet=False):
                         # 强平卖出: 卖价=实际成交, 买价=原反T买入价
                         if fill_p > 0:
                             log_trade(code, st.get("name", ""), "反T", fill_p, st["price"], st["shares"])
-                            log_shadow(st, "尾盘了结" if st.get("tail_close") else "隔夜强平",
+                            log_shadow(st, "止损了结" if st.get("stop_close")
+                                       else ("尾盘了结" if st.get("tail_close") else "隔夜强平"),
                                        (fill_p - st["price"]) / st["price"] * 100)
                     else:
                         # 强平买回: 买价=实际成交, 卖价=原正T卖出价
                         if fill_p > 0:
                             log_trade(code, st.get("name", ""), "正T", st["price"], fill_p, st["shares"])
-                            log_shadow(st, "尾盘了结" if st.get("tail_close") else "隔夜强平",
+                            log_shadow(st, "止损了结" if st.get("stop_close")
+                                       else ("尾盘了结" if st.get("tail_close") else "隔夜强平"),
                                        (st["price"] - fill_p) / st["price"] * 100)
                     st["phase"] = "force_settled"
                     save_state(state)
@@ -386,6 +414,8 @@ def run_cycle(client, quiet=False):
         if st.get("phase") == "done_today"
     }
     for code, pos in positions.items():
+        if t >= NEW_SIGNAL_DEADLINE:
+            break  # 13:00后不开新仓(命中率0%, 2026-10-10裁决); 14:50尾盘只做了结不变
         if t >= TAIL_CLOSE:
             break  # 14:50后不开新仓, 尾盘只做了结(了结腿有7分钟成交确认窗口)
         if code in state or code in done_today:
