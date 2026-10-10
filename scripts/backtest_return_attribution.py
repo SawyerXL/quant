@@ -37,7 +37,9 @@ from backtest_config import BacktestConfig, DEFAULT_CONFIG
 from backtest_engine import run_backtest, make_rebal_dates, calc_metrics
 
 WINDOWS = {
-    "main": ("2019-01-01", "2026-08-28"),
+    # 2026-10-10: END 冻结为本次重跑工件 as_of(闸门十三; 现金1.4%+limit_gate
+    # 定稿后首次归因, 窗口延伸到当前数据前沿)
+    "main": ("2019-01-01", "2026-10-09"),
     "oos":  ("2015-01-01", "2018-12-31"),
 }
 BASE = {"pool_size": 30, "lot_size": 100, "initial_capital": 500_000.0}
