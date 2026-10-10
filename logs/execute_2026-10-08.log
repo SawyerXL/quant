@@ -1,0 +1,26 @@
+2026-10-08 14:30:12.243 | INFO     | __main__:execute:252 - ============================================================
+2026-10-08 14:30:12.243 | INFO     | __main__:execute:253 - Track A 信号执行  模式=正式执行
+2026-10-08 14:30:12.243 | INFO     | __main__:execute:254 - ============================================================
+2026-10-08 14:30:13.745 | INFO     | __main__:fetch_group_signals:116 - [摊平合并] 2026-10-08: 持仓0只 资金0
+2026-10-08 14:30:13.745 | WARNING  | __main__:execute:286 - 大势过滤：熊市信号，仅执行清仓操作
+2026-10-08 14:30:13.745 | INFO     | __main__:execute:303 - 交易计划：买入 0 只，卖出 0 只
+2026-10-08 14:30:25.344 | INFO     | execution.qmt_client:__init__:67 - QMT 连接成功: account=1633013579
+2026-10-08 14:30:29.386 | INFO     | execution.qmt_client:__init__:67 - QMT 连接成功: account=1633013579
+2026-10-08 14:30:30.166 | INFO     | __main__:push_result_to_linux:53 - 执行结果已推送至 Linux: trade_plan_20261008_a.json
+2026-10-08 14:30:30.166 | DEBUG    | monitoring.alerts:_send_email:31 - SMTP 未配置，跳过邮件推送
+2026-10-08 14:30:30.166 | INFO     | __main__:execute:365 - 交易清单已落盘并推送: trade_plan_20261008_a.json 档位=档2清单确认 卖0 买0
+2026-10-08 14:30:30.166 | DEBUG    | monitoring.alerts:_send_email:31 - SMTP 未配置，跳过邮件推送
+2026-10-08 14:30:30.166 | WARNING  | __main__:execute:377 - 档2 未批准, 不执行
+2026-10-08 14:30:30.739 | INFO     | __main__:execute:252 - ============================================================
+2026-10-08 14:30:30.744 | INFO     | __main__:execute:253 - Track CB 信号执行  模式=正式执行
+2026-10-08 14:30:30.744 | INFO     | __main__:execute:254 - ============================================================
+2026-10-08 14:30:30.744 | INFO     | __main__:fetch_signal_from_linux:136 - 从 Linux 拉取 Track CB 信号...
+2026-10-08 14:30:32.008 | INFO     | __main__:fetch_signal_from_linux:143 - 信号拉取成功: 2026-10-08，持仓 24 只，买入 0 只，卖出 0 只
+2026-10-08 14:30:32.008 | INFO     | __main__:execute:303 - 交易计划：买入 0 只，卖出 0 只
+2026-10-08 14:30:38.007 | INFO     | execution.qmt_client:__init__:67 - QMT 连接成功: account=1633013579
+2026-10-08 14:30:42.048 | INFO     | execution.qmt_client:__init__:67 - QMT 连接成功: account=1633013579
+2026-10-08 14:30:42.771 | INFO     | __main__:push_result_to_linux:53 - 执行结果已推送至 Linux: trade_plan_20261008_cb.json
+2026-10-08 14:30:42.771 | DEBUG    | monitoring.alerts:_send_email:31 - SMTP 未配置，跳过邮件推送
+2026-10-08 14:30:42.771 | INFO     | __main__:execute:365 - 交易清单已落盘并推送: trade_plan_20261008_cb.json 档位=档3逐笔人工 卖6 买19
+2026-10-08 14:30:42.771 | DEBUG    | monitoring.alerts:_send_email:31 - SMTP 未配置，跳过邮件推送
+2026-10-08 14:30:42.771 | ERROR    | __main__:execute:372 - 档3 拒绝自动执行: ['总交易额551,649>30万']
