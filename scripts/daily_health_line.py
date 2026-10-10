@@ -305,6 +305,19 @@ def main():
         except Exception:
             pass
 
+    # 2026-10-10: 链隔离锁可见性(用户裁定)——锁在场必须被健康行看到,
+    # 忘解锁会在无提示下停掉全部交易(含临期强制卖出)。
+    lock_p = Path("logs/manual_exec_lock.json")
+    manual_lock = None
+    if lock_p.exists():
+        try:
+            import json as _j2
+            manual_lock = _j2.loads(lock_p.read_text(encoding="utf-8")).get("date")
+        except Exception:
+            manual_lock = "在场(不可读)"
+        alerts.append(f"链隔离锁在场: 日期={manual_lock}"
+                      + (" ⚠非当日=疑似忘解锁" if str(manual_lock) != now[:10] else ""))
+
     line = {"ts": now, "latest_bar": latest_bar,
             "last_trading_day": last_td, "bar_fresh": bar_fresh,
             "last_data_update": last_update, "tunnel": tunnel,
@@ -314,6 +327,7 @@ def main():
             "guard_rejected_rows": guard_rej, "snapshot_state": snap_state,
             "cb_holdings_frozen": cb_frozen, "index_members_as_of": members_asof,
             "win_sync": win_sync, "live_reconcile": lvbc,
+            "manual_exec_lock": manual_lock,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")

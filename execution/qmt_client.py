@@ -113,10 +113,30 @@ class QMTClient:
         # 2026-10-09 链隔离锁(用户裁定): 人工执行时段锁文件在场 → 拒绝所有
         # 自动委托(F2 考试日 127027 档1自动卖出事故的机制修复)。锁含日期+
         # 会话ID; 人工会话开始时置锁、结束时解锁; 拒绝是可见事件记日志。
+        # 2026-10-10 补: 锁过期(日期≠当日)仍拒绝但发告警——忘解锁会在无提示
+        # 下停掉全部交易(含临期强制卖出), 与"没人看得到的状态"同族。
         lock = Path(MANUAL_EXEC_LOCK)
         if lock.exists():
+            stale = False
+            try:
+                import json as _j
+                from datetime import date as _d
+                _info = _j.loads(lock.read_text(encoding="utf-8"))
+                if str(_info.get("date", "")) != str(_d.today()):
+                    stale = True
+            except Exception:
+                pass
             logger.error(f"[链隔离锁] 拒绝下单 {direction} {code} {shares}股: "
-                         f"人工执行锁在场({lock.name})——自动链静默")
+                         f"人工执行锁在场({lock.name})"
+                         f"{'⚠锁日期非当日=疑似忘解锁' if stale else ''}")
+            if stale:
+                try:
+                    from monitoring.alerts import send_alert
+                    send_alert("[链隔离锁] 锁日期非当日, 自动链被锁且疑似忘解锁"
+                               "——请确认人工执行是否仍在进行, 结束请移除锁文件",
+                               level="warning")
+                except Exception:
+                    pass
             return -1
 
         xt_direction = xtc.STOCK_BUY if direction == "buy" else xtc.STOCK_SELL
