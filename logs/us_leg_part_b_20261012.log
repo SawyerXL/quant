@@ -1,0 +1,13 @@
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+面板 1951天×5394只, 调仓日 128个
+
+资金/组                   年化     夏普       回撤     跳票
+无约束(无限可分)           6.72%   0.59  -25.97%      0
+lot 27.2万/组         3.98%   0.56  -11.83%    687
+lot 28.0万/组         3.98%   0.55  -11.55%    671
+lot 28.8万/组         4.01%   0.55  -10.96%    656
+lot 50.0万/组         4.66%   0.54  -17.81%    399
+
+已保存 logs/us_leg_three_piece_result.json
+exit=0
