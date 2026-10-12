@@ -1,0 +1,43 @@
+{
+ "entries": [
+  "scripts/cb_signal.py",
+  "scripts/build_cb_data.py",
+  "scripts/fetch_and_execute.py",
+  "execution/trader.py",
+  "execution/qmt_client.py",
+  "scripts/run_execute.bat"
+ ],
+ "modules": [
+  "data/cb_select.py",
+  "data/code_norm.py",
+  "data/storage.py",
+  "execution/qmt_client.py",
+  "execution/risk.py",
+  "execution/trader.py",
+  "monitoring/alerts.py",
+  "scripts/build_cb_data.py",
+  "scripts/cb_signal.py",
+  "scripts/conclusion_deps.py",
+  "scripts/daily_signal_a_v2.py",
+  "scripts/fetch_and_execute.py",
+  "scripts/run_backtest_a.py",
+  "scripts/run_backtest_a2.py",
+  "scripts/run_execute.bat"
+ ],
+ "configs": [
+  ".env(不入库, 内容在服务器)",
+  "config/settings.py"
+ ],
+ "cron_data_writers": [
+  "scripts/archive_index_members.py",
+  "scripts/build_cb_data.py",
+  "scripts/cb_expiry_alert.py",
+  "scripts/cb_rho_verdict.py",
+  "scripts/cb_signal.py",
+  "scripts/daily_data_update.py",
+  "scripts/daily_health_line.py",
+  "scripts/daily_signal_a_grouped.py",
+  "scripts/live_backtest_check.py",
+  "scripts/measure_execution_costs.py"
+ ]
+}
