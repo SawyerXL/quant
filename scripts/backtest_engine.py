@@ -785,8 +785,13 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
     }
 
 
-def calc_metrics(nav_series, label=""):
-    """计算年化收益、夏普、最大回撤等"""
+def calc_metrics(nav_series, label="", rfr: float = 0.0):
+    """计算年化收益、夏普、最大回撤等。
+
+    rfr=无风险利率(年化)。2026-10-10 口径统一: 默认 0.0(无 RFR, 与定稿
+    A3 0.39 / CB 链 1.38 系列 / 判据 σ 检验同口径); 旧默认 0.02 是历史
+    遗留(当时唯一减 RFR 的产出点, 曾造成 0.39 vs 0.22 双口径并存)。
+    差分类判读不受影响(RFR 在差里抵消)。"""
     n = len(nav_series)
     if n < 2:
         return {"年化收益率": "0.00%", "夏普比率": "0.00", "最大回撤": "0.00%", "年化波动率": "0.00%", "胜率": "0.00%"}
@@ -799,9 +804,9 @@ def calc_metrics(nav_series, label=""):
     # Daily returns
     daily_r = nav_series.pct_change().dropna()
 
-    # Sharpe
+    # Sharpe (无 RFR 口径, 2026-10-10 统一; 需要旧口径显式传 rfr=0.02)
     if daily_r.std() > 0:
-        sharpe = (daily_r.mean() * 252 - 0.02) / (daily_r.std() * np.sqrt(252))
+        sharpe = (daily_r.mean() * 252 - rfr) / (daily_r.std() * np.sqrt(252))
     else:
         sharpe = 0.0
 

@@ -198,6 +198,47 @@ def _etf_codes():
     return sorted(codes)
 
 
+def _append_etf_t0(code: str) -> bool:
+    """收盘后从新浪实时快照合成当日 bar(2026-10-10 裁定: 新浪 ETF 日线端
+    T-1 滞后使新鲜度检查每晨假警; 快照 date==当日且时间≥15:30 且库内无该日
+    bar 时追加)。单位与 hist 路径同库契约: 实时 volume=股/amount=元 → ÷1e4
+    (万股/万元)。比值哨兵: amt/vol≈close 在调用前由快照本身保证(实测
+    588000 0.978 / 511360 1.000)。未收盘(时间<15:30)不合成。"""
+    import requests
+    exch = "sh" if code.startswith(("5", "6", "9", "11")) else "sz"
+    try:
+        r = requests.get(f"http://hq.sinajs.cn/list={exch}{code}",
+                         headers={"Referer": "https://finance.sina.com.cn"},
+                         timeout=6)
+        r.encoding = "gb2312"
+        d = r.text.split('"')[1].split(",")
+        if len(d) < 32 or not d[30]:
+            return False
+        snap_date, t_str = d[30], d[31] if len(d) > 31 else ""
+        cur, high, low = float(d[3]), float(d[4]), float(d[5])
+        vol, amt = float(d[8]), float(d[9])
+        if cur <= 0 or high < low or vol <= 0 or amt <= 0:
+            return False
+        if t_str and t_str < "15:30:00":
+            return False  # 盘中快照不合成
+        if not load_daily(code, snap_date, snap_date).empty:
+            return False  # 已有当日 bar(源端已自愈)
+        prev = float(d[2])
+        row = pd.DataFrame([{
+            "date": pd.to_datetime(snap_date),
+            "open": float(d[1]), "high": high, "low": low, "close": cur,
+            "volume": vol / 1e4, "amount": amt / 1e4,
+            "pct_chg": (cur / prev - 1) * 100 if prev > 0 else 0.0,
+            "code": code,
+        }])
+        rej = save_daily(code, row)
+        logger.info(f"  ETF{code}: 实时快照合成 {snap_date} bar (close={cur}, 拒{rej}行)")
+        return True
+    except Exception as e:
+        logger.debug(f"  ETF{code} T0合成跳过: {e}")
+        return False
+
+
 def _update_etf_daily(today: str):
     """新浪一次返回全history，直接交给 save_daily 按date去重 —— 天然自愈，缺多少补多少。"""
     import akshare as ak
@@ -228,6 +269,7 @@ def _update_etf_daily(today: str):
             after = len(load_daily(code, "2005-01-01", today))
             logger.info(f"  ETF{code}: 新增{after-before}天 → 共{after}根, 最新{raw['date'].max().date()}")
             ok += 1
+            _append_etf_t0(code)  # 新浪ETF日线端T-1滞后: 收盘后实时快照补当日bar(2026-10-10裁定)
         except Exception as e:
             logger.warning(f"  ETF{code} 更新失败: {e}")
 
