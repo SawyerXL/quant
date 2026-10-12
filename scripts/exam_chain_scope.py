@@ -132,6 +132,30 @@ def main():
                     or target in scope["cron_data_writers"]
                     or target in scope["configs"])
         print(f"{target}: {'在范围内→停升级' if in_scope else '范围外→不触发, 记账即可'}")
+    # 窗口批量分类(10-16 定稿用): --window <base> → git diff base..HEAD 逐文件分类
+    if "--window" in sys.argv:
+        import subprocess
+        i = sys.argv.index("--window")
+        base = sys.argv[i + 1]
+        r = subprocess.run(["git", "diff", "--name-only", f"{base}..HEAD"],
+                           capture_output=True, text=True, cwd=REPO)
+        if r.returncode != 0:
+            print(f"git diff 失败: {r.stderr}")
+            return
+        in_scope, out_scope = [], []
+        for f in r.stdout.splitlines():
+            if not f:
+                continue
+            hit = (f in scope["modules"] or f in scope["entries"]
+                   or f in scope["cron_data_writers"] or f in scope["configs"])
+            (in_scope if hit else out_scope).append(f)
+        print(f"窗口 {base}..HEAD: 共 {len(in_scope) + len(out_scope)} 个文件变更")
+        print(f"\n在范围内({len(in_scope)})——交集非空即停升级:")
+        for f in in_scope:
+            print(f"  ⚠ {f}")
+        print(f"\n范围外({len(out_scope)})——不触发, 记账即可:")
+        for f in out_scope:
+            print(f"  ✓ {f}")
 
 
 if __name__ == "__main__":
