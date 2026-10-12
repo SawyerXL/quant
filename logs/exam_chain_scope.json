@@ -39,5 +39,32 @@
   "scripts/daily_signal_a_grouped.py",
   "scripts/live_backtest_check.py",
   "scripts/measure_execution_costs.py"
- ]
+ ],
+ "chain_read_files": [
+  "cb_redemptions",
+  "cb_snapshots",
+  "cb_universe",
+  "csi1000",
+  "csi800",
+  "csi800_index",
+  "stock_info_full",
+  "trade_calendar"
+ ],
+ "writer_chain_edges": {
+  "scripts/build_cb_data.py": [
+   "cb_redemptions",
+   "cb_universe"
+  ],
+  "scripts/daily_data_update.py": [
+   "csi800_index",
+   "stock_info_full",
+   "trade_calendar"
+  ],
+  "scripts/init_history.py": [
+   "trade_calendar"
+  ],
+  "scripts/init_stock_meta.py": [
+   "stock_info_full"
+  ]
+ }
 }

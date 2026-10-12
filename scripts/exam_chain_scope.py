@@ -120,17 +120,44 @@ def main():
         "configs": sorted(configs),
         "cron_data_writers": sorted(writers),
     }
+    # ── 文件级数据流(2026-10-12 补漏): 链读文件 × 写手文件的边 ──
+    # 链读文件 = 闭包源码里 load_meta/load_daily 的字面目标 + data_store 路径字面量
+    chain_reads: set[str] = set()
+    for f in mods:
+        t = f.read_text(errors="ignore")
+        chain_reads |= set(re.findall(r'load_meta\("([^"]+)"', t))
+        chain_reads |= set(re.findall(r'load_daily\("([^"]+)"', t))
+    # 写手→文件: 全库 .py 里 save_meta/save_daily 字面目标命中链读文件的边
+    writer_edges: dict[str, list[str]] = {}
+    for py in sorted((REPO / "scripts").glob("*.py")) + sorted((REPO / "execution").glob("*.py")):
+        t = py.read_text(errors="ignore")
+        saves = (set(re.findall(r'save_meta\("([^"]+)"', t))
+                 | set(re.findall(r'save_daily\("([^"]+)"', t)))
+        hits = sorted(saves & chain_reads)
+        if hits:
+            writer_edges[str(py.relative_to(REPO))] = hits
+    scope["chain_read_files"] = sorted(chain_reads)
+    scope["writer_chain_edges"] = writer_edges
     print(json.dumps(scope, ensure_ascii=False, indent=1))
     out = REPO / "logs/exam_chain_scope.json"
     out.write_text(json.dumps(scope, ensure_ascii=False, indent=1))
     print(f"\n已保存 {out}")
+    # 回归用例(2026-10-12): 脚本必须自己找出这 3 个链读文件被 daily_data_update 写出
+    REGRESSION = ["trade_calendar", "csi800_index", "stock_info_full"]
+    edges = writer_edges.get("scripts/daily_data_update.py", [])
+    missing = [r for r in REGRESSION if r not in edges]
+    if missing:
+        print(f"[REGRESSION FAIL] daily_data_update 漏检链读文件: {missing}")
+        sys.exit(1)
+    print(f"[REGRESSION PASS] daily_data_update→链读文件 3/3 全检出: {edges}")
     # 命中检查接口: --check <file> 输出该文件是否在范围
     if "--check" in sys.argv:
         i = sys.argv.index("--check")
         target = sys.argv[i + 1]
         in_scope = (target in scope["modules"] or target in scope["entries"]
                     or target in scope["cron_data_writers"]
-                    or target in scope["configs"])
+                    or target in scope["configs"]
+                    or target in scope["writer_chain_edges"])
         print(f"{target}: {'在范围内→停升级' if in_scope else '范围外→不触发, 记账即可'}")
     # 窗口批量分类(10-16 定稿用): --window <base> → git diff base..HEAD 逐文件分类
     if "--window" in sys.argv:
@@ -147,7 +174,8 @@ def main():
             if not f:
                 continue
             hit = (f in scope["modules"] or f in scope["entries"]
-                   or f in scope["cron_data_writers"] or f in scope["configs"])
+                   or f in scope["cron_data_writers"] or f in scope["configs"]
+                   or f in scope["writer_chain_edges"])
             (in_scope if hit else out_scope).append(f)
         print(f"窗口 {base}..HEAD: 共 {len(in_scope) + len(out_scope)} 个文件变更")
         print(f"\n在范围内({len(in_scope)})——交集非空即停升级:")
