@@ -29,8 +29,6 @@ PATH=/usr/local/bin:/usr/bin:/bin
 2 16 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/save_intraday_5min.py >> /root/quant/logs/cron_intraday.log 2>&1
 # CB数据周更(周一06:30全量: universe+日线+快照, 约40分钟)
 30 6 * * 1 cd /root/quant && /root/quant/.venv/bin/python scripts/build_cb_data.py >> /root/quant/logs/cron_cb_data.log 2>&1
-# 一次性(10-12): 预演基线拷贝, 必须在 06:30 周重建之前完成(毛口径 diff 的"前"侧); 10-12 之后移除
-25 6 12 10 * cd /root/quant && /root/quant/.venv/bin/python scripts/rehearsal_baseline.py --date 2026-10-12 >> /root/quant/logs/cron_rehearsal_baseline.log 2>&1
 # CB信号(每日14:28, 紧跟股票信号; 月调仓日全量轮换, 非调仓日刷新)
 28 14 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/cb_signal.py >> /root/quant/logs/cron_cb_signal.log 2>&1
 2,7,12,17,22,27,32,37,42,47,52,57 * * * * cd /root/quant && /root/quant/.venv/bin/python scripts/tunnel_watchdog.py >> /root/quant/logs/cron_tunnel.log 2>&1
