@@ -144,6 +144,22 @@ def main():
     except Exception as e:
         lines.append(f"  外盘拉取失败: {str(e)[:60]}")
 
+    # 离岸中国ETF隔夜预告(三十一轮判决: 提示类, 盘中无预测力)
+    try:
+        from scripts.overnight_market import _get_china_etf_offshore
+        ce = _get_china_etf_offshore()
+        s = ce.get("summary")
+        if s:
+            parts = []
+            for k in ("FXI", "KWEB", "ASHR"):
+                v = ce.get(k) or {}
+                if v.get("chg") is not None:
+                    parts.append(f"{k} {v['chg']:+.2f}%")
+            lines.append(f"  🌏 离岸中国预告: {s['expectation']}（{' / '.join(parts)}; 剔全球情绪均值 {s['avg_resid']:+.2f}%）")
+            lines.append("     提示类: 盘中无预测力，只作开盘方向参考")
+    except Exception as e:
+        logger.warning(f"离岸预告失败: {e}")
+
     report = "\n".join(lines)
     logger.info(report)
     print(report)
