@@ -49,6 +49,14 @@ def get_overnight_analysis() -> dict:
     except Exception as e:
         logger.warning(f"道琼斯: {e}")
 
+    # ── 3.5 离岸中国ETF隔夜(2026-10-13 三十一轮判决: 提示类升级) ──
+    # FXI/KWEB/ASHR 隔夜收益预测次日上证跳空(原始t≈17, 剔全球情绪残差t≈8),
+    # 盘中无预测力(t≈0)——只做开盘方向提示, 不进信号链。
+    try:
+        result["china_etf"] = _get_china_etf_offshore()
+    except Exception as e:
+        logger.warning(f"离岸中国ETF: {e}")
+
     # ── 5. 生成判断 ──────────────────────────────────
     sp_chg = result["sp500_chg"]
     nq_chg = result["nasdaq_chg"]
@@ -123,6 +131,77 @@ def get_overnight_analysis() -> dict:
     result["detail"] = details
     result["confidence"] = confidence
     return result
+
+
+def _get_china_etf_offshore() -> dict:
+    """离岸中国ETF隔夜收益+剔全球情绪残差 → 次日A股跳空方向提示。
+
+    依据(三十一轮判决): 隔夜收益→次日上证跳空 原始t≈17/残差t≈8, 盘中t≈0
+    ——提示类, 无盘中预测力。数据=stock_us_daily(本服务器可用), 日更缓存
+    在 logs/offshore_etf_cache.parquet 避免重复全史拉取。
+    """
+    import json
+    from pathlib import Path
+    import numpy as np
+
+    cache_p = Path("/root/quant/logs/offshore_etf_cache.parquet")
+    today = datetime.now().strftime("%Y-%m-%d")
+    etfs = {}
+    if cache_p.exists():
+        try:
+            c = pd.read_parquet(cache_p)
+            if c.attrs.get("fetch_date") == today:
+                etfs = {s: c.set_index("date")[s] for s in ["FXI", "KWEB", "ASHR", "SPY"]}
+        except Exception:
+            pass
+    if not etfs:
+        for sym in ["FXI", "KWEB", "ASHR", "SPY"]:
+            d = ak.stock_us_daily(symbol=sym, adjust="")
+            d["date"] = pd.to_datetime(d["date"])
+            d = d.sort_values("date").reset_index(drop=True)
+            d["ret"] = d["close"].pct_change()
+            s = d.set_index("date")["close"]
+            s.index = pd.to_datetime(s.index, errors="coerce")
+            etfs[sym] = s[~s.index.isna()]
+        cache = pd.DataFrame(etfs)
+        cache.attrs["fetch_date"] = today
+        cache.to_parquet(cache_p)
+
+    out = {}
+    spy = etfs["SPY"].pct_change()
+    spy_ret_pct = float(spy.iloc[-1]) * 100 if len(spy) else None
+    for sym in ["FXI", "KWEB", "ASHR"]:
+        s = etfs[sym]
+        if len(s) < 2:
+            continue
+        chg = (float(s.iloc[-1]) / float(s.iloc[-2]) - 1) * 100
+        r = s.pct_change()
+        j = pd.concat([r, spy], axis=1, keys=["e", "m"]).dropna()
+        beta = None
+        if len(j) >= 252:
+            w = j.tail(252)
+            beta = float(w["e"].corr(w["m"]) * w["e"].std() / w["m"].std())
+            resid = chg - beta * spy_ret_pct if spy_ret_pct is not None else None
+        else:
+            resid = None
+        out[sym] = {"chg": round(chg, 2), "beta": round(beta, 3) if beta else None,
+                    "resid": round(resid, 2) if resid is not None else None}
+    vals = [v for v in out.values() if v.get("resid") is not None]
+    if vals:
+        avg_raw = sum(v["chg"] for v in vals) / len(vals)
+        avg_res = sum(v["resid"] for v in vals) / len(vals)
+        if avg_res > 1.0:
+            expect = "高开预期"
+        elif avg_res < -1.0:
+            expect = "低开预期"
+        else:
+            expect = "平开/方向中性"
+        out["summary"] = {
+            "avg_raw": round(avg_raw, 2), "avg_resid": round(avg_res, 2),
+            "expectation": expect,
+            "note": "离岸中国资产隔夜定价→次日开盘方向提示(剔全球情绪后)。提示类: 盘中无预测力(t≈0), 不做盘中方向操作",
+        }
+    return out
 
 
 def format_overnight_report(analysis: dict) -> str:

@@ -79,6 +79,10 @@ fetch('/api/market/analysis').then(r => r.json()).then(data => {
         if (ov.nasdaq_chg != null) h += ' · 纳斯达克 <span class="' + pctCls(ov.nasdaq_chg) + '">' + (ov.nasdaq_chg>=0?'+':'') + fmt(ov.nasdaq_chg,2) + '%</span>';
         h += '</div>';
     }
+    if (!data.is_afternoon && ov.china_etf && ov.china_etf.summary) {
+        var cs = ov.china_etf.summary;
+        h += '<div style="font-size:12px;margin-bottom:8px;">离岸中国预告: <b>' + cs.expectation + '</b> <span class="text-muted">(剔全球情绪后均值 ' + (cs.avg_resid>=0?'+':'') + fmt(cs.avg_resid,2) + '%)</span></div>';
+    }
 
     if (news.length) h += '<div style="font-size:11px;color:var(--muted);padding-top:6px;border-top:1px solid var(--border);">' + news.slice(0,4).map(function(n){return n.title;}).join(' ｜ ') + '</div>';
 
@@ -185,6 +189,18 @@ fetch('/api/market/analysis').then(r => r.json()).then(data => {
             h += '<tr><td>S&P 500</td><td class="'+pctCls(ov.sp500_chg)+'">'+(ov.sp500_chg>=0?'+':'')+fmt(ov.sp500_chg,2)+'%</td></tr>';
             if (ov.nasdaq_chg != null) h += '<tr><td>纳斯达克</td><td class="'+pctCls(ov.nasdaq_chg)+'">'+(ov.nasdaq_chg>=0?'+':'')+fmt(ov.nasdaq_chg,2)+'%</td></tr>';
             h += '</table>';
+        }
+        if (ov.china_etf) {
+            var ce = ov.china_etf;
+            h += '<table style="margin-top:6px;font-size:12px;"><tr><th>离岸中国ETF</th><th>隔夜</th><th>残差*</th></tr>';
+            ['FXI','KWEB','ASHR'].forEach(function(k) {
+                var v = ce[k];
+                if (v) h += '<tr><td>'+k+'</td>'
+                    + '<td class="'+pctCls(v.chg)+'">'+(v.chg>=0?'+':'')+fmt(v.chg,2)+'%</td>'
+                    + '<td class="'+(v.resid!=null?pctCls(v.resid):'text-muted')+'">'+(v.resid!=null?((v.resid>=0?'+':'')+fmt(v.resid,2)+'%'):'—')+'</td></tr>';
+            });
+            h += '</table>';
+            h += '<div style="font-size:10px;color:var(--muted);margin-top:2px;">*剔全球情绪后; 提示类, 盘中无预测力</div>';
         }
         h += '</div>';
     }

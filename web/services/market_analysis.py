@@ -172,6 +172,7 @@ def _get_overseas() -> dict:
             "dji": ov.get("dji"), "dji_chg": ov.get("dji_chg"),
             "vix": ov.get("vix"), "us10y": ov.get("us10y"),
             "sentiment": ov.get("sentiment", ""),
+            "china_etf": ov.get("china_etf", {}),
         }
     except Exception:
         return {"error": "Overseas data unavailable"}

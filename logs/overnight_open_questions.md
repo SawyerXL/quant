@@ -6749,3 +6749,20 @@ close 的回测结论(含主窗归因)受此污染程度待测。处置建议: �
 ### 预算状态
 - 原预算余 1 不动; 额外名额已用 3: #1 期权备兑判死 / #2 北向判死 /
   #3 离岸窗口=提示类升级(条件性正结论)。
+
+## 三十二轮: 离岸隔夜预告接入网页前端(2026-10-13, 用户授权"做进去")
+
+- **实现**: scripts/overnight_market.py 加 _get_china_etf_offshore()——FXI/
+  KWEB/ASHR 隔夜收益+滚动252日β剔全球情绪残差+跳空方向预期(阈值 ±1%:
+  高开/低开/平开), 日更缓存 logs/offshore_etf_cache.parquet; market_
+  analysis._get_overseas 透传 china_etf; dashboard.html 外围卡加离岸ETF
+  表(隔夜/残差*)与简报行"离岸中国预告"。**提示类标注写死在 UI**: "盘中
+  无预测力(t≈0), 不做盘中方向操作"(三十一轮判决)。早盘才显示(既有
+  is_afternoon 逻辑, 午后跳外围)。
+- 修复过程实锤一 bug: 残差计算把收益序列当价格用(iloc[-1]/iloc[-2] 为
+  收益之比→残差 84~121 荒谬值), 修为 spy_ret_pct=spy.iloc[-1]*100。
+- 部署: systemctl restart quant-web(active, 首页 307 正常)。API 验证:
+  午后时段 overseas 为空=设计行为(早盘才出), _get_overseas 直测含
+  china_etf ✓, 明早盘前可见。今日实测值: FXI −0.29%/KWEB −0.72%/
+  ASHR −0.65%, 残差均值 −0.5% → 平开/方向中性。
+- web 文件不在考卷链范围清单内(冻结不受影响)。
