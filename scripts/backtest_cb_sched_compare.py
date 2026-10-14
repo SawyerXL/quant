@@ -77,9 +77,34 @@ def is_rebalance_day(d: pd.Timestamp) -> bool:
     return n >= 2 and ds == month_dates[mid_idx]
 
 
-def run_bt(schedule="monthly", recovery="zero", stats=None):
+def select_variant(snap, top, mode="static"):
+    """评级过滤变体(2026-10-14 探针臂, 九轮/十三轮锁定口径):
+    static=现口径(共享过滤) / static_suffixfixed=后缀映射修正(修复后效果,
+    探测用, 不并入 cb_select 本体) / none=去评级过滤(探针 B 臂)。
+    变体仅存在于本研究脚本, 共享过滤本体(data/cb_select)保持冻结不动。"""
+    if mode == "static":
+        return select_double_low(snap, top=top)
+    df = snap.copy()
+    if mode == "static_suffixfixed":
+        df["rating"] = df["rating"].apply(
+            lambda r: r[:-3] if isinstance(r, str) and r.endswith("sti") else r)
+        return select_double_low(df, top=top)
+    if mode == "none":
+        df = df[~df["code"].astype(str).str.startswith("404")]
+        if "size" in df.columns:
+            df = df[df["size"] >= 0.5]
+        if "price" in df.columns and "premium" in df.columns:
+            df = df[~((df["price"] > 130) & (df["premium"] < 5))]
+        df = df.sort_values("dblow")
+        out = list(df["code"])
+        return out[:top] if top else out
+    raise ValueError(mode)
+
+
+def run_bt(schedule="monthly", recovery="zero", stats=None, filter_mode="static"):
     """schedule: monthly=快照日调仓(V3同构) / biweekly=月中+月末倒数第二。
-    recovery: zero=全损(现状) / last=按最后成交价回收 / par=按面值100回收。"""
+    recovery: zero=全损(现状) / last=按最后成交价回收 / par=按面值100回收。
+    filter_mode: 评级过滤变体(探针用), 默认 static=现口径。"""
     nav = pd.Series(1.0, index=all_dates)
     cur_weights = {}
     missing = {}
@@ -166,11 +191,11 @@ def run_bt(schedule="monthly", recovery="zero", stats=None):
             if snap.empty:
                 continue
             avails = [c for c in snap["code"].unique() if c in prices_today]
-            full_rank = select_double_low(snap, top=TOP_N)
+            full_rank = select_variant(snap, top=TOP_N, mode=filter_mode)
             blocked = [c for c in full_rank if c not in prices_today]
             blocked_top += len(blocked)
-            selected = select_double_low(
-                snap[snap["code"].isin(avails)], top=TOP_N)
+            selected = select_variant(
+                snap[snap["code"].isin(avails)], top=TOP_N, mode=filter_mode)
             if len(selected) < TOP_N:
                 skip_rebal += 1
                 continue
@@ -217,12 +242,20 @@ biweekly_events_zero = []
 biweekly_pop_events = {}
 print(f"\n{'臂':<34}{'年化':>8}{'夏普':>7}{'回撤':>9}{'换手/年':>9}{'pop':>6}{'临时':>5}{'调仓次数':>8}")
 rows = []
-for schedule in ["monthly", "nextday", "biweekly", "quarterly"]:
-    for recovery in ["zero", "last", "par"]:
+# 探针模式(2026-10-14, 九轮锁定口径): 只跑 biweekly×par 三档评级过滤变体
+if "--probe" in sys.argv:
+    arm_list = [("biweekly", "par", "static"),
+                ("biweekly", "par", "static_suffixfixed"),
+                ("biweekly", "par", "none")]
+else:
+    arm_list = [(s, r, "static") for s in ["monthly", "nextday", "biweekly", "quarterly"]
+                for r in ["zero", "last", "par"]]
+for schedule, recovery, fmode in arm_list:
+    if True:
         st = {}
-        nav = run_bt(schedule, recovery, stats=st)
+        nav = run_bt(schedule, recovery, stats=st, filter_mode=fmode)
         ar, sr, dd = metrics(nav)
-        key = f"{schedule}_{recovery}"
+        key = f"{schedule}_{recovery}" + (f"_{fmode}" if fmode != "static" else "")
         arms[key] = nav
         if key == "biweekly_zero":
             biweekly_events_zero = st["events"]
