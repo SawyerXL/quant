@@ -290,8 +290,24 @@ class Trader:
         sell_set = {_norm(c) for c in sig.get("sell", [])}
         ref_prices = {_norm(k): v for k, v in sig.get("prices", {}).items()}
 
+        # 删笔清单(2026-10-14 实装, 十二/十三/十六轮规格): 人工删掉的单不
+        # 自动补回(双向); 清单内券触发强制退出(信号 excluded)→不抑制+告警
+        # (十三轮: 强制退出优先于清单, 代码职责=不静默排除+留痕)。
+        from execution.manual_delete_list import load_list, suppression_sets
+        dl = load_list()
+        forced_exit = {_norm(c) for c in sig.get("excluded", {})}
+        suppress_sells, suppress_buys, overrides = suppression_sets(dl, forced_exit)
+        dl_reason = {(e.get("code"), e.get("direction")): e.get("reason", "")
+                     for e in dl.get("entries", [])}
+        for ov in overrides:
+            logger.error(
+                f"删笔清单券触发强制退出, 不抑制({ov['code']} {ov['direction']})")
+            send_alert(f"[track_cb] 删笔清单券触发强制退出: {ov['code']} "
+                       f"{ov['direction']} (清单原因: {ov['reason']})",
+                       level="error")
+
         plan = {"sells": [], "buys": [], "skipped_rejected": [],
-                "missing_shares": []}
+                "skipped_deleted": [], "missing_shares": []}
         for code in sorted(set(positions) | set(target_shares)):
             # 2026-09-29: 熊市清仓豁免传导到差量路径——BEAR_EXEMPT_CODES 的
             # sweep 管理持仓(511360 打新底仓)不得进卖出计划。09-15 豁免只落在
@@ -315,6 +331,13 @@ class Trader:
                 continue
             if (strategy_id == "track_cb" and sell_qty < 10
                     and code not in sell_set and code in holdings):
+                continue
+            if code in suppress_sells:
+                # 闸门十二: 跳过是事件——留痕(清单抑制人工删掉的卖单)
+                plan["skipped_deleted"].append({
+                    "code": code, "direction": "sell",
+                    "reason": dl_reason.get((code, "sell"), "")})
+                logger.warning(f"删笔清单抑制卖出 {code}(人工删除不自动补)")
                 continue
             pos_live = positions.get(code, {})
             if pos_live.get("volume") and pos_live.get("market_value"):
@@ -341,6 +364,12 @@ class Trader:
                 plan["skipped_rejected"].append(
                     {"code": code, "direction": "buy",
                      "reason": "当日已废单, 不重试"})
+                continue
+            if code in suppress_buys:
+                plan["skipped_deleted"].append({
+                    "code": code, "direction": "buy",
+                    "reason": dl_reason.get((code, "buy"), "")})
+                logger.warning(f"删笔清单抑制买入 {code}(人工删除不自动补)")
                 continue
             price = ref_prices.get(code, 0)
             if buy_qty <= 0 or price <= 0:
