@@ -22,12 +22,23 @@ cb_signal 与所有回测脚本共用本函数——任何一侧新增过滤条�
 import pandas as pd
 
 
+def _strip_rating_suffix(r):
+    """剥掉评级展望后缀(如 AAsti→AA, AA+sti→AA+)。akshare 信用评级带
+    'sti'(稳定展望)后缀时, rating_order 无此键→fillna(99) 被误剔
+    (2026-10-10 实锤: 当前快照 21 只后缀券, 修正后 TOP25 内 1 只=
+    127038 国微转债 rank16 被漏)。"""
+    if isinstance(r, str) and r.endswith("sti"):
+        return r[:-3]
+    return r
+
+
 def filter_universe(df: pd.DataFrame) -> pd.DataFrame:
     """应用①②③④过滤，返回过滤后的副本。"""
     df = df.copy()
     df = df[~df["code"].astype(str).str.startswith("404")]
     rating_order = {"AAA": 0, "AA+": 1, "AA": 2, "AA-": 3, "A+": 4,
                     "A": 5, "A-": 6}
+    df["rating"] = df["rating"].apply(_strip_rating_suffix)
     df["rn"] = df["rating"].map(rating_order).fillna(99)
     df = df[df["rn"] <= 6]
     if "size" in df.columns:
