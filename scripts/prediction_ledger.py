@@ -74,6 +74,10 @@ def cmd_score(_args):
         return
     s = _index_series()
     df = pd.read_csv(LEDGER)
+    # 空结果列会被推断为 float64, 写入字符串会告警/未来报错——显式转 object
+    for col in ("outcome_pct", "outcome_up", "outcome_date", "scored_at", "valid"):
+        if col in df.columns:
+            df[col] = df[col].astype(object)
     for i, r in df.iterrows():
         if str(r.get("outcome_up", "")) not in ("", "nan") and pd.notna(r["outcome_up"]):
             continue
@@ -102,6 +106,7 @@ def cmd_report(_args):
         print("台账为空")
         return
     df = pd.read_csv(LEDGER)
+    df["outcome_up"] = pd.to_numeric(df["outcome_up"], errors="coerce")
     d = df[(df["valid"] == "ok") & df["outcome_up"].notna()].copy()
     if d.empty:
         print("暂无可评分记录(有效且已结算)")
