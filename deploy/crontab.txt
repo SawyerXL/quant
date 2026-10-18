@@ -40,3 +40,5 @@ PATH=/usr/local/bin:/usr/bin:/bin
 50 17 * * 1-5 /root/quant/.venv/bin/python scripts/check_config_alignment.py >> /root/quant/logs/cron_config_check.log 2>&1
 # IO/内存压力监控(9/8两连崩后加, 连续2次超阈值才告警, 30分钟冷却)
 3-58/5 * * * * cd /root/quant && /root/quant/.venv/bin/python scripts/io_monitor.py >> /root/quant/logs/cron_io_monitor.log 2>&1
+# A股每日研究快照(2026-10-16 立项, 长期研究学习轨道; 写 logs/market_daily_study.csv, 不喂信号链)
+15 18 * * 1-5 /root/quant/.venv/bin/python scripts/market_daily_study.py >> /root/quant/logs/cron_market_study.log 2>&1

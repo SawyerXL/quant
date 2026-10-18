@@ -1,0 +1,3 @@
+registered_at,market_date,horizon_d,p_up,direction,confidence,rationale,features,features_hash,outcome_pct,outcome_up,outcome_date,scored_at,valid
+2026-10-18T21:14:03,2026-10-19,1,0.485,down,low,"无方向优势, 按regime条件化基准率: MA200下方(现-7.21%)次日上涨48.5%(n=743); 前5日-2.56%未触发>3%超跌条件(该条件57.3%); 宽度16.6%极弱但无历史基准率可作证据, 不据此加码。记录而非预测技能。",ma200_dist=-7.21;vol20=12.2;ret5=-2.56;ret20=-5.54;breadth=16.6;up_limit=76;down_limit=26,b7baaf39bc3e,,,,,ok
+2026-10-18T21:14:03,2026-10-19,5,0.458,down,low,"无方向优势, 按regime条件化基准率: MA200下方未来5日上涨45.8%(n=742); 无其他已证特征。记录而非预测技能。",ma200_dist=-7.21;vol20=12.2;ret5=-2.56;ret20=-5.54;breadth=16.6,8dc5797df8ab,,,,,ok
