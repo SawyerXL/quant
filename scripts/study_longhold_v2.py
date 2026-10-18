@@ -16,6 +16,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 BS = Path("/data/quant_data_store/baostock_long/daily")
+GLOBAL_END = pd.Timestamp("2025-12-31")
 PANEL = Path("/root/quant/logs/longhold_panel_v2.csv")
 RESULT = Path("/root/quant/logs/study_longhold_v2_result.json")
 FORMATIONS = ["2012-12-31", "2013-12-31", "2014-12-31", "2015-12-31",
@@ -82,15 +83,22 @@ def build_panel():
             rec = {"cohort": fs, "code": code, "pb": pb, "mom12": mom12,
                    "vol12": vol12, "amt60": amt60, "turn60": turn60,
                    "dd12": dd12, "is_st": is_st, "close0": c0}
-            for years, col in ((3, "fwd3y"), (5, "fwd5y")):
+            for years, col in ((3, "fwd3y"), (5, "fwd5y"), (10, "fwd10y")):
                 tgt = fdate + pd.Timedelta(days=365 * years)
                 bar, actual = nearest_bar(d, tgt, max_gap=15)
                 if bar is not None:
                     rec[col] = float(bar["close"]) / c0 - 1
                     rec[f"{col}_delisted"] = 0
-                else:
+                elif tgt > GLOBAL_END + pd.Timedelta(days=15):
+                    # 目标日在数据末端之后=未到期, 不得误标退市(H2-v1 隐患)
+                    rec[col] = np.nan
+                    rec[f"{col}_delisted"] = 0
+                elif last_date < tgt - pd.Timedelta(days=15):
                     rec[col] = float(d["close"].iloc[-1]) / c0 - 1
                     rec[f"{col}_delisted"] = 1
+                else:
+                    rec[col] = np.nan
+                    rec[f"{col}_delisted"] = 0
             rows.append(rec)
     panel = pd.DataFrame(rows)
     panel.to_csv(PANEL, index=False)
@@ -98,16 +106,16 @@ def build_panel():
     return panel
 
 
-def quintile_stats(g, feat):
-    g = g.dropna(subset=[feat, "fwd3y"])
+def quintile_stats(g, feat, target="fwd3y"):
+    g = g.dropna(subset=[feat, target])
     if len(g) < 500:
         return None
     try:
         q = pd.qcut(g[feat], 5, labels=False, duplicates="drop")
     except ValueError:
         return None
-    q1 = g[q == 0]["fwd3y"]
-    q5 = g[q == q.max()]["fwd3y"]
+    q1 = g[q == 0][target]
+    q5 = g[q == q.max()][target]
     if len(q1) < 10 or len(q5) < 10:
         return None
     t = (q5.mean() - q1.mean()) / np.sqrt(
@@ -118,13 +126,14 @@ def quintile_stats(g, feat):
             "t": round(float(t), 2)}
 
 
-def evaluate(panel, st_mode):
+def evaluate(panel, st_mode, target="fwd3y", min_cohorts=5,
+             mean_thresh=0.05, t_need_ratio=0.6):
     out = {}
     for feat in PRIMARIES:
         res = {}
         for fs, g0 in panel.groupby("cohort"):
             g = g0 if st_mode == "incl_st" else g0[g0["is_st"] == 0]
-            s = quintile_stats(g, feat)
+            s = quintile_stats(g, feat, target=target)
             if s:
                 res[fs] = s
         spreads = [v["spread"] for v in res.values()]
@@ -133,10 +142,12 @@ def evaluate(panel, st_mode):
         same_dir = (n_valid >= 1 and
                     (all(s > 0 for s in spreads) or all(s < 0 for s in spreads)))
         mean_spread = float(np.mean(spreads)) if spreads else None
-        need_t = int(np.ceil(0.6 * n_valid)) if n_valid else 99
+        need_t = int(np.ceil(t_need_ratio * n_valid)) if n_valid else 99
         strong = sum(1 for t in ts if t > 2.5)
-        verdict = ("有证据" if (n_valid >= 5 and same_dir and mean_spread is not None
-                              and abs(mean_spread) >= 0.05 and strong >= need_t)
+        verdict = ("有证据" if (n_valid >= min_cohorts and same_dir
+                              and mean_spread is not None
+                              and abs(mean_spread) >= mean_thresh
+                              and strong >= need_t)
                    else "无证据/不稳定")
         out[feat] = {"by_cohort": res, "n_valid_cohorts": n_valid,
                      "same_dir": same_dir,
@@ -151,39 +162,80 @@ def main():
                                       delisted3y=("fwd3y_delisted", "sum"),
                                       st=("is_st", "sum")).to_string())
     out = {"generated_at": datetime.now().isoformat(timespec="seconds"),
-           "registration": "logs/study_registration_longhold_v2.md",
-           "excl_st": evaluate(panel, "excl_st"),
-           "incl_st": evaluate(panel, "incl_st")}
-    # 退市股敏感性(剔退市重跑)
+           "registration_v2": "logs/study_registration_longhold_v2.md",
+           "registration_h3": "logs/study_registration_longhold_h3.md",
+           "h2v2_fwd3y_excl_st": evaluate(panel, "excl_st"),
+           "h2v2_fwd3y_incl_st": evaluate(panel, "incl_st")}
+    # H2-v2 退市股敏感性(剔退市重跑)
     surv = panel[panel["fwd3y_delisted"] == 0]
-    out["survivors_only"] = evaluate(surv, "excl_st")
-    # 子期
+    out["h2v2_survivors_only"] = evaluate(surv, "excl_st")
+    # H2-v2 子期
     early = panel[panel["cohort"] <= "2016-12-31"]
     late = panel[panel["cohort"] >= "2017-12-29"]
-    out["subperiod_2012_2016"] = evaluate(early, "excl_st")
-    out["subperiod_2017_2021"] = evaluate(late, "excl_st")
-    # 退市组
+    out["h2v2_subperiod_2012_2016"] = evaluate(early, "excl_st")
+    out["h2v2_subperiod_2017_2021"] = evaluate(late, "excl_st")
+    # H2-v2 退市组
     dg = panel[panel["fwd3y_delisted"] == 1]
-    out["delisted"] = {"n": int(len(dg)),
-                       "mean_fwd3y": round(float(dg["fwd3y"].mean()), 4) if len(dg) else None,
-                       "survivor_mean": round(float(panel[panel["fwd3y_delisted"] == 0]["fwd3y"].mean()), 4)}
-    # 5年描述
+    out["h2v2_delisted"] = {"n": int(len(dg)),
+                            "mean_fwd3y": round(float(dg["fwd3y"].mean()), 4) if len(dg) else None,
+                            "survivor_mean": round(float(panel[panel["fwd3y_delisted"] == 0]["fwd3y"].mean()), 4)}
+    # H2-v2 5年描述
     g5 = panel.dropna(subset=["fwd5y"])
-    g5 = g5[g5["cohort"] <= "2020-12-31"]
     out["fwd5y_descriptive"] = {"n": int(len(g5)),
                                 "mean": round(float(g5["fwd5y"].mean()), 4),
                                 "median": round(float(g5["fwd5y"].median()), 4),
                                 "positive_share": round(float((g5["fwd5y"] > 0).mean()), 4)}
+
+    # ── H3: 十年期(2012-2015 形成) ─────────────────────────────
+    h3 = panel[panel["cohort"] <= "2015-12-31"]
+    out["h3_fwd10y_excl_st"] = evaluate(h3, "excl_st", target="fwd10y",
+                                        min_cohorts=4, mean_thresh=0.10,
+                                        t_need_ratio=0.75)
+    out["h3_fwd10y_incl_st"] = evaluate(h3, "incl_st", target="fwd10y",
+                                        min_cohorts=4, mean_thresh=0.10,
+                                        t_need_ratio=0.75)
+    # 十年期描述: 最高/最低十分位的形成日特征画像(明确不可用于选股)
+    profile = {}
+    for fs, g in h3.groupby("cohort"):
+        g = g.dropna(subset=["fwd10y"])
+        if len(g) < 500:
+            continue
+        top = g[g["fwd10y"] >= g["fwd10y"].quantile(0.9)]
+        bot = g[g["fwd10y"] <= g["fwd10y"].quantile(0.1)]
+        profile[fs] = {
+            "n": int(len(g)),
+            "top_decile": {k: round(float(top[k].mean()), 4) for k in
+                           ("pb", "mom12", "vol12", "amt60", "is_st")},
+            "bottom_decile": {k: round(float(bot[k].mean()), 4) for k in
+                              ("pb", "mom12", "vol12", "amt60", "is_st")},
+            "top10_mean_fwd10y": round(float(top["fwd10y"].mean()), 4),
+            "bottom10_mean_fwd10y": round(float(bot["fwd10y"].mean()), 4),
+        }
+    out["h3_descriptive_deciles"] = profile
     RESULT.write_text(json.dumps(out, ensure_ascii=False, indent=1))
 
-    print("\n===== 主结果: 剔除 ST =====")
-    for feat, v in out["excl_st"].items():
+    print("\n===== H2-v2 三年期: 剔除 ST =====")
+    for feat, v in out["h2v2_fwd3y_excl_st"].items():
         print(f"[{feat}] {v['verdict']} | cohorts={v['n_valid_cohorts']} "
               f"same_dir={v['same_dir']} mean_spread={v['mean_spread']} "
               f"t>2.5: {v['t_gt_2.5']}/{v['need_t']}")
         for fs, s in v["by_cohort"].items():
             print(f"   {fs}: n={s['n']} spread={s['spread']:+.1%} t={s['t']:+.1f}")
-    print("\n退市组:", out["delisted"])
+    print("\n===== H3 十年期(2012-2015): 剔除 ST =====")
+    for feat, v in out["h3_fwd10y_excl_st"].items():
+        print(f"[{feat}] {v['verdict']} | cohorts={v['n_valid_cohorts']} "
+              f"same_dir={v['same_dir']} mean_spread={v['mean_spread']} "
+              f"t>2.5: {v['t_gt_2.5']}/{v['need_t']}")
+        for fs, s in v["by_cohort"].items():
+            print(f"   {fs}: n={s['n']} Q1={s['q1']:+.1%} Q5={s['q5']:+.1%} "
+                  f"spread={s['spread']:+.1%} t={s['t']:+.1f}")
+    print("\nH3 十分位画像(描述性, 不可用于选股):")
+    for fs, v in profile.items():
+        print(f"   {fs}: top10 pb={v['top_decile']['pb']} mom={v['top_decile']['mom12']:+.1%} "
+              f"vol={v['top_decile']['vol12']:.2f} amt={v['top_decile']['amt60']:.0f} | "
+              f"bottom10 pb={v['bottom_decile']['pb']} mom={v['bottom_decile']['mom12']:+.1%} "
+              f"vol={v['bottom_decile']['vol12']:.2f} amt={v['bottom_decile']['amt60']:.0f}")
+    print("\n退市组:", out["h2v2_delisted"])
     print("5年描述:", out["fwd5y_descriptive"])
     print(f"\n结果已保存: {RESULT}")
 
