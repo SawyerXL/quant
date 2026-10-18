@@ -1,0 +1,126 @@
+{
+ "SH000001": {
+  "n_days": 1740,
+  "A": {
+   "n_episodes": 21,
+   "mean_fwd20": 0.0114,
+   "baseline_mean": 0.0048,
+   "t": 0.82,
+   "verdict": "无证据"
+  },
+  "B": {
+   "spearman": -0.054,
+   "p": 0.0271,
+   "buckets": [
+    {
+     "range": "0%-15%",
+     "n": 87,
+     "mean_vol": 0.1678
+    },
+    {
+     "range": "15%-30%",
+     "n": 346,
+     "mean_vol": 0.16
+    },
+    {
+     "range": "30%-70%",
+     "n": 963,
+     "mean_vol": 0.1518
+    },
+    {
+     "range": "70%-85%",
+     "n": 198,
+     "mean_vol": 0.151
+    },
+    {
+     "range": "85%-101%",
+     "n": 107,
+     "mean_vol": 0.1875
+    }
+   ],
+   "monotone_low_to_high": false,
+   "verdict": "无证据"
+  },
+  "C": {
+   "n": 1740,
+   "fwd1_up_after_low": 0.6136,
+   "fwd1_up_base": 0.5227,
+   "fwd5_up_after_low": 0.6552,
+   "fwd5_up_base": 0.5268
+  },
+  "split_half": {
+   "2019-2022": {
+    "n": 10,
+    "mean": 0.0057,
+    "base": 0.0048
+   },
+   "2023-2026": {
+    "n": 11,
+    "mean": 0.0166,
+    "base": 0.0048
+   }
+  }
+ },
+ "SH000906(稳健性)": {
+  "n_days": 1740,
+  "A": {
+   "n_episodes": 21,
+   "mean_fwd20": 0.0138,
+   "baseline_mean": 0.0049,
+   "t": 0.92,
+   "verdict": "无证据"
+  },
+  "B": {
+   "spearman": -0.065,
+   "p": 0.007,
+   "buckets": [
+    {
+     "range": "0%-15%",
+     "n": 87,
+     "mean_vol": 0.1962
+    },
+    {
+     "range": "15%-30%",
+     "n": 346,
+     "mean_vol": 0.1933
+    },
+    {
+     "range": "30%-70%",
+     "n": 963,
+     "mean_vol": 0.1769
+    },
+    {
+     "range": "70%-85%",
+     "n": 198,
+     "mean_vol": 0.1726
+    },
+    {
+     "range": "85%-101%",
+     "n": 107,
+     "mean_vol": 0.2101
+    }
+   ],
+   "monotone_low_to_high": false,
+   "verdict": "无证据"
+  },
+  "C": {
+   "n": 1740,
+   "fwd1_up_after_low": 0.5795,
+   "fwd1_up_base": 0.4991,
+   "fwd5_up_after_low": 0.6322,
+   "fwd5_up_base": 0.5147
+  },
+  "split_half": {
+   "2019-2022": {
+    "n": 10,
+    "mean": 0.0059,
+    "base": 0.0062
+   },
+   "2023-2026": {
+    "n": 11,
+    "mean": 0.021,
+    "base": 0.0035
+   }
+  }
+ }
+}

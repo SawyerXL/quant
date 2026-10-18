@@ -1,0 +1,106 @@
+{
+ "generated_at": "2026-10-18T21:33:52",
+ "n_files_skipped": 0,
+ "criteria": "注册文件 H2 §4",
+ "features": {
+  "pb": {
+   "by_cohort": {
+    "2020-12-31": {
+     "n": 3919,
+     "q1_mean": -0.0261,
+     "q5_mean": -0.1302,
+     "spread": -0.1041,
+     "t": -4.61
+    },
+    "2021-12-31": {
+     "n": 4307,
+     "q1_mean": -0.0079,
+     "q5_mean": -0.2417,
+     "spread": -0.2338,
+     "t": -10.02
+    }
+   },
+   "same_dir": false,
+   "mean_spread": -0.1689,
+   "t_gt_2.5_cohorts": 2,
+   "verdict": "无证据/不稳定"
+  },
+  "mom12": {
+   "by_cohort": {
+    "2020-12-31": {
+     "n": 3919,
+     "q1_mean": 0.1758,
+     "q5_mean": -0.1868,
+     "spread": -0.3626,
+     "t": -14.08
+    },
+    "2021-12-31": {
+     "n": 4307,
+     "q1_mean": -0.0076,
+     "q5_mean": -0.2601,
+     "spread": -0.2525,
+     "t": -10.13
+    }
+   },
+   "same_dir": false,
+   "mean_spread": -0.3075,
+   "t_gt_2.5_cohorts": 2,
+   "verdict": "无证据/不稳定"
+  },
+  "vol12": {
+   "by_cohort": {
+    "2020-12-31": {
+     "n": 3919,
+     "q1_mean": 0.012,
+     "q5_mean": -0.0307,
+     "spread": -0.0428,
+     "t": -1.73
+    },
+    "2021-12-31": {
+     "n": 4307,
+     "q1_mean": 0.0612,
+     "q5_mean": -0.2265,
+     "spread": -0.2876,
+     "t": -13.26
+    }
+   },
+   "same_dir": false,
+   "mean_spread": -0.1652,
+   "t_gt_2.5_cohorts": 1,
+   "verdict": "无证据/不稳定"
+  },
+  "amt60": {
+   "by_cohort": {
+    "2020-12-31": {
+     "n": 3919,
+     "q1_mean": 0.3074,
+     "q5_mean": -0.2014,
+     "spread": -0.5088,
+     "t": -22.78
+    },
+    "2021-12-31": {
+     "n": 4307,
+     "q1_mean": 0.1319,
+     "q5_mean": -0.209,
+     "spread": -0.3409,
+     "t": -15.76
+    }
+   },
+   "same_dir": false,
+   "mean_spread": -0.4249,
+   "t_gt_2.5_cohorts": 2,
+   "verdict": "无证据/不稳定"
+  }
+ },
+ "delisted_vs_survivor": {
+  "n_delisted": 253,
+  "delisted_mean_fwd3y": -0.7526,
+  "survivor_mean_fwd3y": 0.0403
+ },
+ "fwd5y_2019_descriptive": {
+  "n": 0,
+  "mean": NaN,
+  "median": NaN,
+  "share_positive": NaN
+ }
+}
