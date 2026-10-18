@@ -7009,3 +7009,24 @@ close 的回测结论(含主窗归因)受此污染程度待测。处置建议: �
   study_longhold.py; logs/breadth_history.csv / longhold_panel.csv /
   study_breadth_result.json / study_longhold_result.json /
   study_longhold_st_sensitivity.json / study_report_20261018.md.
+
+## 三十四轮: 10-19 考前预检(Windows端)+MD5跨平台误报修正(2026-10-18)
+
+### 预检结果(机器值)
+- Linux 冻结窗口 diff 8ae4ccd..HEAD: 23 文件, **在范围内 0** ✓
+- runbook sha256=682df9ff…(定稿值)✓; 锁文件不在(正常)✓
+- Windows HEAD=**cda9a47**(=定稿 commit, Git-Sync 已拉取); git status
+  仅未跟踪文档, **已跟踪文件零修改** ✓
+- **发现并修正**: Windows 原始 MD5 三文件(fetch_and_execute/trader/
+  run_execute.bat)与 Linux 基线不一致——但 **git blob 哈希六文件全部
+  一致**(qmt_client 9a466ccb / trader a527238c / fetch d5f9a4e6 /
+  run_execute.bat b1c9492f / cb_signal 83b018d1 / build_cb_data 95faa5c8)
+  =CRLF/LF 行尾转换, 非内容变更。原"MD5 六值"写法跨平台必然误报(与
+  15 轮 HEAD 基线同型: 判据本身会误报)。
+- **runbook 冻结核对已修正(新证据驱动, 冻结协议允许)**: 改为①Windows
+  status 无已跟踪修改 ②六文件 git blob 哈希一致; Linux MD5 仅参考。
+  runbook 修正后 sha256=**527da272…**(新定稿指纹, 取代 682df9ff)。
+
+### 状态
+- 10-19 开盘前按修正后的核对方法执行; 其余条款不变。
+- H2-v2 下载后台进行中(~2%, 预计今晚完成)。
