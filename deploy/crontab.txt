@@ -44,3 +44,6 @@ PATH=/usr/local/bin:/usr/bin:/bin
 15 18 * * 1-5 /root/quant/.venv/bin/python scripts/market_daily_study.py >> /root/quant/logs/cron_market_study.log 2>&1
 # 预测台账结算(研究轨道; 18:15快照之后)
 25 18 * * 1-5 /root/quant/.venv/bin/python scripts/prediction_ledger.py score >> /root/quant/logs/cron_prediction.log 2>&1 && /root/quant/.venv/bin/python scripts/prediction_ledger.py report >> /root/quant/logs/cron_prediction.log 2>&1
+# 消息层采集(2026-10-18; 新浪全球快讯每小时, 22:35 加新闻联播; 含周末)
+30 8-23 * * * /root/quant/.venv/bin/python scripts/news_capture.py --no-cctv >> /root/quant/logs/cron_news.log 2>&1
+35 22 * * * /root/quant/.venv/bin/python scripts/news_capture.py >> /root/quant/logs/cron_news.log 2>&1
