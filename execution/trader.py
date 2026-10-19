@@ -29,6 +29,14 @@ TRACK_CAPITAL_FALLBACK = {"track_a": 1_000_000, "track_b": 400_000, "track_cb": 
 # 板块涨跌停幅度(涨停禁买/跌停禁卖推算用); ST 单独 5%
 _BOARD_BANDS = {("60", "00"): 0.10, ("30", "68"): 0.20, ("8", "4", "92"): 0.30}
 
+# 未终态委托状态(2026-10-19 实锤): 原 (50,52,54) 把 54=已撤当未终态,
+# 撤单的未成交量被并进持仓 → 200 实持 + 200 撤单 = 400 → 派生价 mv/vol
+# 腰斩(115→57.6) → 链自动挂 56.44 卖 127068(当日刚买入的券)。QMT 状态码:
+# 48 未报/49 待报/50 已报/51 已报待撤/52 部成待撤/55 部成 = 未终态;
+# 53 部撤/54 已撤/56 已成/57 废单 = 终态。保守口径: 除终态外都算未终态
+# (多算=少下单, 漏算=重复下单, 后者危险)。
+_TERMINAL_ORDER_STATUS = {53, 54, 56, 57}
+
 
 def _norm(code) -> str:
     """6位代码归一化: '600276.SH' → '600276'。"""
@@ -263,7 +271,6 @@ class Trader:
         positions = {_norm(k): v for k, v in raw_positions.items()
                      if self._in_scope(k, strategy_id)}
         try:
-            OPEN_STATUS = (50, 52, 54)
             today_orders = self.client.get_today_orders() or []
             rejected_buys = {
                 _norm(o.get("code"))
@@ -274,7 +281,7 @@ class Trader:
                 code = _norm(o.get("code"))
                 if not self._in_scope(code, strategy_id):
                     continue
-                if o.get("status") not in OPEN_STATUS:
+                if o.get("status") in _TERMINAL_ORDER_STATUS:
                     continue
                 d = o.get("direction")
                 net = max(0, o.get("shares", 0) - o.get("filled", 0))
@@ -375,7 +382,6 @@ class Trader:
         # 买入差量=0、部署静默漏买; 正确口径只计未终态(50已报/52部成/
         # 54部成待撤)的 shares-filled 净额。
         try:
-            OPEN_STATUS = (50, 52, 54)
             today_orders = self.client.get_today_orders() or []
             # 2026-09-22: 当日已废单的买入不再重试(09-01多波重跑每波
             # 重复撞8只停牌券+1只仿真冻结券的废单; 废单是柜台判定的
@@ -389,7 +395,7 @@ class Trader:
                 code = _norm(o.get("code"))
                 if not self._in_scope(code, strategy_id):
                     continue
-                if o.get("status") not in OPEN_STATUS:
+                if o.get("status") in _TERMINAL_ORDER_STATUS:
                     continue
                 d = o.get("direction")
                 net = max(0, o.get("shares", 0) - o.get("filled", 0))
