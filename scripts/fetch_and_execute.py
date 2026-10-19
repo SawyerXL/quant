@@ -513,13 +513,15 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False,
             json.dumps(exec_record, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         logger.info(f"执行结果已保存: {result_file}")
-        logger.info(f"成交率: {fill_rate:.0f}%  平均滑点: {avg_slip:+.3f}%  时延: {latency_min:.1f}min" if latency_min else f"成交率: {fill_rate:.0f}%  平均滑点: {avg_slip:+.3f}%")
+        slip_str = f"{avg_slip:+.3f}%" if avg_slip is not None else "无样本"
+        logger.info(f"成交率: {fill_rate:.0f}%  平均滑点: {slip_str}"
+                   + (f"  时延: {latency_min:.1f}min" if latency_min else ""))
         push_result_to_linux(result_file)
 
         send_alert(
             f"[Track {track.upper()} {'建仓' if setup else '调仓'}完成] {date.today()}\n"
             f"买入: {len(buy_list)} 只  卖出: {len(sell_list)} 只\n"
-            f"成交率: {fill_rate:.0f}%  平均滑点: {avg_slip:+.3f}%"
+            f"成交率: {fill_rate:.0f}%  平均滑点: {slip_str}"
             + (f"  时延: {latency_min:.1f}min" if latency_min else "")
             + f"\n信号日期: {signal.get('signal_date')}"
         )
