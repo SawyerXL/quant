@@ -63,6 +63,24 @@ def main():
             bad += 1
         print(f"{key:<22}{str(e):>10}{str(l):>10}{str(s):>10}  {mark}")
     print(f"\n漂移项: {bad}")
+
+    # 调仓日程一致性(2026-10-19 日程三原则裁定 b: 统一来源)
+    try:
+        from data.storage import load_meta
+        from daily_signal_a_v2 import is_rebalance_day as _live
+        from run_backtest_a2 import _make_rebal_dates as _a2
+        from backtest_engine import make_rebal_dates as _eng
+        cal = sorted(load_meta("trade_calendar")["trade_date"].astype(str).tolist())
+        live_days = [d for d in cal if _live(d, cal)]
+        a2_days = [d for d in _a2(cal, "biweekly") if d in set(cal)]
+        eng_days = [d for d in _eng(cal, "biweekly") if d in set(cal)]
+        sched_ok = live_days == a2_days == eng_days
+        print(f"调仓日程: 实盘/A2/引擎 三处{'一致 ✅' if sched_ok else '不一致 ❌'}"
+              f" (各 {len(live_days)}/{len(a2_days)}/{len(eng_days)} 个)")
+        if not sched_ok:
+            bad += 1
+    except Exception as e:
+        print(f"调仓日程检查失败: {e}")
     # 开关类登记(2026-09-08: 实盘TP已关)
     print("开关: 实盘 TP_ENABLED=False (2026-09-08 关闭, 见§6.9深夜复核②)")
     if bad:

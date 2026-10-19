@@ -41,16 +41,12 @@ def is_trade_day(today: str, calendar: list[str]) -> bool:
     return today in calendar
 
 def is_rebalance_day(today: str, calendar: list[str]) -> bool:
-    """双周调仓: 月末倒数第二 + 月中(交易日中点 n//2−1, 非固定日)"""
-    year_month  = today[:7]
-    month_dates = sorted([d for d in calendar if d.startswith(year_month)])
-    if not month_dates: return False
-    end_idx = -2 if len(month_dates) >= 2 else -1
-    is_month_end = (today == month_dates[end_idx])
-    n = len(month_dates)
-    mid_idx = max(0, n // 2 - 1)
-    is_month_mid = (n >= 2 and today == month_dates[mid_idx])
-    return is_month_end or is_month_mid
+    """双周调仓: 月末倒数第二 + 月中(交易日中点 n//2−1, 非固定日)。
+
+    2026-10-19 日程统一(三原则裁定 b): 委托 scripts/rebalance_schedule.py
+    唯一实现, 本函数仅保留入口(实盘语义)。"""
+    from rebalance_schedule import is_rebalance_day as _impl
+    return _impl(today, calendar)
 
 def _get_position_ratio(today: str) -> float:
     idx_df = load_meta("csi800_index")

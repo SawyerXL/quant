@@ -47,20 +47,22 @@ REBAL_FREQ    = os.getenv("REBAL_FREQ", "biweekly")
 
 
 def _make_rebal_dates(calendar, freq="biweekly"):
+    """生成调仓日期列表。
+
+    2026-10-19 日程统一(三原则裁定 b): biweekly 委托
+    scripts/rebalance_schedule.biweekly_dates(实盘语义 n//2−1); monthly
+    保持月末倒数第二。此前月中用 n//2(比实盘晚一个交易日)。
     """
-    生成调仓日期列表。
-    月末用倒数第二个交易日（为执行失败预留1天缓冲）。
-    """
+    from rebalance_schedule import biweekly_dates
     dates = pd.DatetimeIndex(sorted(calendar))
+    if freq == "biweekly":
+        return biweekly_dates([str(d.date()) for d in dates])
     result = []
     for yr in range(dates[0].year, dates[-1].year + 1):
         for mo in range(1, 13):
             md = dates[(dates.year == yr) & (dates.month == mo)]
             if not len(md):
                 continue
-            if freq == "biweekly" and len(md) >= 2:
-                result.append(str(md[len(md) // 2].date()))
-            # 月末：倒数第二个交易日（保留最后一天为缓冲）
             end_idx = -2 if len(md) >= 2 else -1
             result.append(str(md[end_idx].date()))
     return sorted(set(result))

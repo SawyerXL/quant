@@ -867,18 +867,19 @@ def calc_metrics(nav_series, label="", rfr: float = 0.0):
 
 
 def make_rebal_dates(calendar, freq="biweekly"):
-    """生成调仓日期列表: weekly=每周五, biweekly=每月15日+月末, monthly=每月最后交易日"""
+    """生成调仓日期列表: weekly=每周五, biweekly=实盘双周语义, monthly=每月最后交易日。
+
+    2026-10-19 日程统一(三原则裁定 b): biweekly 委托
+    scripts/rebalance_schedule.biweekly_dates(月中 n//2−1 + 月末倒数第二,
+    与实盘 is_rebalance_day 同一实现)。此前是字面 15 日 + 自然月末,
+    与实盘不同构(第三处实现)。
+    """
     dates = pd.to_datetime(calendar)
     if freq == "weekly":
         return sorted([str(d.date()) for d in dates if d.weekday() == 4])
     elif freq == "biweekly":
-        # 每月15日和最后交易日 (约两周一次)
-        result = []
-        for d in dates:
-            last_day = pd.Timestamp(d.year, d.month, 1) + pd.offsets.MonthEnd(0)
-            if d.day == 15 or d == last_day:
-                result.append(str(d.date()))
-        return sorted(set(result))
+        from rebalance_schedule import biweekly_dates
+        return biweekly_dates([str(d.date()) for d in dates])
     elif freq == "monthly":
         # 每月最后一个交易日
         result = []
@@ -888,10 +889,6 @@ def make_rebal_dates(calendar, freq="biweekly"):
                 result.append(str(month_dates[-1].date()))
         return sorted(result)
     else:
-        # 默认双周
-        result = []
-        for d in dates:
-            last_day = pd.Timestamp(d.year, d.month, 1) + pd.offsets.MonthEnd(0)
-            if d.day == 15 or d == last_day:
-                result.append(str(d.date()))
-        return sorted(set(result))
+        # 默认双周(与 biweekly 同语义, 2026-10-19 统一来源)
+        from rebalance_schedule import biweekly_dates
+        return biweekly_dates([str(d.date()) for d in dates])
