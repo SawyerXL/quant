@@ -2,7 +2,9 @@
 
 H1=董事会提议下修公告; H2=预计触发下修提示公告.
 入场=公告日后首个交易日 E 开盘; 出场=E+4 收盘(5日).
-基准=CB等权开→收(逐券日线自建), 同窗复利; 成本主口径0.1%双边.
+基准=CB等权同窗买入持有 mean_i(close_X/open_E-1)(v2, 修正隔夜口径);
+v1 逐日开→收复利工件保留 logs/cb_clause_event_study_v1_daily_oc.json.
+成本主口径0.1%双边.
 统计=按券聚类t(主), 日聚类/naive t 并列. 判据出数前已锁.
 用法: python scripts/cb_clause_event_study.py
 """
@@ -85,7 +87,7 @@ def stats(x, cost):
     }
 
 
-def build(kind, days, bm):
+def build(kind, days, opens, closes):
     ev = pd.read_parquet(EVENTS[kind]).copy()
     ev["code"] = ev["code"].astype(str).str.zfill(6)
     ev["ann_date"] = pd.to_datetime(ev["ann_date"]).dt.normalize()
@@ -131,29 +133,30 @@ def build(kind, days, bm):
             if d.loc[X5, "close"] / pc_x - 1 <= -0.19:
                 invalid["limit_exit"] += 1
                 continue
-            # 基准同窗复利
-            i0 = np.searchsorted(days, np.datetime64(E, "D"))
-            i5 = np.searchsorted(days, np.datetime64(X5, "D"))
-            wd = [pd.Timestamp(x) for x in days[i0:i5 + 1]]
-            br = bm.reindex(wd)
-            if br.isna().any():
+            # 基准: 同窗买入持有等权 mean_i(close_X_i/open_E_i - 1)
+            if E not in opens.index or X5 not in closes.index:
                 invalid["missing_bench"] += 1
                 continue
-            bench5 = float((1 + br).prod() - 1)
+            o_row, c_row = opens.loc[E], closes.loc[X5]
+            ok = o_row.notna() & c_row.notna() & (o_row > 0) & (c_row > 0)
+            if int(ok.sum()) < 50:
+                invalid["missing_bench"] += 1
+                continue
+            bench5 = float((c_row[ok] / o_row[ok] - 1).mean())
             ret5 = float(d.loc[X5, "close"] / d.loc[E, "open"] - 1)
 
-            # 诊断窗口 1 日/20 日
+            # 诊断窗口 1 日/20 日(同口径)
             ret1 = float(d.loc[E, "close"] / d.loc[E, "open"] - 1)
-            b1 = float(bm.get(E, np.nan))
+            o1, c1 = opens.loc[E], closes.loc[E]
+            ok1 = o1.notna() & c1.notna() & (o1 > 0) & (c1 > 0)
+            b1 = float((c1[ok1] / o1[ok1] - 1).mean()) if int(ok1.sum()) >= 50 else np.nan
             ret20 = bench20 = None
             X20 = r.get("exit20")
-            if pd.notna(X20) and X20 in d.index:
-                j0 = np.searchsorted(days, np.datetime64(E, "D"))
-                j20 = np.searchsorted(days, np.datetime64(X20, "D"))
-                wd20 = [pd.Timestamp(x) for x in days[j0:j20 + 1]]
-                br20 = bm.reindex(wd20)
-                if not br20.isna().any():
-                    bench20 = float((1 + br20).prod() - 1)
+            if pd.notna(X20) and X20 in d.index and X20 in closes.index:
+                c20 = closes.loc[X20]
+                ok20 = o_row.notna() & c20.notna() & (o_row > 0) & (c20 > 0)
+                if int(ok20.sum()) >= 50:
+                    bench20 = float((c20[ok20] / o_row[ok20] - 1).mean())
                     ret20 = float(d.loc[X20, "close"] / d.loc[E, "open"] - 1)
             rows.append({
                 "code": code, "ann_date": r["ann_date"], "entry": E, "exit5": X5,
@@ -178,16 +181,21 @@ def verdict(res, oos, kind):
 
 def main():
     days = load_days()
-    bm_df = load_meta("cb_eqw_oc")
-    bm_df["date"] = pd.to_datetime(bm_df["date"]).dt.normalize()
-    bm = bm_df.set_index("date")["mean_oc"]
+    opens = load_meta("cb_open_panel")
+    closes = load_meta("cb_close_panel")
+    for panel in (opens, closes):
+        panel["date"] = pd.to_datetime(panel["date"]).dt.normalize()
+    opens = opens.set_index("date").sort_index()
+    closes = closes.set_index("date").sort_index()
 
     out = {"registered_at": REGISTERED_AT, "sample": [START, END],
            "cost_primary": COST_PRIMARY, "mde_pct": MDE_PCT,
+           "benchmark": "v2_buy_and_hold: mean_i(close_X/open_E - 1)",
+           "v1_artifact": "logs/cb_clause_event_study_v1_daily_oc.json",
            "results": {}}
     all_events = []
     for kind in ("H1", "H2"):
-        x, invalid, n_raw = build(kind, days, bm)
+        x, invalid, n_raw = build(kind, days, opens, closes)
         all_events.append(x.assign(kind=kind))
         x["year"] = x["ann_date"].dt.year
         x["seg"] = np.where(x["year"] <= 2024, "IS_2022_2024", "OOS_2025_2026")

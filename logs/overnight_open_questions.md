@@ -7682,3 +7682,24 @@ close 的回测结论(含主窗归因)受此污染程度待测。处置建议: �
 - 工件: logs/prereg_cb_clause_20261019.md, scripts/cb_clause_event_study.py,
   scripts/build_cb_clause_events.py, logs/cb_clause_event_study.json,
   logs/cb_clause_events_returns.csv, logs/cb_revision_announcements_20261019*.jsonl.
+
+## 六十三轮更正(2026-10-19 23:1x): 基准口径错误修正——H1/H2 均 FAIL
+### 错误
+- v1 基准 = 逐日开→收复利; 事件收益 = open(E)→close(E+4) **含 4 个隔夜**
+  → 不同窗, 系统性高估超额. v1 的 H2 PASS 主要是隔夜 beta 漏计, 不是 alpha.
+- 修正 = 同窗买入持有基准 `mean_i(close_X_i/open_E_i−1)`; 判据/样本/成本不变.
+### 修正后(v2, 机器值)
+| 假设 | N | 券 | 净超额 | 券聚类t | OOS25-26 | OOS t | 判定 |
+|---|---|---|---|---|---|---|---|
+| H1提议 | 332 | 240 | +0.0759% | +0.54 | +0.0117% | +0.07 | FAIL |
+| H2触发 | 1,440 | 352 | +0.1840% | +3.27 | +0.0557% | +0.55 | FAIL(OOS) |
+- H2 全样本 t 过 2.5, 但 OOS t=0.55 < 1.5; 均值 0.184% 仅略高于 MDE 0.183%.
+- 诊断: H1 20日 +1.726% t5.07; H2 20日 +0.162% t1.20 —— 20日仅诊断, 不入判据;
+  **事后改窗口=数据挖掘, 禁止**.
+- 结论: **条款事件族关闭**; #22 组合层验证不启动.
+### 产出
+- v1/v2 工件均保留: logs/cb_clause_event_study_v1_daily_oc.json
+  与 logs/cb_clause_event_study.json; 预注册顶部有口径修正留痕.
+### 教训
+- **多日事件收益必须与同窗买入持有基准比**; 逐日开→收复利只匹配"每日平仓"策略.
+- v1 的 H2 PASS 是假阳, 靠出数后自查拦下——口径闸门在报告前生效, 比事后解释便宜.

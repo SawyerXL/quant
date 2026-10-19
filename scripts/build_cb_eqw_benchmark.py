@@ -46,14 +46,20 @@ def main():
                           "dirty_cc_gt50pct": dirty,
                           "min_close": float(d["close"].min()),
                           "max_close": float(d["close"].max())})
-            frames.append(d[["date", "oc"]].assign(code=p.stem))
+            frames.append(d[["date", "open", "close", "oc"]].assign(code=p.stem))
         except Exception as e:
             audit.append({"code": p.stem, "rows": 0, "error": str(e)[:80]})
 
-    df = pd.concat(frames, ignore_index=True)
+    df = pd.concat(frames, ignore_index=True).drop_duplicates(["date", "code"])
     bm = (df.groupby("date")["oc"].agg(mean_oc="mean", n_bonds="count")
           .reset_index().sort_values("date"))
     save_meta("cb_eqw_oc", bm)
+    # 同窗买入持有基准所需的开/收盘面板(date × code)
+    opens = df.pivot(index="date", columns="code", values="open").reset_index()
+    closes = df.pivot(index="date", columns="code", values="close").reset_index()
+    save_meta("cb_open_panel", opens)
+    save_meta("cb_close_panel", closes)
+    print(f"panels: opens {opens.shape}, closes {closes.shape}")
     pd.DataFrame(audit).to_csv("logs/cb_daily_continuity_20261019.csv", index=False)
 
     print(f"daily files: {len(files)} | used: {len(frames)} | rows: {len(df):,}")
