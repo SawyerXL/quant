@@ -33,6 +33,9 @@ def main():
     lags, swings = [], []          # swings: (year, amplitude, bars)
     per_year = {}
     used = 0
+    stock_metrics = []             # 每股因子: pivot密度/波动/动量/成交额/行业
+    ind_map = dict(zip(meta["code"].astype(str),
+                       meta.get("industry_l1", pd.Series("", index=meta.index))))
     for code in sample:
         try:
             d = load_daily(code, START, END)
@@ -62,6 +65,20 @@ def main():
                 y_counts[y] = y_counts.get(y, 0) + 1
             for y, cnt in y_counts.items():
                 per_year.setdefault(y, [])
+            # 每股因子(描述性相关用)
+            ret = close.pct_change().dropna()
+            amt = pd.to_numeric(d["amount"], errors="coerce") if "amount" in d else pd.Series(dtype=float)
+            stock_metrics.append({
+                "code": code,
+                "pivot_density": len(piv) / (len(close) / 250.0),   # 每年 pivot 数
+                "lag_median": float(np.median([x.lag for x in piv])) if piv else None,
+                "amp_median": float(np.median([abs(b.price / a.price - 1)
+                                               for a, b in zip(piv, piv[1:])])) if len(piv) > 1 else None,
+                "vol_ann": float(ret.std() * np.sqrt(252)),
+                "ret_ann": float((close.iloc[-1] / close.iloc[0]) ** (252 / len(close)) - 1),
+                "avg_amount": float(amt.mean()) if len(amt) else None,
+                "industry": ind_map.get(code, ""),
+            })
         except Exception:
             continue
 
@@ -92,6 +109,37 @@ def main():
         },
         "note": "描述性研究; pivot 使用必须以 confirm_idx 为可用时点.",
     }
+
+    # ── ③ 与已有因子的相关性(交付物要求; 描述性, 非信号) ──
+    sm = pd.DataFrame(stock_metrics).dropna(subset=["pivot_density", "vol_ann"])
+    if len(sm) >= 20:
+        sm["log_amount"] = np.log(sm["avg_amount"].clip(lower=1))
+        corr = {}
+        for col in ("vol_ann", "ret_ann", "log_amount"):
+            corr[col] = float(sm["pivot_density"].corr(sm[col], method="spearman"))
+        # 波动率控制后的残差相关(看 swing 结构是否另有信息)
+        try:
+            import numpy as _np
+            X = _np.column_stack([_np.ones(len(sm)), sm["vol_ann"].values])
+            beta, *_ = _np.linalg.lstsq(X, sm["pivot_density"].values, rcond=None)
+            resid = sm["pivot_density"].values - X @ beta
+            resid_corr = {c: float(pd.Series(resid).corr(sm[c].reset_index(drop=True),
+                                                         method="spearman"))
+                          for c in ("ret_ann", "log_amount")}
+        except Exception:
+            resid_corr = {}
+        out["factor_corr_spearman"] = corr
+        out["factor_corr_resid_vs_vol"] = resid_corr
+        out["n_stocks_for_corr"] = int(len(sm))
+        # 行业分布(样本内)
+        ind_stats = {}
+        for ind, g in sm.groupby("industry"):
+            if len(g) >= 3:
+                ind_stats[ind] = {"n": int(len(g)),
+                                  "pivot_density_median": float(g["pivot_density"].median()),
+                                  "amp_median": float(g["amp_median"].median())
+                                  if g["amp_median"].notna().any() else None}
+        out["by_industry"] = ind_stats
     print(json.dumps(out, ensure_ascii=False, indent=1))
     Path("logs/zigzag_study_20261019.json").write_text(
         json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")

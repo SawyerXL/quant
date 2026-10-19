@@ -1,0 +1,134 @@
+{
+ "threshold": 0.05,
+ "sample_requested": 100,
+ "sample_used": 98,
+ "pivots_total": 15614,
+ "lag_bars": {
+  "P50": 3.0,
+  "P90": 8.0,
+  "max": 66
+ },
+ "swing_amplitude": {
+  "P50": 0.11519331287545653,
+  "P90": 0.276710043567989
+ },
+ "swing_bars": {
+  "P50": 7.0,
+  "P90": 23.0
+ },
+ "by_year": {
+  "2019": {
+   "n": 1347,
+   "amp_median": 0.11166253101736978,
+   "bars_median": 8.0
+  },
+  "2020": {
+   "n": 1867,
+   "amp_median": 0.1194891476118296,
+   "bars_median": 7.0
+  },
+  "2021": {
+   "n": 2038,
+   "amp_median": 0.1157435438855165,
+   "bars_median": 6.0
+  },
+  "2022": {
+   "n": 2267,
+   "amp_median": 0.11777777777777776,
+   "bars_median": 7.0
+  },
+  "2023": {
+   "n": 1594,
+   "amp_median": 0.11222203685123266,
+   "bars_median": 10.0
+  },
+  "2024": {
+   "n": 2589,
+   "amp_median": 0.11786469344608885,
+   "bars_median": 7.0
+  },
+  "2025": {
+   "n": 2152,
+   "amp_median": 0.11167819128153827,
+   "bars_median": 7.0
+  },
+  "2026": {
+   "n": 1662,
+   "amp_median": 0.11385872744095038,
+   "bars_median": 6.0
+  }
+ },
+ "note": "描述性研究; pivot 使用必须以 confirm_idx 为可用时点.",
+ "factor_corr_spearman": {
+  "vol_ann": 0.9296163471312435,
+  "ret_ann": -0.0357225967915091,
+  "log_amount": 0.23816764692907616
+ },
+ "factor_corr_resid_vs_vol": {
+  "ret_ann": 0.09959260180173285,
+  "log_amount": 0.217629694802007
+ },
+ "n_stocks_for_corr": 98,
+ "by_industry": {
+  "交通运输": {
+   "n": 3,
+   "pivot_density_median": 21.791352093342482,
+   "amp_median": 0.11073002925060765
+  },
+  "公用事业": {
+   "n": 8,
+   "pivot_density_median": 15.26433358153388,
+   "amp_median": 0.10929500141968909
+  },
+  "其他": {
+   "n": 11,
+   "pivot_density_median": 27.187244480784955,
+   "amp_median": 0.12327842290035096
+  },
+  "医药生物": {
+   "n": 10,
+   "pivot_density_median": 24.602530243896858,
+   "amp_median": 0.11193668207246532
+  },
+  "商贸零售": {
+   "n": 6,
+   "pivot_density_median": 24.777830083069734,
+   "amp_median": 0.11249071440247896
+  },
+  "基础化工": {
+   "n": 6,
+   "pivot_density_median": 25.37999284373361,
+   "amp_median": 0.11173236594745467
+  },
+  "机械设备": {
+   "n": 8,
+   "pivot_density_median": 29.16547025204129,
+   "amp_median": 0.12049404003191316
+  },
+  "汽车": {
+   "n": 5,
+   "pivot_density_median": 27.045209903121634,
+   "amp_median": 0.10996563573883145
+  },
+  "环保": {
+   "n": 4,
+   "pivot_density_median": 25.409696757447158,
+   "amp_median": 0.1187471330970904
+  },
+  "电力设备": {
+   "n": 4,
+   "pivot_density_median": 30.154571818779612,
+   "amp_median": 0.1169760185070122
+  },
+  "电子": {
+   "n": 10,
+   "pivot_density_median": 30.370184254606365,
+   "amp_median": 0.12528179384183555
+  },
+  "轻工制造": {
+   "n": 3,
+   "pivot_density_median": 21.493820526598604,
+   "amp_median": 0.10503303085973015
+  }
+ }
+}
