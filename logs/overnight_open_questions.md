@@ -7135,3 +7135,15 @@ close 的回测结论(含主窗归因)受此污染程度待测。处置建议: �
   (考试日链隔离原则不变)。
 - 提醒已设: 15:56 收盘收尾(settle+判据④初审+续锁); 10-20 14:20 残差
   审计+按授权解锁。
+
+## 三十七轮: 考卷原件备份+settle校验器自测(2026-10-19 09:5x)
+- **考卷备份(14:28 链重算会覆盖同名 plan)**: 09:31 计划→
+  logs/exam_paper_20261019_cb.json (sha256=027e1b20f888fcb1…);
+  09:31 信号→logs/exam_signal_20261019.json (sha256=30ad08c8…)。
+- **settle 校验器 SELFTEST PASS**(闸门十六: 已知通过判 PASS/已知失败判
+  FAIL)。
+- 收盘收尾命令(15:56): cb_trade_settle_check.py
+  --orders logs/qmt_orders_20261019.json
+  --pre logs/qmt_positions_20261016.json
+  --post logs/qmt_positions_20261019.json
+  (pre=周五收盘快照, post=今日15:05收盘快照; 中间无其他交易)。
