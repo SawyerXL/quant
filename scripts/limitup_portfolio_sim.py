@@ -107,50 +107,68 @@ def main():
     ev["seg"] = np.where(ev["year"] <= 2022, "IS_2019_2022", "OOS_2023_2026")
     print(f"事件 {len(ev):,} | 入场日 {ev['mdate'].nunique():,} | 顺延 {int(ev['delayed'].sum()):,}")
 
+    # 成本/滑点敏感性(执行假设扫描, 非策略参数): 成本 + 开盘买入滑点
+    SCENARIOS = [("理想", 0.0023, 0.0), ("成本0.33", 0.0033, 0.0),
+                 ("滑点0.2%", 0.0023, 0.002), ("滑点0.4%", 0.0023, 0.004),
+                 ("成本0.53", 0.0053, 0.0)]
     out = {}
     for cap in CAP_CAPITAL:
-        rows = []
-        for mdate, day in ev.groupby("mdate"):
-            n = len(day)
-            w = min(1.0 / n, CAP_5PCT)
-            # 冲击: 参与率 = 仓位额/ADV20。**单位**: 本地 amount=万元(库契约),
-            # 故先把仓位额(元)换成万元再比; 2026-10-19 首跑实锤单位错导致
-            # 参与率虚高 1e4 倍(783%)、冲击成本假 1.47%/笔。
-            pos_amt_wan = cap * w / 1e4
-            part = pos_amt_wan / day["adv20"].replace(0, np.nan)
-            impact = 0.001 * np.sqrt(part / 0.01)
-            impact = impact.clip(upper=0.02).fillna(0.02)   # 缺ADV按最差2%
-            stock_ret_net = day["stock_ret"] - COST - impact.values
-            port_ret = float((w * stock_ret_net).sum())
-            bench_ret = float(day["b_intra"].mean()) * (w * n)   # 基准乘部署比例
-            rows.append({"mdate": mdate, "ret": port_ret, "excess": port_ret - bench_ret,
-                         "n": n, "deployed": w * n, "impact_mean": float(impact.mean()),
-                         "part_mean": float(part.mean()) if part.notna().any() else None})
-        r = pd.DataFrame(rows).set_index("mdate")
-        r.index = pd.to_datetime(r.index)
-        r = r.sort_index()
-        nav = (1 + r["ret"]).cumprod()
-        ann = nav.iloc[-1] ** (252 / len(r)) - 1
-        shp = r["ret"].mean() / r["ret"].std() * np.sqrt(252) if r["ret"].std() else None
-        dd = (nav / nav.cummax() - 1).min()
-        t_all = r["excess"].mean() / (r["excess"].std() / np.sqrt(len(r)))
-        seg = {}
-        for s, ss in r.groupby(np.where(r.index.year <= 2022, "IS_2019_2022", "OOS_2023_2026")):
-            seg[s] = {"mean_excess_pct": ss["excess"].mean() * 100,
-                      "t": ss["excess"].mean() / (ss["excess"].std() / np.sqrt(len(ss)))
-                      if len(ss) > 1 else None}
-        out[f"cap_{cap}"] = {
-            "days": len(r), "ann_pct": ann * 100, "sharpe": shp, "max_dd_pct": dd * 100,
-            "mean_daily_ret_pct": r["ret"].mean() * 100,
-            "mean_daily_excess_pct": r["excess"].mean() * 100, "t_excess": t_all,
-            "avg_events": float(r["n"].mean()), "avg_deployed_pct": float(r["deployed"].mean() * 100),
-            "avg_impact_cost_pct": float(r["impact_mean"].mean() * 100),
-            "avg_participation_pct": float(r["part_mean"].dropna().mean() * 100)
-            if r["part_mean"].notna().any() else None,
-            "segments": seg,
-        }
+        for sname, cost, slip in SCENARIOS:
+            rows = []
+            for mdate, day in ev.groupby("mdate"):
+                n = len(day)
+                w = min(1.0 / n, CAP_5PCT)
+                # 冲击: 参与率 = 仓位额/ADV20。**单位**: 本地 amount=万元(库契约),
+                # 故先把仓位额(元)换成万元再比; 首跑实锤单位错致参与率虚高1e4倍。
+                pos_amt_wan = cap * w / 1e4
+                part = pos_amt_wan / day["adv20"].replace(0, np.nan)
+                impact = 0.001 * np.sqrt(part / 0.01)
+                impact = impact.clip(upper=0.02).fillna(0.02)
+                # 开盘买入滑点: 以开盘价×(1+slip)成交
+                entry_px = day["open_next"] * (1 + slip)
+                stock_ret = np.where(
+                    day["delayed"], day["open_next2"] / entry_px - 1,
+                    day["close_next"] / entry_px - 1)
+                stock_ret_net = stock_ret - cost - impact.values
+                port_ret = float((w * stock_ret_net).sum())
+                bench_ret = float(day["b_intra"].mean()) * (w * n)
+                rows.append({"mdate": mdate, "ret": port_ret, "excess": port_ret - bench_ret,
+                             "n": n, "deployed": w * n, "impact_mean": float(impact.mean()),
+                             "part_mean": float(part.mean()) if part.notna().any() else None})
+            r = pd.DataFrame(rows).set_index("mdate")
+            r.index = pd.to_datetime(r.index)
+            r = r.sort_index()
+            nav = (1 + r["ret"]).cumprod()
+            ann = nav.iloc[-1] ** (252 / len(r)) - 1
+            shp = r["ret"].mean() / r["ret"].std() * np.sqrt(252) if r["ret"].std() else None
+            dd = (nav / nav.cummax() - 1).min()
+            t_all = r["excess"].mean() / (r["excess"].std() / np.sqrt(len(r)))
+            seg = {}
+            for s, ss in r.groupby(np.where(r.index.year <= 2022, "IS_2019_2022", "OOS_2023_2026")):
+                seg[s] = {"mean_excess_pct": ss["excess"].mean() * 100,
+                          "t": ss["excess"].mean() / (ss["excess"].std() / np.sqrt(len(ss)))
+                          if len(ss) > 1 else None}
+            out[f"cap_{cap}_{sname}"] = {
+                "cost": cost, "entry_slip": slip,
+                "days": len(r), "ann_pct": ann * 100, "sharpe": shp, "max_dd_pct": dd * 100,
+                "mean_daily_ret_pct": r["ret"].mean() * 100,
+                "mean_daily_excess_pct": r["excess"].mean() * 100, "t_excess": t_all,
+                "avg_events": float(r["n"].mean()), "avg_deployed_pct": float(r["deployed"].mean() * 100),
+                "avg_impact_cost_pct": float(r["impact_mean"].mean() * 100),
+                "avg_participation_pct": float(r["part_mean"].dropna().mean() * 100)
+                if r["part_mean"].notna().any() else None,
+                "segments": seg,
+            }
 
-    print(pd.DataFrame(out).T.to_string())
+    # 紧凑表
+    tab = pd.DataFrame({k: {"年化%": round(v["ann_pct"], 2),
+                            "回撤%": round(v["max_dd_pct"], 2),
+                            "夏普": round(v["sharpe"], 2) if v["sharpe"] else None,
+                            "日均超额%": round(v["mean_daily_excess_pct"], 4),
+                            "t": round(v["t_excess"], 2),
+                            "OOS_t": round(v["segments"].get("OOS_2023_2026", {}).get("t") or 0, 2)}
+                        for k, v in out.items()})
+    print(tab.T.to_string())
     import json
     Path("logs/limitup_portfolio_sim.json").write_text(
         json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
