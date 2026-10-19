@@ -1,0 +1,141 @@
+{
+ "registered_at": "2026-10-19T22:39:18+08:00",
+ "arm_P": "T+1 open buy → T+2 open sell",
+ "arm_S": "T+1 open buy → T+2 close sell",
+ "sample": [
+  "2019-01-01",
+  "2026-09-30"
+ ],
+ "primary_cost": 0.0033,
+ "n_signal_events": 43708,
+ "one_word_excluded": {
+  "n": 298,
+  "mean_ret_pct": -2.87897908103429
+ },
+ "results": {
+  "P": {
+   "cost_0.0033": {
+    "n": 43398,
+    "n_days": 1842,
+    "mean_excess_pct": -0.4450543224483088,
+    "median_pct": -0.9832175477812113,
+    "win_rate_pct": 39.25065671229089,
+    "t_day_cluster": -10.1685787875357,
+    "max_dd_pct": -99.97647681164995,
+    "delayed_n": 356,
+    "delayed_mean_excess_pct": -12.068579774432488
+   },
+   "cost_0.0023": {
+    "n": 43398,
+    "n_days": 1842,
+    "mean_excess_pct": -0.3450543224483088,
+    "median_pct": -0.8832175477812112,
+    "win_rate_pct": 40.315221899626714,
+    "t_day_cluster": -7.837028954932465,
+    "max_dd_pct": -99.8508797035907,
+    "delayed_n": 356,
+    "delayed_mean_excess_pct": -11.96857977443249
+   },
+   "cost_0.0053": {
+    "n": 43398,
+    "n_days": 1842,
+    "mean_excess_pct": -0.6450543224483088,
+    "median_pct": -1.1832175477812112,
+    "win_rate_pct": 37.15148163509839,
+    "t_day_cluster": -14.831678452742164,
+    "max_dd_pct": -99.99941790501681,
+    "delayed_n": 356,
+    "delayed_mean_excess_pct": -12.268579774432489
+   },
+   "segments_primary": {
+    "IS_2019_2022": {
+     "n": 19732,
+     "n_days": 936,
+     "mean_excess_pct": -0.3106905913037112,
+     "median_pct": -0.8868369698991093,
+     "win_rate_pct": 40.25947699168862,
+     "t_day_cluster": -5.859777759793494,
+     "max_dd_pct": -96.43592964881692,
+     "delayed_n": 124,
+     "delayed_mean_excess_pct": -12.803145366005426
+    },
+    "OOS_2023_2026": {
+     "n": 23666,
+     "n_days": 906,
+     "mean_excess_pct": -0.5570827659091895,
+     "median_pct": -1.0618694137983862,
+     "win_rate_pct": 38.40953266289191,
+     "t_day_cluster": -8.474603549755027,
+     "max_dd_pct": -99.33599823281001,
+     "delayed_n": 232,
+     "delayed_mean_excess_pct": -11.675967130660752
+    }
+   }
+  },
+  "S": {
+   "cost_0.0033": {
+    "n": 43397,
+    "n_days": 1842,
+    "mean_excess_pct": -0.33812388361682094,
+    "median_pct": -1.0892300513159505,
+    "win_rate_pct": 41.14109270226052,
+    "t_day_cluster": -7.300452563266303,
+    "max_dd_pct": -99.92951016766268,
+    "delayed_n": 1240,
+    "delayed_mean_excess_pct": -10.343812153688814
+   },
+   "cost_0.0023": {
+    "n": 43397,
+    "n_days": 1842,
+    "mean_excess_pct": -0.23812388361682088,
+    "median_pct": -0.9892300513159504,
+    "win_rate_pct": 41.93607853077402,
+    "t_day_cluster": -5.325625815595074,
+    "max_dd_pct": -99.55402809798981,
+    "delayed_n": 1240,
+    "delayed_mean_excess_pct": -10.243812153688813
+   },
+   "cost_0.0053": {
+    "n": 43397,
+    "n_days": 1842,
+    "mean_excess_pct": -0.538123883616821,
+    "median_pct": -1.2892300513159503,
+    "win_rate_pct": 39.67785791644584,
+    "t_day_cluster": -11.250106058608763,
+    "max_dd_pct": -99.99824875540084,
+    "delayed_n": 1240,
+    "delayed_mean_excess_pct": -10.543812153688812
+   },
+   "segments_primary": {
+    "IS_2019_2022": {
+     "n": 19732,
+     "n_days": 936,
+     "mean_excess_pct": -0.2645975316192046,
+     "median_pct": -1.0543878802583921,
+     "win_rate_pct": 41.39468883032637,
+     "t_day_cluster": -4.774039334610643,
+     "max_dd_pct": -96.19358584911048,
+     "delayed_n": 535,
+     "delayed_mean_excess_pct": -10.109330376918912
+    },
+    "OOS_2023_2026": {
+     "n": 23665,
+     "n_days": 906,
+     "mean_excess_pct": -0.3994305380692599,
+     "median_pct": -1.1212147583268506,
+     "win_rate_pct": 40.929642932600885,
+     "t_day_cluster": -5.532107725062163,
+     "max_dd_pct": -98.16707235533424,
+     "delayed_n": 705,
+     "delayed_mean_excess_pct": -10.521752225422002
+    }
+   }
+  }
+ },
+ "verdict": {
+  "P_primary_pass": false,
+  "P_oos_pass": false,
+  "R1_family_status": "关闭",
+  "note": "S 臂不得挽救 P 臂; 前向 alpha 在6个月样本下不可测, 前向只能测滑点."
+ }
+}
