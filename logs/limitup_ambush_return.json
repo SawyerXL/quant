@@ -1,0 +1,90 @@
+{
+ "armA": {
+  "all": {
+   "n_events": 43707,
+   "n_days": 1843,
+   "mean_excess_pct": -1.3178022641552984,
+   "median_excess_pct": -1.72109829034831,
+   "win_rate_pct": 34.50019447685725,
+   "t_day_cluster": -31.173385189757344,
+   "t_naive": -50.56531266744477,
+   "mean_gap_ex_pct": -1.4172747496473306,
+   "mean_intra_ex_pct": 0.5243188450217071,
+   "max_dd_pct": -99.99999999969542,
+   "mean_excess_sens013_pct": -1.2178022641552984,
+   "n_delayed_exit": 2199
+  },
+  "IS_2019_2022": {
+   "n_events": 19772,
+   "n_days": 936,
+   "mean_excess_pct": -1.3303500578178429,
+   "median_excess_pct": -1.8271346736415148,
+   "win_rate_pct": 34.098725470362126,
+   "t_day_cluster": -23.04702657043798,
+   "t_naive": -35.662919975384646,
+   "mean_gap_ex_pct": -1.496630135186431,
+   "mean_intra_ex_pct": 0.5656400631240511,
+   "max_dd_pct": -99.9998113463691,
+   "mean_excess_sens013_pct": -1.2303500578178428,
+   "n_delayed_exit": 2199
+  },
+  "OOS_2023_2026": {
+   "n_events": 23935,
+   "n_days": 907,
+   "mean_excess_pct": -1.3074369006167226,
+   "median_excess_pct": -1.6304269363876336,
+   "win_rate_pct": 34.83183622310424,
+   "t_day_cluster": -21.16419732041436,
+   "t_naive": -36.05078336303868,
+   "mean_gap_ex_pct": -1.3517215980751935,
+   "mean_intra_ex_pct": 0.49018460126488483,
+   "max_dd_pct": -99.99983726913699,
+   "mean_excess_sens013_pct": -1.2074369006167223,
+   "n_delayed_exit": 2199
+  }
+ },
+ "armB": {
+  "all": {
+   "n_events": 265692,
+   "n_days": 1855,
+   "mean_excess_pct": -0.7494596800162502,
+   "median_excess_pct": -1.0757174286816908,
+   "win_rate_pct": 37.13472742875209,
+   "t_day_cluster": -18.840112857661417,
+   "t_naive": -17.54714297705369,
+   "mean_gap_ex_pct": -0.7225472004481872,
+   "mean_intra_ex_pct": 0.2928115252358257,
+   "max_dd_pct": -99.99997111745125,
+   "mean_excess_sens013_pct": -0.6494596800162502,
+   "n_delayed_exit": 6585
+  },
+  "IS_2019_2022": {
+   "n_events": 121555,
+   "n_days": 949,
+   "mean_excess_pct": -0.758411885884786,
+   "median_excess_pct": -1.0460470675342293,
+   "win_rate_pct": 37.58216445230554,
+   "t_day_cluster": -19.328893195719107,
+   "t_naive": -59.02101570339838,
+   "mean_gap_ex_pct": -0.7445065574223351,
+   "mean_intra_ex_pct": 0.299967187315774,
+   "max_dd_pct": -99.94631053285002,
+   "mean_excess_sens013_pct": -0.6584118858847863,
+   "n_delayed_exit": 6585
+  },
+  "OOS_2023_2026": {
+   "n_events": 144137,
+   "n_days": 907,
+   "mean_excess_pct": -0.7419100197322851,
+   "median_excess_pct": -1.0990863267482867,
+   "win_rate_pct": 36.75739053816855,
+   "t_day_cluster": -10.804020694151248,
+   "t_naive": -9.513911208603924,
+   "mean_gap_ex_pct": -0.7040282244948057,
+   "mean_intra_ex_pct": 0.28677694352448074,
+   "max_dd_pct": -99.9510014568508,
+   "mean_excess_sens013_pct": -0.6419100197322851,
+   "n_delayed_exit": 6585
+  }
+ }
+}
