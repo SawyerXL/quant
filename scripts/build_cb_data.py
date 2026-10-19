@@ -104,6 +104,23 @@ def build_universe():
 # ══════════════════════════════════════════════════════════════════
 # Stage 3: 逐只日线数据
 # ══════════════════════════════════════════════════════════════════
+def _latest_trading_day() -> str:
+    """最近一个交易日(含今天, 若今天开市)。日历缺失/异常时退化为今天。
+
+    2026-10-19: 日更陈旧判据由"10 个日历日"改为按交易日历——原阈值使
+    每只券约每 10 天才刷新一次(10-19 实锤: 最后bar=今天−10 → 全跳过)。
+    """
+    from datetime import date as _date
+    today = _date.today().strftime("%Y-%m-%d")
+    try:
+        cal = load_meta("trade_calendar")
+        days = sorted(cal["trade_date"].astype(str).str[:10].tolist())
+        le = [d for d in days if d <= today]
+        return le[-1] if le else today
+    except Exception:
+        return today
+
+
 def build_daily(batch_size=50, sleep_sec=2, force_refresh=False):
     """下载每只可转债的日线数据(含价格/溢价率)。"""
     # 2026-09-27: 非交易日跳过——国庆 10-01~10-08 长假期间 19:45 日更 cron
@@ -159,14 +176,16 @@ def build_daily(batch_size=50, sleep_sec=2, force_refresh=False):
         if fpath.exists():
             # 2026-09-20 修复: 旧逻辑对已有文件一律跳过——CB 日线自
             # 08-06 起整体冻结无人察觉(闸门十二形状), 快照链随之停摆。
-            # 改为: 陈旧文件(最后bar>10天前)重拉覆盖, 新鲜文件才跳过。
-            # force_refresh: 前缀bug修复后的一次性全量重拉(错前缀文件
-            # 可能带着错券的"新鲜"日期, 靠新鲜度跳不过去)
+            # 2026-10-19 修复(日更名不副实): 原"最后bar >= 今天−10 日历日"
+            # 阈值使每只券约每 10 天才刷新一次(10-19 实锤: 最后bar=10-09=
+            # 今天−10 → 全部跳过, 日线落后 6 个交易日)。改为**按交易日历**
+            # 判陈旧: 最后bar < 最近一个交易日 → 重拉。非交易日(周末/假日)
+            # 天然跳过(最新交易日=上一交易日)。force_refresh 仍强制全量。
             try:
                 if not force_refresh:
                     _d = pd.read_parquet(fpath, columns=["date"])
                     _mx = str(_d["date"].max())[:10] if not _d.empty else "1900-01-01"
-                    if _mx >= (date.today() - timedelta(days=10)).strftime("%Y-%m-%d"):
+                    if _mx >= _latest_trading_day():
                         skip += 1
                         continue
             except Exception:

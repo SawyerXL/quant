@@ -122,7 +122,8 @@ def main():
     cond = {}
     lu5_b = base["lu5"].clip(upper=2).astype(int)
     cond["lu5"] = {str(k): rate(base[lu5_b == k]) for k in sorted(lu5_b.unique())}
-    pct_b = pd.cut(base["pct"], [0.02, 0.05, 0.09], right=False)
+    pct_b = pd.cut(base["pct"], [0.02, 0.05, 0.09, 10.0],
+                   labels=["[2,5)", "[5,9)", "[9,+)"] , right=False)
     cond["pct_t"] = {str(k): rate(base[pct_b == k]) for k in pct_b.cat.categories}
     # 炸板: T日触板但未封板
     cond["blowup_t"] = {"blowup": rate(base[base["touch"] & ~base["seal"]]),
@@ -133,6 +134,20 @@ def main():
             lambda s: pd.qcut(s.rank(method="first"), 5, labels=False, duplicates="drop"))
         cond[name] = {str(k): rate(base[q == k]) for k in sorted(q.dropna().unique())}
     res["conditional"] = cond
+
+    # OOS 分段复现(协议: 2023-2026 为 OOS 段, 条件基率须复现)
+    base["seg"] = np.where(pd.to_datetime(base["date"]).dt.year <= 2022,
+                           "IS_2019_2022", "OOS_2023_2026")
+    seg_res = {}
+    for seg, sub in base.groupby("seg"):
+        lu5b = sub["lu5"].clip(upper=2).astype(int)
+        seg_res[seg] = {
+            "unconditional": rate(sub),
+            "lu5_1": rate(sub[lu5b == 1]),
+            "lu5_2plus": rate(sub[lu5b == 2]),
+            "blowup": rate(sub[sub["touch"] & ~sub["seal"]]),
+        }
+    res["by_segment"] = seg_res
 
     print(json.dumps(res, ensure_ascii=False, indent=1))
     out = f"logs/limitup_base_rates_{'sample' if args.sample else 'full'}.json"

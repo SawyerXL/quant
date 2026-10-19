@@ -10,7 +10,7 @@
 建议 cron: 每天 18:10(与 p0 sweep 同链, 先于 sweep 3 分钟):
   7 18 * * * cd /root/quant && .venv/bin/python scripts/daily_health_line.py >> logs/cron_health_line.log 2>&1
 """
-import sys, json
+import sys, json, subprocess
 from pathlib import Path
 from datetime import datetime
 
@@ -307,16 +307,54 @@ def main():
 
     # 2026-10-10: 链隔离锁可见性(用户裁定)——锁在场必须被健康行看到,
     # 忘解锁会在无提示下停掉全部交易(含临期强制卖出)。
-    lock_p = Path("logs/manual_exec_lock.json")
+    # 2026-10-19 修复: 权威锁在 Windows(H:\quant\logs), 原实现只读 Linux
+    # 本地文件 → 10-19 锁在 Windows 生效拦下链, 健康行却报 None(盲区)。
+    # 现在: SSH 读 Windows 权威文件; 不可达时报 "不可读" 并告警(未知≠无锁)。
     manual_lock = None
-    if lock_p.exists():
-        try:
-            import json as _j2
-            manual_lock = _j2.loads(lock_p.read_text(encoding="utf-8")).get("date")
-        except Exception:
-            manual_lock = "在场(不可读)"
-        alerts.append(f"链隔离锁在场: 日期={manual_lock}"
-                      + (" ⚠非当日=疑似忘解锁" if str(manual_lock) != now[:10] else ""))
+    manual_lock_src = None
+    win_cmd = ('if exist H:\\quant\\logs\\manual_exec_lock.json '
+               '(type H:\\quant\\logs\\manual_exec_lock.json) '
+               'else (echo __NO_LOCK__)')
+    try:
+        _r = subprocess.run(
+            ["ssh", "-p", "2222", "-i", "/root/.ssh/id_rsa",
+             "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
+             "-o", "StrictHostKeyChecking=no",
+             "Administrator@127.0.0.1", win_cmd],
+            capture_output=True, text=True, encoding="utf-8",
+            errors="replace", timeout=20)
+        out = (_r.stdout or "").strip()
+        if _r.returncode != 0 or not out:
+            manual_lock = "不可读(SSH失败)"
+            manual_lock_src = "win_ssh_fail"
+        elif "__NO_LOCK__" not in out:
+            try:
+                import json as _j2
+                manual_lock = _j2.loads(out).get("date")
+            except Exception:
+                manual_lock = "在场(不可读)"
+            manual_lock_src = "win"
+    except Exception:
+        manual_lock = "不可读(SSH异常)"
+        manual_lock_src = "win_ssh_fail"
+    if manual_lock is None and manual_lock_src is None:
+        # SSH 正常且明确无锁 → 再看本地镜像(冗余)
+        lock_p = Path("logs/manual_exec_lock.json")
+        if lock_p.exists():
+            try:
+                import json as _j2
+                manual_lock = _j2.loads(lock_p.read_text(encoding="utf-8")).get("date")
+                manual_lock_src = "local"
+            except Exception:
+                manual_lock = "在场(不可读)"
+                manual_lock_src = "local"
+    if manual_lock is not None:
+        alerts.append(f"链隔离锁: {manual_lock} (源={manual_lock_src})"
+                      + (" ⚠非当日=疑似忘解锁"
+                         if str(manual_lock) not in ("不可读(SSH失败)", "不可读(SSH异常)")
+                         and str(manual_lock) != now[:10] else ""))
+        if str(manual_lock).startswith("不可读"):
+            alerts.append("链隔离锁状态不可读(SSH失败)——未知≠无锁, 请人工核对")
 
     line = {"ts": now, "latest_bar": latest_bar,
             "last_trading_day": last_td, "bar_fresh": bar_fresh,
