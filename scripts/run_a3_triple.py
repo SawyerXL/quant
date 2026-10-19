@@ -56,9 +56,14 @@ def main():
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
     rebal = [d for d in make_rebal_dates(cal, "biweekly") if START <= d <= END]
 
+    # 2026-10-19 修: 10-07 启用后 DEFAULT_CONFIG 已含 cash=1.4%/limit_gate=True,
+    # 原写法三臂全部等于生产配置(退化)。基线必须**显式钉回**两项全关的
+    # 10-07 前默认值(cash=0.02/limit_gate=False), 否则无法归因。
     runs = [
-        ("①基线(两项全关)", DEFAULT_CONFIG),
-        ("②+现金1.4%", replace(DEFAULT_CONFIG, cash_yield=0.014)),
+        ("①基线(两项全关)", replace(DEFAULT_CONFIG, cash_yield=0.02,
+                                     limit_gate=False)),
+        ("②+现金1.4%", replace(DEFAULT_CONFIG, cash_yield=0.014,
+                               limit_gate=False)),
         ("③+limit_gate", replace(DEFAULT_CONFIG, cash_yield=0.014,
                                  limit_gate=True)),
     ]
