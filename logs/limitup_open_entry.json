@@ -1,0 +1,82 @@
+{
+ "armA": {
+  "all": {
+   "n": 43409,
+   "n_days": 1843,
+   "mean_excess_pct": 0.11332629605889624,
+   "median_pct": -0.49750349014675,
+   "win_rate_pct": 44.37789398511829,
+   "t_day_cluster": 4.665478243024269,
+   "mean_excess_sens013_pct": 0.2133262960588962,
+   "max_dd_pct": -18.71962850043779
+  },
+  "excluded_one_word": {
+   "n": 298,
+   "mean_intra_ret_pct": -2.8994992852613195
+  },
+  "delayed_exit": {
+   "n": 2199,
+   "mean_excess_pct": -7.085480097131
+  },
+  "IS_2019_2022": {
+   "n": 19732,
+   "n_days": 936,
+   "mean_excess_pct": 0.18255789014617427,
+   "median_pct": -0.4075099924557204,
+   "win_rate_pct": 45.45915264544902,
+   "t_day_cluster": 3.87349659929433,
+   "mean_excess_sens013_pct": 0.2825578901461742,
+   "max_dd_pct": -18.71962850043779
+  },
+  "OOS_2023_2026": {
+   "n": 23677,
+   "n_days": 907,
+   "mean_excess_pct": 0.05562988965056032,
+   "median_pct": -0.5764012911542793,
+   "win_rate_pct": 43.47679182328842,
+   "t_day_cluster": 2.7594341429875597,
+   "mean_excess_sens013_pct": 0.1556298896505603,
+   "max_dd_pct": -18.35669417257867
+  }
+ },
+ "armB": {
+  "all": {
+   "n": 265063,
+   "n_days": 1855,
+   "mean_excess_pct": 0.04275475426550226,
+   "median_pct": -0.5441741959128723,
+   "win_rate_pct": 42.769832077657014,
+   "t_day_cluster": 1.1890792523288365,
+   "mean_excess_sens013_pct": 0.14275475426550227,
+   "max_dd_pct": -31.11765626573366
+  },
+  "excluded_one_word": {
+   "n": 629,
+   "mean_intra_ret_pct": -1.6060522837137257
+  },
+  "delayed_exit": {
+   "n": 6584,
+   "mean_excess_pct": -4.961443711624707
+  },
+  "IS_2019_2022": {
+   "n": 121301,
+   "n_days": 949,
+   "mean_excess_pct": -0.002389707714453032,
+   "median_pct": -0.49991746381272095,
+   "win_rate_pct": 43.29642789424654,
+   "t_day_cluster": 0.9774372322340632,
+   "mean_excess_sens013_pct": 0.09761029228554692,
+   "max_dd_pct": -14.467241619152615
+  },
+  "OOS_2023_2026": {
+   "n": 143762,
+   "n_days": 907,
+   "mean_excess_pct": 0.08084596322635808,
+   "median_pct": -0.5839926891506642,
+   "win_rate_pct": 42.32551021827743,
+   "t_day_cluster": 0.9360438030698472,
+   "mean_excess_sens013_pct": 0.18084596322635804,
+   "max_dd_pct": -31.11765626573367
+  }
+ }
+}
