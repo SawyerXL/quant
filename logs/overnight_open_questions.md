@@ -7208,3 +7208,25 @@ close 的回测结论(含主窗归因)受此污染程度待测。处置建议: �
   幻影; 但修复仍应在今晚合并部署(防其它当日撤单场景)。
 - **F2 判据更新**: "考试日链隔离" ✅ 且**有实证价值**(拦下真实错误卖出);
   链 14:30 计划文件覆盖同名 plan——考卷原件已提前备份(exam_paper_20261019)。
+
+## 四十二轮: 收盘后合并四分支+部署Windows+走查3/3 PASS+续锁10-20(2026-10-19 15:1x)
+- **收盘结算(15:05 收盘快照)**: 判据③ **PASS**(9 行持仓差量 vs 委托净额逐位);
+  判据②⑤ 工具判 FAIL=127068 撤单(54)未分类, 按 runbook 修正单单独列剔除后
+  10/10 委托=成交、废单 0 → PASS; 判据④ 券商对账单待。
+- **续锁**: Windows 锁改 {"date":"2026-10-20","reason":"post-exam residual
+  review"}(UTF-8 改写校验, 非当日不误报)。
+- **四分支合并 main(收盘后冻结解除)**: 后缀修复/删笔清单/撤单54终态/
+  None滑点守卫——全部 no-ff 干净合并。全量测试 **125 过 / 2 失败**(失败
+  =test_limit_gate_smoke 与 test_engine_fixes::ma10, **合并前已存在**, 归因
+  其他会话 backtest_engine 改动, 非本次引入)。
+- **部署 Windows**: `git -C H:\quant pull linux main` 成功(HEAD=a7120f4);
+  MD5 校验发现 Windows checkout **CRLF**: 原始 hash 不同, **LF 归一后与
+  Linux 逐字节一致**(d0764347…), 部署内容确认一致。⚠ 冻结 MD5 口径今后
+  须注明 LF 归一(git core.autocrlf 影响), 已在账本登记。
+- **Windows 走查(显式假客户端注入, 不碰真实账户) 3/3 PASS**:
+  ① 合成删笔(买+卖)→双向排除进 skipped_deleted ✓;
+  ② 合成强赎券在清单内→卖出照常进计划+ERROR 告警 ✓(强制退出优先);
+  ③ 撤单 54 → 幻影持仓不重现 ✓。
+  走查后确认 Windows 无合成清单残留(NO_SYNTHETIC_LIST)。
+- **附带发现**: Windows 上 pytest 会经 get_client() 连真实 QMT(测试 mock
+  失效), 故走查改用显式假客户端注入; 建议考后把测试改为强制注入。
