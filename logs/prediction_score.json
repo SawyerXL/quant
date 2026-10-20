@@ -1,0 +1,11 @@
+{
+ "n_targets": 1,
+ "n_raw_valid_records": 3,
+ "method": "dedupe by (market_date,horizon_d) keep last registered_at",
+ "base_rate": 1.0,
+ "brier": 0.4489,
+ "brier_base_rate": 0.0,
+ "brier_5050": 0.25,
+ "hit_rate": 0.0,
+ "computed_at": "2026-10-19T23:46:58"
+}

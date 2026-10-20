@@ -111,8 +111,14 @@ def cmd_report(_args):
     if d.empty:
         print("暂无可评分记录(有效且已结算)")
         return
+    # 同一 (market_date, horizon) 的盘前修订只保留最后一次登记——否则
+    # 一次预测的多次修订会被当成多个独立样本，Brier/命中率被重复计数。
+    n_raw = len(d)
+    d = (d.sort_values("registered_at")
+           .drop_duplicates(["market_date", "horizon_d"], keep="last"))
     d["p_up"] = pd.to_numeric(d["p_up"])
     d["outcome_up"] = pd.to_numeric(d["outcome_up"])
+    print(f"评分样本: {len(d)} 个目标 (原始有效记录 {n_raw} 条, 已按目标去重)")
     brier = ((d["p_up"] - d["outcome_up"]) ** 2).mean()
     base = d["outcome_up"].mean()
     brier_base = ((base - d["outcome_up"]) ** 2).mean()
@@ -125,7 +131,9 @@ def cmd_report(_args):
              "outcome_pct", "outcome_up", "valid"]].tail(15).to_string(index=False))
     out = Path("/root/quant/logs/prediction_score.json")
     out.write_text(json.dumps({
-        "n": len(d), "base_rate": round(float(base), 4),
+        "n_targets": len(d), "n_raw_valid_records": n_raw,
+        "method": "dedupe by (market_date,horizon_d) keep last registered_at",
+        "base_rate": round(float(base), 4),
         "brier": round(float(brier), 4),
         "brier_base_rate": round(float(brier_base), 4),
         "brier_5050": round(float(brier_5050), 4),

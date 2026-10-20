@@ -59,11 +59,11 @@ def load_window(lo, hi, cal):
 def main():
     # 2026-10-09: 与 backtest_halt_grid 同步——END 冻结为本次重校的工件
     # as_of(闸门十三); 本次重跑=现金1.4%+limit_gate 启用(10-07 定稿)后重校
-    END_20261009 = "2026-10-09"
-    sh = load_daily("SH000001", "2014-06-01", END_20261009)
+    END_20261019 = "2026-10-19"
+    sh = load_daily("SH000001", "2014-06-01", END_20261019)
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
 
-    windows = [("全期2019-2026.10", "2019-01-01", END_20261009),
+    windows = [("全期2019-2026.10", "2019-01-01", END_20261019),
                ("OOS 2015-2018", "2015-01-01", "2018-12-31")]
 
     for wname, lo, hi in windows:

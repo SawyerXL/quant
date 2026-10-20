@@ -20,23 +20,23 @@ from data.storage import load_daily, load_meta
 from backtest_config import DEFAULT_CONFIG
 from backtest_engine import run_backtest, make_rebal_dates, calc_metrics
 
-END_20261009 = "2026-10-09"   # 工件 as_of 冻结(闸门十三; 10-07 新口径定稿后重校)
+END_20261019 = "2026-10-19"   # 工件 as_of 冻结(闸门十三; 日程统一后重校, 见 prereg_halt_recalib_20261019)
 START = "2019-01-01"
 CAPITALS = [500_000, 1_000_000, 1_500_000, 2_000_000, 3_000_000, 5_000_000]
 
 
 def main():
-    sh = load_daily("SH000001", "2014-06-01", END_20261009)
+    sh = load_daily("SH000001", "2014-06-01", END_20261019)
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
     rebal = [d for d in make_rebal_dates(cal, "biweekly")
-             if START <= d <= END_20261009]
+             if START <= d <= END_20261019]
 
     meta = load_meta("stock_info_full")
     codes = meta["code"].tolist() if not meta.empty else []
     prices, amounts = {}, {}
     for code in codes:
         try:
-            d = load_daily(code, START, END_20261009)
+            d = load_daily(code, START, END_20261019)
             if d.empty:
                 continue
             d["date"] = pd.to_datetime(d["date"])
@@ -75,7 +75,7 @@ def main():
     for cap in CAPITALS:
         cfg = replace(DEFAULT_CONFIG, lot_size=100, initial_capital=cap)
         run(cfg, f"lot {cap/10000:.0f}万/组")
-    print(f"\nas_of={END_20261009}, pool30, 双周调仓, shift=-0.03, 现金1.4%+limit_gate, 无熔断纯画像")
+    print(f"\nas_of={END_20261019}, pool30, 双周调仓(实盘日程), shift=-0.03, 现金1.4%+limit_gate, 无熔断纯画像")
 
 
 if __name__ == "__main__":

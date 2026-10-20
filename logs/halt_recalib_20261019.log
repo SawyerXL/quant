@@ -1,0 +1,123 @@
+=== 2026-10-19_23:17:51 capital_sweep START (as_of=2026-10-19, 实盘日程) ===
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+面板 1957天×5394只, 调仓日 188个
+
+资金/组                         年化     夏普       回撤     跳票
+────────────────────────────────────────────────────────────
+无约束(无限可分)              无约束(无限可分)              年化  +4.59% 夏普  0.38 回撤  -30.17% 跳票     0 ⚠破15%熔断线
+lot 50万/组              年化  +2.55% 夏普  0.29 回撤  -21.72% 跳票   630 ⚠破15%熔断线
+lot 100万/组             年化  +2.97% 夏普  0.30 回撤  -26.19% 跳票   310 ⚠破15%熔断线
+lot 150万/组             年化  +3.39% 夏普  0.33 回撤  -27.88% 跳票   224 ⚠破15%熔断线
+lot 200万/组             年化  +4.07% 夏普  0.37 回撤  -27.49% 跳票   186 ⚠破15%熔断线
+lot 300万/组             年化  +3.87% 夏普  0.35 回撤  -29.41% 跳票   130 ⚠破15%熔断线
+lot 500万/组             年化  +4.30% 夏普  0.37 回撤  -29.38% 跳票    67 ⚠破15%熔断线
+
+as_of=2026-10-19, pool30, 双周调仓(实盘日程), shift=-0.03, 现金1.4%+limit_gate, 无熔断纯画像
+=== 2026-10-19_23:23:50 halt_grid_lot START ===
+
+========================================================================================
+窗口 全期2019-2026.10  [lot约束 50万/组, pool30]
+========================================================================================
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+  面板 1957天×5394只
+
+      阈值方案                 年化      夏普      最大回撤    触发
+    -10%无熔断            +2.55%    0.29   -21.72%     0
+    -10%A全清仓           +3.03%    0.44   -12.95%     2
+    -10%B暂停开仓          +3.15%    0.43   -13.42%     2
+    -10%C降30%          +3.18%    0.43   -12.93%     2
+    -15%无熔断            +2.55%    0.29   -21.72%     0
+    -15%A全清仓           +2.47%    0.33   -16.60%     1
+    -15%B暂停开仓          +2.38%    0.32   -17.35%     1
+    -15%C降30%          +2.43%    0.33   -16.92%     1
+    -20%无熔断            +2.55%    0.29   -21.72%     0
+    -20%A全清仓           +1.82%    0.25   -20.37%     1
+    -20%B暂停开仓          +1.65%    0.23   -21.56%     1
+    -20%C降30%          +1.73%    0.24   -20.97%     1
+    -25%无熔断            +2.55%    0.29   -21.72%     0
+    -25%A全清仓           +2.55%    0.29   -21.72%     0
+    -25%B暂停开仓          +2.55%    0.29   -21.72%     0
+    -25%C降30%          +2.55%    0.29   -21.72%     0
+
+========================================================================================
+窗口 OOS 2015-2018  [lot约束 50万/组, pool30]
+========================================================================================
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+  面板 975天×3209只
+
+      阈值方案                 年化      夏普      最大回撤    触发
+    -10%无熔断            -3.50%   -0.50   -15.88%     0
+    -10%A全清仓           -1.61%   -0.40   -10.12%     1
+    -10%B暂停开仓          -1.22%   -0.30   -10.07%     1
+    -10%C降30%          -1.33%   -0.33   -10.07%     1
+    -15%无熔断            -3.50%   -0.50   -15.88%     0
+    -15%A全清仓           -3.33%   -0.48   -15.29%     1
+    -15%B暂停开仓          -3.34%   -0.48   -15.49%     1
+    -15%C降30%          -3.34%   -0.48   -15.49%     1
+    -20%无熔断            -3.50%   -0.50   -15.88%     0
+    -20%A全清仓           -3.50%   -0.50   -15.88%     0
+    -20%B暂停开仓          -3.50%   -0.50   -15.88%     0
+    -20%C降30%          -3.50%   -0.50   -15.88%     0
+    -25%无熔断            -3.50%   -0.50   -15.88%     0
+    -25%A全清仓           -3.50%   -0.50   -15.88%     0
+    -25%B暂停开仓          -3.50%   -0.50   -15.88%     0
+    -25%C降30%          -3.50%   -0.50   -15.88%     0
+=== 2026-10-19_23:36:17 halt_grid START ===
+
+========================================================================================
+窗口 全期2019-2026.10
+========================================================================================
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+  面板 1957天×5394只
+
+      阈值方案                 年化      夏普      最大回撤    触发
+    -10%无熔断            +4.59%    0.38   -30.17%     0
+    -10%A全清仓           +2.27%    0.31   -11.02%     2
+    -10%B暂停开仓          +1.37%    0.20   -16.94%     2
+    -10%C降30%          +2.11%    0.30   -12.28%     2
+    -15%无熔断            +4.59%    0.38   -30.17%     0
+    -15%A全清仓           +6.42%    0.61   -16.10%     2
+    -15%B暂停开仓          +6.12%    0.59   -17.85%     2
+    -15%C降30%          +6.16%    0.59   -17.07%     2
+    -20%无熔断            +4.59%    0.38   -30.17%     0
+    -20%A全清仓           +2.97%    0.36   -20.44%     1
+    -20%B暂停开仓          +2.92%    0.36   -20.99%     1
+    -20%C降30%          +2.93%    0.36   -20.83%     1
+    -25%无熔断            +4.59%    0.38   -30.17%     0
+    -25%A全清仓           +1.87%    0.23   -26.13%     1
+    -25%B暂停开仓          +1.80%    0.22   -26.78%     1
+    -25%C降30%          +1.85%    0.23   -26.35%     1
+
+========================================================================================
+窗口 OOS 2015-2018
+========================================================================================
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+  面板 975天×3209只
+
+      阈值方案                 年化      夏普      最大回撤    触发
+    -10%无熔断            -3.72%   -0.48   -16.67%     0
+    -10%A全清仓           -1.59%   -0.37   -10.11%     1
+    -10%B暂停开仓          -1.27%   -0.29   -10.10%     1
+    -10%C降30%          -1.27%   -0.29   -10.10%     1
+    -15%无熔断            -3.72%   -0.48   -16.67%     0
+    -15%A全清仓           -3.52%   -0.45   -15.94%     1
+    -15%B暂停开仓          -3.52%   -0.45   -16.09%     1
+    -15%C降30%          -3.52%   -0.45   -16.08%     1
+    -20%无熔断            -3.72%   -0.48   -16.67%     0
+    -20%A全清仓           -3.72%   -0.48   -16.67%     0
+    -20%B暂停开仓          -3.72%   -0.48   -16.67%     0
+    -20%C降30%          -3.72%   -0.48   -16.67%     0
+    -25%无熔断            -3.72%   -0.48   -16.67%     0
+    -25%A全清仓           -3.72%   -0.48   -16.67%     0
+    -25%B暂停开仓          -3.72%   -0.48   -16.67%     0
+    -25%C降30%          -3.72%   -0.48   -16.67%     0
+DONE 2026-10-19_23:44:47

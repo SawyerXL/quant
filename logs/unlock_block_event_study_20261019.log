@@ -1,0 +1,35 @@
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+/root/quant/scripts/unlock_block_event_study.py:280: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+  str(k): stats(v, PRIMARY_COST) for k, v in res.groupby("ratio_bin")}
+/root/quant/scripts/unlock_block_event_study.py:286: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+  str(k): stats(v, PRIMARY_COST) for k, v in res.groupby("disc_bin")}
+panel 8102013 rows, 5194 codes
+unlock raw/dedup/after_ratio 17472 16660 8715 counts {'candidates': 8696, 'boundary': 19, 'no_entry_bar': 569, 'no_exit_bar': 25, 'limit_up_entry': 10, 'limit_down_exit': 21, 'jump': 0, 'used': 8071}
+block raw/filt/dedup 120130 29419 20224 counts {'candidates': 20224, 'boundary': 0, 'no_entry_bar': 1182, 'no_exit_bar': 79, 'limit_up_entry': 56, 'limit_down_exit': 56, 'jump': 0, 'used': 18851}
+
+unlock primary:
+  n: 8071
+  n_days: 1720
+  n_codes: 3896
+  mean_excess_pct: 0.08453761391884998
+  median_pct: -1.0439503859084098
+  win_rate_pct: 42.51022178168753
+  t_day_cluster: -0.7214028081576117
+  max_dd_pct: -99.60479502708162
+  IS_2019_2022: mean=0.19835895957136915 t=0.09401046686490273 n=4013
+  OOS_2023_2026: mean=-0.02802154332697528 t=-1.1072648739263573 n=4058
+
+block primary:
+  n: 18851
+  n_days: 1823
+  n_codes: 3487
+  mean_excess_pct: -0.4953858733802279
+  median_pct: -1.244985173831426
+  win_rate_pct: 39.493926051668346
+  t_day_cluster: -6.914557510559836
+  max_dd_pct: -99.99835439950698
+  IS_2019_2022: mean=-0.5269564102395795 t=-5.611987936372836 n=9495
+  OOS_2023_2026: mean=-0.46334630011392347 t=-4.274191283056196 n=9356
+
+-> logs/unlock_block_event_study.json
