@@ -12,7 +12,13 @@ QMT 实盘 NAV 追踪 — 正确口径的净值曲线。
   - **价格来源: 快照自带的 market_value/volume (QMT导出时实时报的, 天天都有, 不依赖本地日线)**;
     只有"快照日之间被卖掉的票"需要期末价时才用本地日线兜底, 且兜底价过期>5天会告警。
     此前只靠本地日线, 日线管道一断NAV就假持平(8/18-8/21事故)。
-  - 种子 = 100万 notional, 每个快照日之间按"期初持仓的价格变动"算收益, 复利成 NAV。
+  - 种子 = 股票腿 100 万 + CB 腿 60 万 notional, 每个快照日之间按"期初持仓的
+    价格变动"算收益, 分腿复利成 NAV。
+  - 2026-10-20 修正: 快照含 CB 腿持仓, 旧实现把 CB 腿 P&L 并入 1M 股票腿
+    → invested_pct 达 126.9%、单腿 NAV 被另一腿污染。现输出:
+      nav / nav_a = 股票腿(1M, 剔除 CB); nav_cb = CB 腿(600k);
+      nav_combined = (equity_a + equity_cb) / 1.6M。
+    旧 `nav` 语义=股票腿(修正后), 组合绩效看 `nav_combined`。
   - 现金部分(未投入的 notional)按 CASH_YIELD 计息; 换手按 COMMISSION 扣费。
 
 局限(诚实说明):
@@ -37,6 +43,8 @@ from data.storage import load_daily
 from run_backtest_a import COMMISSION, CASH_YIELD
 
 NOTIONAL   = 1_000_000
+NOTIONAL_CB = 600_000
+CB_PREFIX  = ("110", "111", "113", "118", "123", "127", "128")
 SNAP_DIR   = Path("logs")
 NAV_FILE   = Path("logs/qmt_nav_history.parquet")
 SNAP_RE    = re.compile(r"qmt_positions_(\d{8})(?:_\d{4})?\.json$")
@@ -151,55 +159,81 @@ def build_nav() -> pd.DataFrame:
             return p
         return np.nan
 
+    def is_cb(code):
+        return str(code)[:3] in CB_PREFIX
+
+    sleeves = {"a": (float(NOTIONAL), lambda c: not is_cb(c)),
+               "cb": (float(NOTIONAL_CB), is_cb)}
+    state = {k: {"equity": n, "prev_date": None, "prev_hold": {}}
+             for k, (n, _) in sleeves.items()}
     rows = []
-    equity = float(NOTIONAL)
-    prev_date, prev_hold = None, {}
+    prev_nav_all = None
     for dstr in dates:
         hold = snaps[dstr]
-        invested_now = 0.0
-        for c, v in hold.items():
-            p = price_on(c, dstr)
-            if not np.isnan(p):
-                invested_now += v["vol"] * p
+        row = {"date": pd.Timestamp(dstr)}
+        for name, (notional, pred) in sleeves.items():
+            hold_s = {c: v for c, v in hold.items() if pred(c)}
+            prices_now = {c: price_on(c, dstr) for c in hold_s}
+            invested_now = sum(v["vol"] * prices_now[c]
+                               for c, v in hold_s.items()
+                               if not np.isnan(prices_now[c]))
+            st = state[name]
+            if st["prev_date"] is None:
+                ret = 0.0
+            else:
+                pnl = 0.0
+                for c, v in st["prev_hold"].items():
+                    p0 = price_on(c, st["prev_date"])
+                    p1 = price_on(c, dstr)
+                    if not np.isnan(p0) and not np.isnan(p1):
+                        pnl += v["vol"] * (p1 - p0)
+                prev_invested = 0.0
+                for c, v in st["prev_hold"].items():
+                    p = price_on(c, st["prev_date"])
+                    if not np.isnan(p):
+                        prev_invested += v["vol"] * p
+                cash = max(0.0, st["equity"] - prev_invested)
+                days = (pd.Timestamp(dstr) - pd.Timestamp(st["prev_date"])).days
+                interest = cash * CASH_YIELD * days / 365
+                traded = 0.0
+                for c in set(st["prev_hold"]) | set(hold_s):
+                    p1 = price_on(c, dstr)
+                    if np.isnan(p1):
+                        continue
+                    v0 = st["prev_hold"].get(c, {}).get("vol", 0)
+                    v1 = hold_s.get(c, {}).get("vol", 0)
+                    traded += abs(v1 - v0) * p1
+                fee = traded * COMMISSION
+                eq_new = st["equity"] + pnl + interest - fee
+                ret = eq_new / st["equity"] - 1
+                st["equity"] = eq_new
+            row[f"nav_{name}"] = st["equity"] / notional
+            row[f"equity_{name}"] = round(st["equity"])
+            row[f"invested_{name}"] = round(invested_now)
+            row[f"n_pos_{name}"] = len(hold_s)
+            row[f"ret_{name}"] = round(ret, 5)
+            st["prev_date"], st["prev_hold"] = dstr, hold_s
 
-        if prev_date is None:
-            ret = 0.0
-        else:
-            # 期初(prev)持仓的价格 P&L
-            pnl = 0.0
-            for c, v in prev_hold.items():
-                p0 = price_on(c, prev_date)
-                p1 = price_on(c, dstr)
-                if not np.isnan(p0) and not np.isnan(p1):
-                    pnl += v["vol"] * (p1 - p0)
-            prev_invested = 0.0
-            for c, v in prev_hold.items():
-                p = price_on(c, prev_date)
-                if not np.isnan(p):
-                    prev_invested += v["vol"] * p
-            cash = max(0.0, equity - prev_invested)
-            days = (pd.Timestamp(dstr) - pd.Timestamp(prev_date)).days
-            interest = cash * CASH_YIELD * days / 365
-            # 换手手续费(期初vs期末持仓变动 × 期末价的近似)
-            traded = 0.0
-            for c in set(prev_hold) | set(hold):
-                p1 = price_on(c, dstr)
-                if np.isnan(p1):
-                    continue
-                v0 = prev_hold.get(c, {}).get("vol", 0)
-                v1 = hold.get(c, {}).get("vol", 0)
-                traded += abs(v1 - v0) * p1
-            fee = traded * COMMISSION
-            equity_new = equity + pnl + interest - fee
-            ret = equity_new / equity - 1
-            equity = equity_new
-
-        rows.append({
-            "date": pd.Timestamp(dstr), "nav": equity / NOTIONAL, "equity": round(equity),
-            "invested": round(invested_now), "invested_pct": round(invested_now / equity * 100, 1),
-            "n_pos": len(hold), "ret": round(ret, 5),
+        eq_all = state["a"]["equity"] + state["cb"]["equity"]
+        inv_all = row["invested_a"] + row["invested_cb"]
+        nav_all = eq_all / (NOTIONAL + NOTIONAL_CB)
+        row["nav_combined"] = nav_all
+        row["equity_combined"] = round(eq_all)
+        row["invested_combined"] = round(inv_all)
+        row["n_pos_combined"] = row["n_pos_a"] + row["n_pos_cb"]
+        row["ret_combined"] = (round(nav_all / prev_nav_all - 1, 5)
+                               if prev_nav_all is not None else 0.0)
+        prev_nav_all = nav_all
+        # 兼容旧列: nav=股票腿(1M notional, 已剔除CB), 不再混入CB盈亏
+        row.update({
+            "nav": row["nav_a"], "equity": row["equity_a"],
+            "invested": row["invested_a"],
+            "invested_pct": round(row["invested_a"] / row["equity_a"] * 100, 1),
+            "n_pos": row["n_pos_a"], "ret": row["ret_a"],
         })
-        prev_date, prev_hold = dstr, hold
+        rows.append(row)
+    for r in rows:
+        r.pop("_prev_nav_all", None)
 
     # 护栏: 汇总兜底价过期告警(只在有真问题时吵, 不静默)
     if warnings:
@@ -245,14 +279,19 @@ def main():
     if df.empty:
         print("无法建NAV(缺快照或本地价)"); return
     print("\n" + "=" * 72)
-    print("  QMT 实盘 NAV (mark-to-market, 100万notional口径)")
+    print("  QMT NAV (分腿 mark-to-market: 股票1M / CB 600k / 合计1.6M)")
     print("=" * 72)
     show = df.copy()
     show["date"] = show["date"].dt.date
     show["ret"] = (show["ret"] * 100).round(2).astype(str) + "%"
     print(show.to_string(index=False))
-    print("\n── 绩效(口径见脚本docstring, 样本极短仅供参考) ──")
+    print("\n── 股票腿绩效(1M, 口径见脚本docstring, 样本极短仅供参考) ──")
     for k, v in metrics(df).items():
+        print(f"  {k}: {v}")
+    comb = df[["date", "nav_combined", "ret_combined"]].rename(
+        columns={"nav_combined": "nav", "ret_combined": "ret"})
+    print("\n── 组合绩效(股票1M+CB 600k=1.6M) ──")
+    for k, v in metrics(comb).items():
         print(f"  {k}: {v}")
     print(f"\nNAV已存 → {NAV_FILE}")
 
