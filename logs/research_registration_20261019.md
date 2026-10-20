@@ -207,9 +207,12 @@
   - **H2 大宗 PASS（负漂移）**：−0.4954%/t=−6.91；OOS −0.4633%/t=−4.27；
     N=18,851/1,823 日；成本敏感性同向。**落地=回避规则**（事件后 5 日不买/不持有），
     不是做空策略。
-  - 部署前必须先做**组合层 overlay 预注册**（pool30 双周调仓 + 大宗回避过滤，
-    同引擎/同日程 A-B），并加**市值/流动性中性对照**——本轮只证明事件层负漂移，
-    不证明组合层增益，且负漂移可能含小盘/低流动性风格成分。
+  - **组合层 overlay 已测（2026-10-20）：FAIL，方向关闭**。预注册
+    `logs/prereg_block_filter_overlay_20261020.md`；重叠 113/5,510 槽（2.05%）、
+    78/186 调仓日；50万/组全期 Δ年化 **+0.09pp**、配对 bootstrap **t=0.32**
+    （<1×SE）；无约束 +0.10pp；OOS +0.57/+0.77 仅描述。按预注册判据 1/5 FAIL →
+    不部署、不调窗口/阈值；事件层 PASS 仅保留为研究记录。
   - 产出：`logs/unlock_block_event_study.json` / `logs/unlock_block_returns.csv` /
-    `.log`；原始事件 parquet 在 `data_store/meta/`（as_of=2026-10-19）。
+    `.log`；overlay `logs/block_filter_overlay_20261020.json` / `.log`；
+    原始事件 parquet 在 `data_store/meta/`（as_of=2026-10-19）。
 - 累计检验披露：本家族 N=2；历史 R1 N=3、CB 下修 N=3；账本序号 N=50/51。

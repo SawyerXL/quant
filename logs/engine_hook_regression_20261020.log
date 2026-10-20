@@ -1,0 +1,15 @@
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+面板 1957天×5394只, 调仓日 188个
+
+资金/组                         年化     夏普       回撤     跳票
+────────────────────────────────────────────────────────────
+无约束(无限可分)              无约束(无限可分)              年化  +4.59% 夏普  0.38 回撤  -30.17% 跳票     0 ⚠破15%熔断线
+lot 50万/组              年化  +2.55% 夏普  0.29 回撤  -21.72% 跳票   630 ⚠破15%熔断线
+lot 100万/组             年化  +2.97% 夏普  0.30 回撤  -26.19% 跳票   310 ⚠破15%熔断线
+lot 150万/组             年化  +3.39% 夏普  0.33 回撤  -27.88% 跳票   224 ⚠破15%熔断线
+lot 200万/组             年化  +4.07% 夏普  0.37 回撤  -27.49% 跳票   186 ⚠破15%熔断线
+lot 300万/组             年化  +3.87% 夏普  0.35 回撤  -29.41% 跳票   130 ⚠破15%熔断线
+lot 500万/组             年化  +4.30% 夏普  0.37 回撤  -29.38% 跳票    67 ⚠破15%熔断线
+
+as_of=2026-10-19, pool30, 双周调仓(实盘日程), shift=-0.03, 现金1.4%+limit_gate, 无熔断纯画像

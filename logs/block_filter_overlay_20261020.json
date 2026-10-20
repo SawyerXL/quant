@@ -1,0 +1,105 @@
+{
+  "prereg": "logs/prereg_block_filter_overlay_20261020.md",
+  "as_of": "2026-10-19",
+  "events": 25662,
+  "exclude_pairs": 12360,
+  "exclude_dates": 281,
+  "arms": {
+    "full_lot50": {
+      "baseline": {
+        "ann": 2.44,
+        "sharpe": 0.28,
+        "dd": -21.9,
+        "lot_skips": 639,
+        "trades": 3988
+      },
+      "filtered": {
+        "ann": 2.53,
+        "sharpe": 0.29,
+        "dd": -21.71,
+        "lot_skips": 631,
+        "trades": 3981
+      },
+      "diff": {
+        "ann_pp": 0.09,
+        "sharpe": 0.01,
+        "dd_pp": 0.19
+      },
+      "bootstrap": {
+        "months": 94,
+        "mean_ann": 0.000708094598082594,
+        "se_ann": 0.002225121143487977,
+        "t": 0.31822743680940624
+      }
+    },
+    "full_uncon": {
+      "baseline": {
+        "ann": 4.36,
+        "sharpe": 0.37,
+        "dd": -30.23,
+        "lot_skips": 0,
+        "trades": 4925
+      },
+      "filtered": {
+        "ann": 4.46,
+        "sharpe": 0.38,
+        "dd": -29.48,
+        "lot_skips": 0,
+        "trades": 4903
+      },
+      "diff": {
+        "ann_pp": 0.1,
+        "sharpe": 0.01,
+        "dd_pp": 0.75
+      },
+      "bootstrap": {
+        "months": 94,
+        "mean_ann": 0.0010418403575078786,
+        "se_ann": 0.0020308723563585793,
+        "t": 0.5130013977717105
+      }
+    },
+    "oos_lot50": {
+      "baseline": {
+        "ann": -3.2,
+        "sharpe": -0.46,
+        "dd": -14.84,
+        "lot_skips": 63,
+        "trades": 1750
+      },
+      "filtered": {
+        "ann": -2.63,
+        "sharpe": -0.37,
+        "dd": -12.98,
+        "lot_skips": 60,
+        "trades": 1750
+      },
+      "diff": {
+        "ann_pp": 0.57,
+        "sharpe": 0.09,
+        "dd_pp": 1.86
+      }
+    },
+    "oos_uncon": {
+      "baseline": {
+        "ann": -3.34,
+        "sharpe": -0.43,
+        "dd": -15.34,
+        "lot_skips": 0,
+        "trades": 1800
+      },
+      "filtered": {
+        "ann": -2.57,
+        "sharpe": -0.32,
+        "dd": -14.12,
+        "lot_skips": 0,
+        "trades": 1795
+      },
+      "diff": {
+        "ann_pp": 0.77,
+        "sharpe": 0.11,
+        "dd_pp": 1.22
+      }
+    }
+  }
+}

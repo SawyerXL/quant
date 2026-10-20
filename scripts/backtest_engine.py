@@ -56,18 +56,26 @@ def limit_status(panel, idx, code):
     return None
 
 
-def apply_filters(pool_codes, panel, idx, config, return_tags=False):
+def apply_filters(pool_codes, panel, idx, config, return_tags=False,
+                  exclude=None, held=None):
     """
     三层漏斗过滤。
     return_tags: 若为True，返回 (codes_list, {code: is_overheated}) 元组
+    exclude/held: 可选排除集合(2026-10-20 overlay钩子, 默认None=现状)。
+    只排除"非持仓"的候选(=不新买), 已持仓不受影响(不强制卖出)。
     """
+    ex = exclude or set()
+    held = held or set()
     if idx < 65:
-        codes = pool_codes[:min(len(pool_codes), config.pool_size)]
+        codes = [c for c in pool_codes if not (c in ex and c not in held)]
+        codes = codes[:min(len(codes), config.pool_size)]
         return (codes, {c: False for c in codes}) if return_tags else codes
 
     eligible = []
     tags = {}
     for code in pool_codes:
+        if code in ex and code not in held:
+            continue
         if code not in panel.columns:
             continue
         cl = panel[code]
@@ -137,7 +145,7 @@ def apply_filters(pool_codes, panel, idx, config, return_tags=False):
     return selected
 
 
-def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, open_panel=None, cash_asset_ret=None, pit_members=None, universe_members=None):
+def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, open_panel=None, cash_asset_ret=None, pit_members=None, universe_members=None, exclude_map=None):
     """
     主回测引擎。open_panel 可选(ma10_exit_delay=True 时用于次日开盘卖价)。
     cash_asset_ret: 现金资产的日收益序列(如国债ETF), 传入则现金部分按该资产计收益
@@ -549,8 +557,11 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
                 # 重入冷却: MA10退出的票N日内不买回
                 if getattr(config, "ma10_reentry_cool", 0) > 0 and i >= config.min_bars:
                     pool = [c for c in pool if cooldown_until.get(c, -1) <= i]
-                selected, sel_tags = apply_filters(pool, panel, i, config, return_tags=True)
                 old_set = set(cur_weights.keys())
+                exclude = exclude_map.get(date_str, set()) if exclude_map else None
+                selected, sel_tags = apply_filters(
+                    pool, panel, i, config, return_tags=True,
+                    exclude=exclude, held=old_set)
                 n = min(len(selected), config.pool_size)
                 # rank buffer: 旧持仓排名在池子规模×mult 以内者保留(进N出N×mult)
                 # 2026-09-02 修复: old_set原先在此块之后定义, 开启即NameError

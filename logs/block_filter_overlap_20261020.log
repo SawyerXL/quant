@@ -1,0 +1,33 @@
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+/root/quant/scripts/block_filter_overlap_audit.py:55: FutureWarning: The default fill_method='pad' in DataFrame.pct_change is deprecated and will be removed in a future version. Either fill in any non-leading NA values prior to calling pct_change or specify 'fill_method=None' to not fill NA values.
+  ret = panel.pct_change()
+面板 1957天×5193只
+大宗事件(过滤+去重) 20300 条, 3690 只
+            n_sel      n_excl
+count  186.000000  186.000000
+mean    29.623656    0.607527
+std      2.178092    0.877187
+min     12.000000    0.000000
+25%     30.000000    0.000000
+50%     30.000000    0.000000
+75%     30.000000    1.000000
+max     30.000000    5.000000
+总买入槽 5510; 被过滤 113 (2.05%)
+有过滤的调仓日 78/186
+      date  n_sel  n_excl                 excl
+2024-11-14     29       3 000625,002230,688008
+2024-12-16     30       2        603019,002156
+2024-12-30     30       2        300059,300033
+2025-01-14     30       1               300059
+2025-02-17     30       1               301236
+2025-06-16     30       1               300085
+2025-06-27     30       1               300085
+2025-08-14     30       1               300274
+2025-09-29     30       2        603986,600030
+2025-11-14     30       2        603986,300059
+2025-12-15     30       1               300750
+2025-12-30     30       1               300750
+2026-01-16     30       1               002463
+2026-02-10     30       2        688981,601012
+2026-03-16     30       2        300017,000657
