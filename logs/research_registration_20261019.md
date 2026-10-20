@@ -253,3 +253,22 @@
   杠杆不改 t。**候选2关闭**。
 - 卫星候选1/2 均 FAIL；候选3（CB 激进/长波动率）预期更低或负；
   **64% 仍无可行路径**。卫星仍在研究阶段，无真钱；核心 40/60 与 15% 线未动。
+
+---
+
+## 新 edge 搜索（2026-10-20，用户要求"找真正的新 edge"）
+
+| 候选 | 数据 | 机制 | 结果 |
+|---|---|---|---|
+| N=57 正向业绩预告漂移（预增） | akshare `stock_yjyg_em` 45,401 事件 | 预告披露+反应不足 | **FAIL**：均值≈0/中位−1.96%/IS+0.85%·OOS−1.33%（符号翻转）；方向关闭 |
+| N=58 重要股东增持（corp≥0.1%） | `shareholder_changes.parquet` 增持 13,016 | 内部人增持=正面信息 | **FAIL（反向）**：均值−0.556%/t−1.92；次级 −0.614%/t−3.50；增持=护盘/困境信号；方向关闭 |
+| **N=59 重要股东减持（corp≥0.1%）** | 同上，减持 75,356 | 供给冲击+知情卖出 | **PASS**：10,857 事件，20 日净超额 **−0.514%/t_day −2.90**，OOS **−0.767%/t−3.23**，60 日 −1.287%/t−4.85；MDE 0.50%；**落地=20 日回避规则** |
+| N=60 减持回避 × pool30 overlay | 重叠 117/5,510 槽（2.12%），85/186 日 | 组合层落地 | **FAIL**：50万/组 Δ年化 **+0.10pp**、bootstrap **t=0.30**；OOS +0.49pp 仅描述；事件层 PASS 不转化为组合层增益；方向关闭（留作人工风险提示） |
+
+- 产出：脚本 `fetch_forecast_events.py` / `pead_forecast_study.py` /
+  `fetch_shareholder_changes.py` / `shareholder_increase_study.py` /
+  `shareholder_decrease_study.py` / `shareholder_decrease_overlap_audit.py` /
+  `backtest_decrease_filter_overlay.py`；预注册 4 份；结果 JSON/日志/CSV。
+- 纪律：每个候选预注册先锁、OOS 仅一次、阈值不网格；FAIL 也入账。
+- **注**：N=59 是首个通过预注册的事件层新 edge；但它只是**回避规则**，
+  不是 64% 收益引擎；overlay 未过前不部署，核心 40/60 与 15% 线不动。

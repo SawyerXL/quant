@@ -1,0 +1,14 @@
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+panel 2932天×5199只
+events 13473, 3390 只
+exclude_map 284 日, 25892 对
+full_lot50 base {'ann': 2.44, 'sharpe': 0.28, 'dd': -21.9} filt {'ann': 2.54, 'sharpe': 0.29, 'dd': -20.86} diff {'ann_pp': 0.1, 'sharpe': 0.01, 'dd_pp': 1.04}
+full_uncon base {'ann': 4.36, 'sharpe': 0.37, 'dd': -30.23} filt {'ann': 4.54, 'sharpe': 0.38, 'dd': -29.84} diff {'ann_pp': 0.18, 'sharpe': 0.01, 'dd_pp': 0.39}
+oos_lot50 base {'ann': -3.2, 'sharpe': -0.46, 'dd': -14.84} filt {'ann': -2.71, 'sharpe': -0.38, 'dd': -13.47} diff {'ann_pp': 0.49, 'sharpe': 0.08, 'dd_pp': 1.37}
+oos_uncon base {'ann': -3.34, 'sharpe': -0.43, 'dd': -15.34} filt {'ann': -2.85, 'sharpe': -0.36, 'dd': -15.4} diff {'ann_pp': 0.49, 'sharpe': 0.07, 'dd_pp': -0.06}
+-> logs/shareholder_decrease_overlay_20261020.json

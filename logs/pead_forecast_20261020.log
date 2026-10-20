@@ -1,0 +1,19 @@
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+/root/quant/scripts/pead_forecast_study.py:90: FutureWarning: The default fill_method='pad' in DataFrame.pct_change is deprecated and will be removed in a future version. Either fill in any non-leading NA values prior to calling pct_change or specify 'fill_method=None' to not fill NA values.
+  ret = cl.pct_change()
+forecast events 45401
+panel 1957天×5193只
+primary 预增 13486; secondary positive 23856
+primary: counts20 {'events': 11670, 'no_entry': 1716, 'no_exit': 0, 'limit_up': 68, 'limit_dn': 32, 'jump': 0, 'used': 11670}
+  all: n=11670 days=892 mean=-0.003403696201036199% median=-1.962587296458182% win=42.030848329048844% t_day=1.2280555476578574 t_stock=-1.0479114685730064
+  IS: n=7109 days=552 mean=0.8448522684922012% median=-1.466358776644264% win=44.61949641299761% t_day=1.779075995646448 t_stock=2.0342864602161117
+  OOS: n=4561 days=340 mean=-1.3255373627224623% median=-2.7338759213369483% win=37.99605349704012% t_day=-0.08370440449085109 t_stock=-5.163006118003941
+  60d: {'n': 10490, 'n_days': 863, 'n_codes': 3389, 'mean_pct': 0.6912332997588833, 'median_pct': -3.404876440100489, 'win_pct': 41.258341277407055, 'sd_pct': 24.627196079961138, 'daily_sd_pct': 23.412234677828685, 't_day': 2.242490497824574, 't_stock': -1.3903041843574322}
+secondary: counts20 {'events': 19471, 'no_entry': 4215, 'no_exit': 0, 'limit_up': 92, 'limit_dn': 78, 'jump': 0, 'used': 19471}
+  all: n=19471 days=1137 mean=0.6160485553746163% median=-1.682551060582185% win=43.099994864156955% t_day=3.4260699383754263 t_stock=2.3898467853752687
+  IS: n=12025 days=685 mean=1.6678124990159433% median=-1.221739601654515% win=45.313929313929314% t_day=4.601927995769575 t_stock=5.8113113995475505
+  OOS: n=7446 days=452 mean=-1.0825092504656952% median=-2.3824917122368214% win=39.5245769540693% t_day=-2.974889576025723 t_stock=-5.857479883661197
+  60d: {'n': 17697, 'n_days': 1108, 'n_codes': 4280, 'mean_pct': 1.3710877067257772, 'median_pct': -3.0162598009056403, 'win_pct': 42.204893484771425, 'sd_pct': 26.498439285903913, 'daily_sd_pct': 35.999677503936276, 't_day': 3.7759860784504777, 't_stock': 2.972343455257368}
+MDE(2.8*SE, from event SD): 1.57
+criteria {'1_mean_t': False, '2_oos': False, '3_n': True, '4_mde': False} verdict FAIL
