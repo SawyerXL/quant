@@ -8338,3 +8338,19 @@ IC0 1.86pp / IM0 4.02pp / IF0 1.50pp / IH0 1.42pp（均 ≤5% 可判读）。
   样本仅 92 天，年化/夏普仅供参考。
 - **熔断 15% 不受影响**：trader `_build_gateway` 按 track 名义资金 + `_in_scope`
   分腿计算，本修正只改报告口径。工件 `logs/nav_tracker_fix_20261020.md`。
+
+## 九十轮：健康行 + Windows 代码部署核查（2026-10-20 20:54）
+
+- **健康行**：`alerts=[]`；隧道 up；bar fresh（10-20）；锁 `null`（已解锁）；
+  live_reconcile ok（25 CB + 511360，implementation=1.0，无 missing/extra）；
+  stock_leg_pos=0、sig_regime=bear；快照 15:05 ok；cb_unknown_recent=0。
+- **但 win_sync 暴露部署滞后**：Windows HEAD **efb9da0**，落后 Linux 10 个提交
+  → **负持仓守卫（829e05a）未部署**。`Quant-Git-Sync` 失败原因：Windows 有
+  **未跟踪** 的 `scripts/collect_tick_daily.py`，与传入提交冲突、merge 中止。
+  处置：备份到 `H:\quant\logs\collect_tick_daily_backup_20261020.py` → 删除未跟踪
+  文件 → 重跑 `Quant-Git-Sync` → Windows HEAD **37b6c87**；验证
+  `_scoped_positions`（1 定义 + 3 调用）已在 Windows `execution/trader.py`；
+  采集脚本与 .bat 在场，`lastClose` 字段在场。
+- `audit="?"`（单位一致性日志缺失）——健康行未告警，属**小盲区**，数据日更与
+  对账均正常。
+- F2 券商对账单：Windows 全盘搜索无文件 → 仍为外部待办。
