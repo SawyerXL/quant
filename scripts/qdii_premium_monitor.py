@@ -43,10 +43,26 @@ def latest_navs():
     return out
 
 
+def subscription_usable():
+    """QDII 联接/指数基金：开放申购或限大额但日额度>=1000元，才算有可用通道。"""
+    try:
+        d = ak.fund_purchase_em()
+        m = d[d["基金简称"].astype(str).str.contains(
+            "纳斯达克|纳指|标普500", na=False)].copy()
+        m["日累计限定金额"] = pd.to_numeric(m["日累计限定金额"], errors="coerce")
+        ok = m[(m["申购状态"] == "开放申购") |
+               ((m["申购状态"] == "限大额") & (m["日累计限定金额"] >= 1000))]
+        return ok[["基金代码", "基金简称", "申购状态",
+                   "日累计限定金额", "手续费"]].to_dict("records")
+    except Exception as e:
+        return [{"err": str(e)[:150]}]
+
+
 def main():
     navs = latest_navs()
     res = {"checked_at": date.today().isoformat(), "threshold": THRESH,
-           "etfs": {}, "alert": False}
+           "etfs": {}, "alert": False,
+           "subscription_usable": subscription_usable()}
     for code, sym in CODES.items():
         try:
             d = ak.fund_etf_hist_sina(symbol=sym)
