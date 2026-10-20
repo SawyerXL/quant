@@ -36,6 +36,7 @@ _BOARD_BANDS = {("60", "00"): 0.10, ("30", "68"): 0.20, ("8", "4", "92"): 0.30}
 # 53 部撤/54 已撤/56 已成/57 废单 = 终态。保守口径: 除终态外都算未终态
 # (多算=少下单, 漏算=重复下单, 后者危险)。
 _TERMINAL_ORDER_STATUS = {53, 54, 56, 57}
+_NEG_ALERTED = set()   # 负持仓伪影告警去重(进程内)
 
 
 def _norm(code) -> str:
@@ -150,6 +151,29 @@ class Trader:
 
     # ── 内部执行逻辑 ─────────────────────────────────────────────────
 
+    def _scoped_positions(self, strategy_id: str) -> dict:
+        """本 track 的有效持仓；负 volume=仿真伪影，按 0 持仓隔离并告警。
+
+        2026-10-20 实锤：002028 -399 股（cost 204.08、mv -44,923）来自早于考试日
+        的仿真卖空。负持仓会让 NAV/cash 虚高，且目标含该票时会多买 |volume| 股补券；
+        账户本身无法“修正”，只能在执行层隔离。
+        """
+        raw = self.client.get_positions()
+        neg = {_norm(k): v for k, v in raw.items()
+               if self._in_scope(k, strategy_id) and v.get("volume", 0) < 0}
+        if neg:
+            logger.error(f"[{strategy_id}] 负持仓伪影已隔离(按0持仓): {neg}")
+            key = (strategy_id, tuple(sorted(neg)))
+            if key not in _NEG_ALERTED:
+                _NEG_ALERTED.add(key)
+                try:
+                    send_alert(f"[{strategy_id}] 负持仓伪影: {list(neg)[:5]} "
+                               f"(已按0持仓处理, 不补券)", level="error")
+                except Exception:
+                    pass
+        return {_norm(k): v for k, v in raw.items()
+                if self._in_scope(k, strategy_id) and v.get("volume", 0) > 0}
+
     def _build_gateway(self, strategy_id: str, capital: float) -> tuple[RiskGateway, dict]:
         """构建风控网关（2026-09-02 修复: 百分比口径改按track名义资金计算）。
 
@@ -162,8 +186,7 @@ class Trader:
         污染值永久毒化熔断线。
         """
         account   = self.client.get_account_info()
-        positions = {_norm(k): v for k, v in self.client.get_positions().items()
-                     if self._in_scope(k, strategy_id)}
+        positions = self._scoped_positions(strategy_id)
         mv_total  = sum(p.get("market_value", 0) for p in positions.values())
         cost_total = sum(p.get("volume", 0) * p.get("cost_price", 0)
                          for p in positions.values())
@@ -203,8 +226,7 @@ class Trader:
         trader, "拦截0笔"=豁免清单为空(闸门十四第八例)。豁免码与
         scripts/cash_sweep.py BOND_ETF 同源, 改动须同步。
         """
-        positions = {_norm(k): v for k, v in self.client.get_positions().items()
-                     if self._in_scope(k, strategy_id)}
+        positions = self._scoped_positions(strategy_id)
         exempted = [c for c in positions if c in BEAR_EXEMPT_CODES]
         positions = {c: v for c, v in positions.items() if c not in BEAR_EXEMPT_CODES}
         ref_prices = {c: float(p.get("cost_price", 0)) for c, p in positions.items()}
@@ -267,9 +289,7 @@ class Trader:
         """
         def _norm(c):
             return str(c).split(".")[0]
-        raw_positions = self.client.get_positions()
-        positions = {_norm(k): v for k, v in raw_positions.items()
-                     if self._in_scope(k, strategy_id)}
+        positions = self._scoped_positions(strategy_id)
         try:
             today_orders = self.client.get_today_orders() or []
             rejected_buys = {
@@ -402,9 +422,7 @@ class Trader:
         # 2026-09-01 两次事故根因: key格式错位导致diff把持仓当0 → 重复下单
         def _norm(c):
             return str(c).split(".")[0]
-        raw_positions = self.client.get_positions()
-        positions = {_norm(k): v for k, v in raw_positions.items()
-                     if self._in_scope(k, strategy_id)}
+        positions = self._scoped_positions(strategy_id)
         # 成交回报延迟修正: 未终态委托的未成交净额并入持仓口径
         # (已下未回报的买单不再被当缺失)。2026-09-03 修复: 原把废单(57)/
         # 已撤/全成单的整单量都计入 → 32笔废单被当成"已买入" → 重跑时

@@ -178,3 +178,44 @@ class TestLimitPriceEnforcement:
         gw = self._limit_gw({"000001": {"up": 11.0, "down": 9.0}})
         ok, msg = gw.check("track_a", "000001", "sell", 100, 9.0)
         assert not ok and "跌停" in msg
+
+
+class TestNegativePositionGuard:
+    """2026-10-20: 仿真户负持仓伪影(002028 -399)必须按 0 持仓隔离。"""
+
+    def _mock_client(self, _mock_env, monkeypatch, positions):
+        import execution.trader as trader_mod
+        client = _mock_env["client"]
+        client._positions = positions
+        monkeypatch.setattr(trader_mod, "send_alert", lambda *a, **k: None)
+        return client
+
+    def test_gateway_excludes_negative_holding(self, _mock_env, monkeypatch):
+        from execution.trader import Trader
+        self._mock_client(_mock_env, monkeypatch, {
+            "511360.SH": {"volume": 6100, "cost_price": 113.9233918,
+                          "market_value": 695815.0},
+            "002028.SZ": {"volume": -399, "cost_price": 204.0772,
+                          "market_value": -44923.41},
+        })
+        gw, _ = Trader()._build_gateway("track_a", 1_000_000)
+        assert "002028" not in gw.state["positions"], "负持仓不得进入风控持仓"
+        assert gw.state["cash"] == pytest.approx(1_000_000 - 695815.0, abs=1)
+        assert gw.state["current_nav"] == pytest.approx(
+            1_000_000 + (695815.0 - 6100 * 113.9233918), abs=1)
+
+    def test_plan_target_not_inflated_by_negative(self, _mock_env, monkeypatch):
+        from execution.trader import Trader
+        self._mock_client(_mock_env, monkeypatch, {
+            "002028.SZ": {"volume": -399, "cost_price": 204.0772,
+                          "market_value": -44923.41},
+        })
+        sig = {"holdings": ["002028"], "shares": {"002028": 1000},
+               "prices": {"002028": 112.6}, "sell": [], "buy": [],
+               "capital": 1_000_000, "regime": "bull"}
+        plan = Trader().compute_plan("track_a", sig)
+        buys = [b for b in plan["buys"] if b["code"] == "002028"]
+        assert len(buys) == 1 and buys[0]["shares"] == 1000, \
+            "-399 伪影不得使买入差量变成 1399 股"
+        assert not any(s["code"] == "002028" for s in plan["sells"]), \
+            "负持仓不得生成卖单"

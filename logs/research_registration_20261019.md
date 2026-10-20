@@ -301,3 +301,20 @@
   存在的仿真卖空伪影；快照导出用 `volume>0` 过滤 → 负持仓不可见（盲区）。
   影响 `track_a` NAV/cash 与未来若目标含 002028 的多买 399 股；下一股票调仓
   10-29 前需加负持仓守卫。详见 `logs/residual_audit_20261020.md`。
+
+---
+
+## 无法检验项补齐（2026-10-20 下午）
+
+- 计划：`logs/plan_intraday_tape_testing_20261020.md`（数据可行性实测 + 三轨）。
+- **N=64 入场时点（执行层）— FAIL**：QMT 5 分钟，400 只 CSI800，95,754 股票日；
+  14:30 vs 09:45 的 20 日配对差 **−0.0069%/t_day −0.17**（pool30 +0.119%/t0.96；
+  OOS −0.003%/t−0.04）；14:55 vs 14:30 +0.0084%/t0.45；MAE 中位 09:45 −0.593% vs
+  14:30 −0.147%（尾盘降低日内暴露=机械通过），收益无优势 → **执行时点不改**。
+  预注册 `logs/prereg_entry_timing_5m_20261020.md`。
+- **N=65 盘口前向（未出数）**：tick 仅当日可得，历史 L2 不存在；已建 Windows
+  每日 15:10 采集任务 `Quant_Tick_Collect`（200 只 CSI800，三日快照五档），
+  预注册 `logs/prereg_tape_spoofing_forward_20261020.md`；40 个交易日后判读。
+  **隐形盘本体不可观测**，只测撤单/成交/aggressor 代理。
+- 数据：`data_store/intraday/win5min`（400 只，约 171MB，2025-10-17~2026-10-20）；
+  每日 tick 落 Windows `H:\quant\data_store\intraday\tick\`。
