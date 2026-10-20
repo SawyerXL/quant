@@ -33,8 +33,8 @@ def one(code, day):
     df = df.reset_index()
     tm = df["time"].astype(str) if "time" in df.columns else df.iloc[:, 0].astype(str)
     out = pd.DataFrame({"code": code, "time": tm})
-    for c in ("lastPrice", "volume", "amount", "pvolume", "tickvol",
-              "transactionNum"):
+    for c in ("lastPrice", "lastClose", "open", "high", "low", "volume",
+              "amount", "pvolume", "tickvol", "transactionNum"):
         out[c] = pd.to_numeric(df[c], errors="coerce") if c in df.columns else np.nan
     for i in range(5):
         out["a" + str(i + 1)] = [flat_list(x)[i] for x in df["askPrice"]] if "askPrice" in df.columns else np.nan
