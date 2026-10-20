@@ -117,7 +117,7 @@ def main():
         day = load_day(p)
         if day.empty:
             continue
-        day_ev, grids = [], {}
+        day_ev, day_imb, grids = [], [], {}
         for code, g in day.groupby("code"):
             ev, gg = stock_events(g)
             day_ev.extend(ev)
@@ -139,11 +139,11 @@ def main():
             tot = agg["buy"] + agg["sell"]
             agg = agg[tot > 0]
             if len(agg):
-                imb.extend([(code, int(b), float((r.buy - r.sell) / (r.buy + r.sell)))
-                            for b, r in agg.iterrows()])
+                day_imb.extend([(code, int(b), float((r.buy - r.sell) / (r.buy + r.sell)))
+                                for b, r in agg.iterrows()])
         # 当日分钟网格 -> 同一时刻的观察池等权 30 分钟收益（横截面超额基准）
-        if day_ev and grids:
-            d0 = pd.Timestamp(day_ev[0]["t"]).normalize()
+        if grids:
+            d0 = pd.Timestamp(day["dt"].iloc[0]).normalize()
             grid = pd.DataFrame(grids).reindex(
                 pd.date_range(d0 + pd.Timedelta(hours=9, minutes=30),
                               d0 + pd.Timedelta(hours=15), freq="1min")).ffill()
@@ -152,6 +152,14 @@ def main():
                 t0 = pd.Timestamp(r["t"]).floor("1min")
                 m = mret.get(t0, np.nan)
                 r["ex30"] = (r["ret30"] - m) if np.isfinite(r["ret30"]) else np.nan
+            for code_, b_, im_ in day_imb:
+                t0 = d0 + pd.Timedelta(minutes=b_)
+                s0 = grids[code_].get(t0, np.nan)
+                s1 = grids[code_].get(t0 + pd.Timedelta(minutes=30), np.nan)
+                m = mret.get(t0, np.nan)
+                ex = (s1 / s0 - 1 - m) if (np.isfinite(s0) and np.isfinite(s1)
+                                           and s0 > 0 and np.isfinite(m)) else np.nan
+                imb.append((d0.strftime("%Y-%m-%d"), code_, b_, im_, ex))
         events.extend(day_ev)
     ev = pd.DataFrame(events)
     if len(ev):
@@ -178,14 +186,26 @@ def main():
             ev[(ev.side == "bid") & (ev.kind == "vanished") & ev.lure])
         out["events"]["ask_lure_vanished"] = agg_ev(
             ev[(ev.side == "ask") & (ev.kind == "vanished") & ev.lure])
-    # 内外盘十分位（描述）
+    # 内外盘十分位（按日截面；30 分钟横截面超额）
     if imb:
-        im = pd.DataFrame(imb, columns=["code", "bin", "imb"])
-        im["q"] = pd.qcut(im["imb"], 10, labels=False, duplicates="drop")
-        out["imbalance"] = {str(int(q)): {"n": int(len(g)),
-                                          "imb_mean": float(g["imb"].mean())}
-                            for q, g in im.groupby("q")}
-        out["imbalance_n"] = int(len(im))
+        im = pd.DataFrame(imb, columns=["day", "code", "bin", "imb", "ex30"])
+        im = im.dropna(subset=["ex30"])
+        if len(im):
+            im["q"] = im.groupby("day")["imb"].transform(
+                lambda s: pd.qcut(s, 10, labels=False, duplicates="drop"))
+            dec = im.groupby("q")["ex30"].agg(["mean", "count"])
+            out["imbalance_deciles_pct"] = {
+                int(q): {"mean_pct": float(r["mean"] * 100), "n": int(r["count"])}
+                for q, r in dec.iterrows()}
+            daily = im.groupby(["day", "q"])["ex30"].mean().unstack()
+            if 9 in daily.columns and 0 in daily.columns:
+                sp = (daily[9] - daily[0]).dropna()
+                t = (float(sp.mean() / (sp.std() / np.sqrt(len(sp))))
+                     if len(sp) > 1 and sp.std() > 0 else None)
+                out["imbalance_spread"] = {
+                    "mean_pct": float(sp.mean() * 100),
+                    "n_days": int(len(sp)), "t": t}
+            out["imbalance_n"] = int(len(im))
     with open(OUT_JSON, "w") as f:
         json.dump(out, f, ensure_ascii=False, indent=2, default=str)
     print(json.dumps(out, ensure_ascii=False, indent=1, default=str)[:3500])
