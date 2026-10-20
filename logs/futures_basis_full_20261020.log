@@ -1,0 +1,75 @@
+=== 阶段1: MDE 先行 (判据①前置) ===
+IC0: n=117月 T=9.7年 月基差σ=0.84% TE=2.91% SE=0.93pp MDE(2×SE)=1.86pp → ≤5% 可判读 ✓
+IM0: n=51月 T=4.3年 月基差σ=1.20% TE=4.15% SE=2.01pp MDE(2×SE)=4.02pp → ≤5% 可判读 ✓
+IF0: n=117月 T=9.7年 月基差σ=0.68% TE=2.35% SE=0.75pp MDE(2×SE)=1.50pp → ≤5% 可判读 ✓
+IH0: n=117月 T=9.7年 月基差σ=0.64% TE=2.22% SE=0.71pp MDE(2×SE)=1.42pp → ≤5% 可判读 ✓
+
+结论: 全部合约 MDE ≤5% → 可跑全量
+
+=== 阶段2: 全量臂 (判据①②③④) ===
+IC0 成本基准: α_net=-0.19%/年 ±0.93pp (毛α=-0.09%, 成本=0.09%/年)
+IC0 成本−50%: α_net=-0.14%/年 ±0.93pp (毛α=-0.09%, 成本=0.09%/年)
+IC0 成本+50%: α_net=-0.24%/年 ±0.93pp (毛α=-0.09%, 成本=0.09%/年)
+  IC0 分段α: 2017-2020: -0.00%/年(n=48) | 2021-2024: -0.27%/年(n=48) | 2025-2026: +0.10%/年(n=22)
+  IC0 正交性: vs 股票腿 r=-0.016, vs CB腿 r=-0.030 → ✓
+  IC0 判据: ①α≥MDE ✗ ②正交 ✓ ③成本敏感 ✗
+IM0 成本基准: α_net=-0.10%/年 ±2.00pp (毛α=-0.01%, 成本=0.09%/年)
+IM0 成本−50%: α_net=-0.05%/年 ±2.00pp (毛α=-0.01%, 成本=0.09%/年)
+IM0 成本+50%: α_net=-0.15%/年 ±2.00pp (毛α=-0.01%, 成本=0.09%/年)
+  IM0 分段α: 2022-2024: -0.29%/年(n=30) | 2025-2026: +0.38%/年(n=22)
+  IM0 正交性: vs 股票腿 r=-0.062, vs CB腿 r=0.041 → ✓
+  IM0 判据: ①α≥MDE ✗ ②正交 ✓ ③成本敏感 ✗
+IF0 成本基准: α_net=-0.24%/年 ±0.75pp (毛α=-0.12%, 成本=0.11%/年)
+IF0 成本−50%: α_net=-0.18%/年 ±0.75pp (毛α=-0.12%, 成本=0.11%/年)
+IF0 成本+50%: α_net=-0.30%/年 ±0.75pp (毛α=-0.12%, 成本=0.11%/年)
+  IF0 分段α: 2017-2020: +0.16%/年(n=48) | 2021-2024: -0.16%/年(n=48) | 2025-2026: -0.65%/年(n=22)
+  IF0 正交性: vs 股票腿 r=0.081, vs CB腿 r=0.077 → ✓
+  IF0 判据: ①α≥MDE ✗ ②正交 ✓ ③成本敏感 ✗
+IH0 成本基准: α_net=-0.26%/年 ±0.71pp (毛α=-0.12%, 成本=0.14%/年)
+IH0 成本−50%: α_net=-0.19%/年 ±0.71pp (毛α=-0.12%, 成本=0.14%/年)
+IH0 成本+50%: α_net=-0.33%/年 ±0.71pp (毛α=-0.12%, 成本=0.14%/年)
+  IH0 分段α: 2017-2020: +0.09%/年(n=48) | 2021-2024: -0.08%/年(n=48) | 2025-2026: -0.66%/年(n=22)
+  IH0 正交性: vs 股票腿 r=0.093, vs CB腿 r=0.122 → ✓
+  IH0 判据: ①α≥MDE ✗ ②正交 ✓ ③成本敏感 ✗
+
+=== 判读(机器值) ===
+IC0: 净α=-0.19%/年±0.93pp → 存在✗→逐条看
+IM0: 净α=-0.10%/年±2.00pp → 存在✗→逐条看
+IF0: 净α=-0.24%/年±0.75pp → 存在✗→逐条看
+IH0: 净α=-0.26%/年±0.71pp → 存在✗→逐条看
+
+=== 阶段3: 合约级滚动拼接 (IC/IM, 主连滚跳伪影修正) ===
+  IC1701: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1702: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1703: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1704: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1705: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1706: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1707: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1708: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1709: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1710: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1711: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1712: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1801: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1802: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1803: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1804: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1805: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1806: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1807: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1808: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1809: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1810: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1811: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1812: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1901: 拉取失败 Length mismatch: Expected axis has 0 ele
+  IC1902: 拉取失败 Length mismatch: Expected axis has 0 ele
+IC(拼接): 净α=-0.11%/年±1.08pp 毛α=-0.01% 成本=0.09%/年
+  分段: 2017-2020: -0.08%/年(n=22) | 2021-2024: -0.07%/年(n=48) | 2025-2026: +0.18%/年(n=22)
+  正交: vs股票 r=0.007 vsCB r=-0.034 ✓
+  判据: ①α≥MDE ✗ ②正交 ✓ ③成本敏感 ✗
+IM(拼接): 净α=+0.01%/年±1.41pp 毛α=+0.10% 成本=0.09%/年
+  分段: 2022-2024: +0.04%/年(n=29) | 2025-2026: +0.19%/年(n=22)
+  正交: vs股票 r=-0.044 vsCB r=-0.006 ✓
+  判据: ①α≥MDE ✗ ②正交 ✓ ③成本敏感 ✗

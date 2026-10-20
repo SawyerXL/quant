@@ -130,7 +130,9 @@ def load_contract_splice(idx, start, end, cache_dir="logs/fut_contracts"):
         roll_d = roll_dates.get(d.strftime("%Y-%m"), "2099-12-31")
         nm = pd.Timestamp(d) + pd.offsets.MonthEnd(1)
         code_next = f"{idx}{nm.strftime('%y%m')}"
-        if ds < roll_d:
+        # 换月日当天仍持近月(按收盘价), 次日起持次月——价差跳变计入次月首日
+        # 收益, 才是真实的滚月收益(原实现换月当日直接切次月, 丢失价差)
+        if ds <= roll_d:
             pick = code_cur if code_cur in series else code_next
         else:
             pick = code_next if code_next in series else code_cur
