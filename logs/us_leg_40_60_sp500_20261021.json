@@ -1,0 +1,194 @@
+{
+ "split_day": "2022-03-30",
+ "split_note": "513500 2022-03-30 未复权拆分, 收益置0",
+ "arms": {
+  "SP500_NAV_u0": {
+   "ann_pct": 11.81,
+   "sharpe": 1.401,
+   "dd_pct": -13.99,
+   "n": 1860,
+   "weights": {
+    "s": 0.4,
+    "cb": 0.6,
+    "us": 0.0
+   },
+   "sat5": {
+    "ann_pct": 12.14,
+    "sharpe": 1.425,
+    "dd_pct": -14.36,
+    "n": 1860
+   },
+   "sat5_margin15": 0.64
+  },
+  "SP500_NAV_u100": {
+   "ann_pct": 14.13,
+   "sharpe": 1.709,
+   "dd_pct": -13.52,
+   "n": 1860,
+   "weights": {
+    "s": 0.3,
+    "cb": 0.6,
+    "us": 0.1
+   },
+   "sat5": {
+    "ann_pct": 14.36,
+    "sharpe": 1.715,
+    "dd_pct": -13.91,
+    "n": 1860
+   },
+   "sat5_margin15": 1.09
+  },
+  "SP500_NAV_u125": {
+   "ann_pct": 14.72,
+   "sharpe": 1.767,
+   "dd_pct": -13.37,
+   "n": 1860,
+   "weights": {
+    "s": 0.275,
+    "cb": 0.6,
+    "us": 0.125
+   },
+   "sat5": {
+    "ann_pct": 14.92,
+    "sharpe": 1.77,
+    "dd_pct": -13.78,
+    "n": 1860
+   },
+   "sat5_margin15": 1.22
+  },
+  "SP500_NAV_u150": {
+   "ann_pct": 15.32,
+   "sharpe": 1.821,
+   "dd_pct": -13.25,
+   "n": 1860,
+   "weights": {
+    "s": 0.25,
+    "cb": 0.6,
+    "us": 0.15
+   },
+   "sat5": {
+    "ann_pct": 15.49,
+    "sharpe": 1.822,
+    "dd_pct": -13.66,
+    "n": 1860
+   },
+   "sat5_margin15": 1.34
+  },
+  "SP500_PX_u0": {
+   "ann_pct": 11.81,
+   "sharpe": 1.401,
+   "dd_pct": -13.99,
+   "n": 1860,
+   "weights": {
+    "s": 0.4,
+    "cb": 0.6,
+    "us": 0.0
+   },
+   "sat5": {
+    "ann_pct": 12.14,
+    "sharpe": 1.425,
+    "dd_pct": -14.36,
+    "n": 1860
+   },
+   "sat5_margin15": 0.64
+  },
+  "SP500_PX_u100": {
+   "ann_pct": 14.2,
+   "sharpe": 1.699,
+   "dd_pct": -13.39,
+   "n": 1860,
+   "weights": {
+    "s": 0.3,
+    "cb": 0.6,
+    "us": 0.1
+   },
+   "sat5": {
+    "ann_pct": 14.42,
+    "sharpe": 1.705,
+    "dd_pct": -13.79,
+    "n": 1860
+   },
+   "sat5_margin15": 1.21
+  },
+  "SP500_PX_u125": {
+   "ann_pct": 14.81,
+   "sharpe": 1.755,
+   "dd_pct": -13.21,
+   "n": 1860,
+   "weights": {
+    "s": 0.275,
+    "cb": 0.6,
+    "us": 0.125
+   },
+   "sat5": {
+    "ann_pct": 15.0,
+    "sharpe": 1.759,
+    "dd_pct": -13.62,
+    "n": 1860
+   },
+   "sat5_margin15": 1.38
+  },
+  "SP500_PX_u150": {
+   "ann_pct": 15.43,
+   "sharpe": 1.809,
+   "dd_pct": -13.06,
+   "n": 1860,
+   "weights": {
+    "s": 0.25,
+    "cb": 0.6,
+    "us": 0.15
+   },
+   "sat5": {
+    "ann_pct": 15.59,
+    "sharpe": 1.81,
+    "dd_pct": -13.48,
+    "n": 1860
+   },
+   "sat5_margin15": 1.52
+  }
+ },
+ "mde_vs_u0": {
+  "SP500_NAV_u100": {
+   "delta_ann_pp_same_window": 2.32,
+   "n": 1860,
+   "TE_pct": 2.21,
+   "SE_pp": 0.81,
+   "MDE_pp": 1.6
+  },
+  "SP500_NAV_u125": {
+   "delta_ann_pp_same_window": 2.91,
+   "n": 1860,
+   "TE_pct": 2.73,
+   "SE_pp": 1.0,
+   "MDE_pp": 1.97
+  },
+  "SP500_NAV_u150": {
+   "delta_ann_pp_same_window": 3.51,
+   "n": 1860,
+   "TE_pct": 3.25,
+   "SE_pp": 1.2,
+   "MDE_pp": 2.35
+  },
+  "SP500_PX_u100": {
+   "delta_ann_pp_same_window": 2.39,
+   "n": 1860,
+   "TE_pct": 2.07,
+   "SE_pp": 0.76,
+   "MDE_pp": 1.49
+  },
+  "SP500_PX_u125": {
+   "delta_ann_pp_same_window": 3.0,
+   "n": 1860,
+   "TE_pct": 2.56,
+   "SE_pp": 0.94,
+   "MDE_pp": 1.84
+  },
+  "SP500_PX_u150": {
+   "delta_ann_pp_same_window": 3.62,
+   "n": 1860,
+   "TE_pct": 3.05,
+   "SE_pp": 1.12,
+   "MDE_pp": 2.2
+  }
+ }
+}

@@ -1,5 +1,11 @@
 # QDII ETF 溢价研究（2026-10-20，机器值）
 
+> **2026-10-21 警告：本文"价格年化/NAV 年化"列被未复权份额折算污染**
+> （513100 −80.45%@2022-01-14、159941 −74.66%@2022-07-05、513500
+> −49.18%@2022-03-30），收益类数字**作废**；溢价水平/分位/+22pp 溢价
+> 扩张**不受影响**（px/nav 比值拆分不变）。见
+> `logs/etf_split_contamination_20261021.md`。
+
 数据：NAV 历史 `ak.fund_open_fund_info_em`；二级市场价 `ak.fund_etf_hist_sina`。
 premium = price/NAV − 1。落盘 `data_store/meta/etf_premium_{code}.parquet`、
 `etf_premium_panel.parquet`。
