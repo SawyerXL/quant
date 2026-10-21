@@ -10,6 +10,11 @@
 口径与 V3(backtest_cb_eligibility_arms.py N=10) 完全一致:
   过滤共用 data/cb_select(闸门二十一) / N=10 无价 pop / 补足25只 / 双边0.1%。
 仅两处改变: ①调仓日程 ②pop 时的回收值。面板构建与 V3 同源同过滤。
+
+2026-10-21 增补(snapdelay 臂): 实盘 CB 改为月度后, monthly/nextday 在"1 日
+恰为交易日"的月份用 1 日收盘快照在 1 日调仓=same-bar; snapdelay 把执行放到
+快照日之后的首个交易日(1 日休市→当月首个交易日; 1 日交易→次一交易日), 是
+无前视实盘口径。biweekly 臂保留为 2026-10-21 前的旧实盘对照。
 """
 import sys
 from pathlib import Path
@@ -185,6 +190,14 @@ def run_bt(schedule="monthly", recovery="zero", stats=None, filter_mode="static"
             is_rb = (last_snap_date is not None
                      and last_acted_snap != last_snap_date
                      and last_snap_date.month in (1, 4, 7, 10))
+        if schedule == "snapdelay":
+            # 2026-10-21: 无前视月度日程。快照日(1日)的收盘数据在当日收盘后
+            # 才可用(1日非交易日时=上月末收盘): 执行日必须是快照日**之后**
+            # 的首个交易日。1日休市→当月首个交易日; 1日交易→次一交易日。
+            # monthly/nextday 在1日交易月份用1日收盘快照在1日调仓=same-bar。
+            is_rb = (last_snap_date is not None
+                     and last_acted_snap != last_snap_date
+                     and date > last_snap_date)
 
         if is_rb:
             snap = snapshots[snapshots["snap_date"] == last_snap_date]
@@ -248,7 +261,8 @@ if "--probe" in sys.argv:
                 ("biweekly", "par", "static_suffixfixed"),
                 ("biweekly", "par", "none")]
 else:
-    arm_list = [(s, r, "static") for s in ["monthly", "nextday", "biweekly", "quarterly"]
+    arm_list = [(s, r, "static")
+                for s in ["monthly", "nextday", "snapdelay", "biweekly", "quarterly"]
                 for r in ["zero", "last", "par"]]
 for schedule, recovery, fmode in arm_list:
     if True:
@@ -273,6 +287,7 @@ for schedule, recovery, fmode in arm_list:
 print("\n[解读锚点]")
 print("  monthly_zero = V3 N=10 同构基线(对外参考 1.39 的臂)")
 print("  nextday_zero = 隔离快照日跳过效应(每个快照后首个交易日调仓, 92 次全用)")
+print("  snapdelay_zero = 无前视月度(快照日之后首个交易日; 1日交易→次一交易日, 实盘口径)")
 print("  biweekly_zero vs monthly_zero → Q1 频率不同构的量级(换手/夏普差)")
 print("  zero vs last vs par 同日程内 → Q2 退市全损保守偏差的量级")
 print("  par 臂: 回收=面值100/最后价, 溢价券少收、折价券多收(退市兑付下限近似)")

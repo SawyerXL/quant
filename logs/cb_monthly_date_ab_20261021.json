@@ -1,0 +1,308 @@
+{
+ "as_of": "2026-10-19",
+ "window": "2019-01-01~2026-10-09 (joint)",
+ "40/60 (32万/组)": {
+  "monthly_zero": {
+   "n": 1887,
+   "ann_pct": 9.64,
+   "sharpe": 1.158,
+   "dd_pct": -13.69,
+   "halt15_triggers": 0,
+   "halt15_ann": 9.64,
+   "halt15_dd": -13.69,
+   "halt15_damage_pp": 0.0
+  },
+  "monthly_last": {
+   "n": 1887,
+   "ann_pct": 13.67,
+   "sharpe": 1.565,
+   "dd_pct": -13.69,
+   "halt15_triggers": 0,
+   "halt15_ann": 13.67,
+   "halt15_dd": -13.69,
+   "halt15_damage_pp": 0.0
+  },
+  "monthly_par": {
+   "n": 1887,
+   "ann_pct": 13.56,
+   "sharpe": 1.55,
+   "dd_pct": -13.69,
+   "halt15_triggers": 0,
+   "halt15_ann": 13.56,
+   "halt15_dd": -13.69,
+   "halt15_damage_pp": 0.0
+  },
+  "nextday_zero": {
+   "n": 1887,
+   "ann_pct": 8.89,
+   "sharpe": 1.107,
+   "dd_pct": -13.98,
+   "halt15_triggers": 0,
+   "halt15_ann": 8.89,
+   "halt15_dd": -13.98,
+   "halt15_damage_pp": 0.0
+  },
+  "nextday_last": {
+   "n": 1887,
+   "ann_pct": 12.88,
+   "sharpe": 1.521,
+   "dd_pct": -13.98,
+   "halt15_triggers": 0,
+   "halt15_ann": 12.88,
+   "halt15_dd": -13.98,
+   "halt15_damage_pp": 0.0
+  },
+  "nextday_par": {
+   "n": 1887,
+   "ann_pct": 12.79,
+   "sharpe": 1.506,
+   "dd_pct": -13.98,
+   "halt15_triggers": 0,
+   "halt15_ann": 12.79,
+   "halt15_dd": -13.98,
+   "halt15_damage_pp": 0.0
+  },
+  "snapdelay_zero": {
+   "n": 1887,
+   "ann_pct": 8.64,
+   "sharpe": 1.08,
+   "dd_pct": -13.98,
+   "halt15_triggers": 0,
+   "halt15_ann": 8.64,
+   "halt15_dd": -13.98,
+   "halt15_damage_pp": 0.0
+  },
+  "snapdelay_last": {
+   "n": 1887,
+   "ann_pct": 12.62,
+   "sharpe": 1.494,
+   "dd_pct": -13.98,
+   "halt15_triggers": 0,
+   "halt15_ann": 12.62,
+   "halt15_dd": -13.98,
+   "halt15_damage_pp": 0.0
+  },
+  "snapdelay_par": {
+   "n": 1887,
+   "ann_pct": 12.54,
+   "sharpe": 1.48,
+   "dd_pct": -13.98,
+   "halt15_triggers": 0,
+   "halt15_ann": 12.54,
+   "halt15_dd": -13.98,
+   "halt15_damage_pp": 0.0
+  },
+  "biweekly_zero": {
+   "n": 1887,
+   "ann_pct": 8.3,
+   "sharpe": 1.029,
+   "dd_pct": -14.58,
+   "halt15_triggers": 0,
+   "halt15_ann": 8.3,
+   "halt15_dd": -14.58,
+   "halt15_damage_pp": 0.0
+  },
+  "biweekly_last": {
+   "n": 1887,
+   "ann_pct": 9.02,
+   "sharpe": 1.107,
+   "dd_pct": -14.58,
+   "halt15_triggers": 0,
+   "halt15_ann": 9.02,
+   "halt15_dd": -14.58,
+   "halt15_damage_pp": 0.0
+  },
+  "biweekly_par": {
+   "n": 1887,
+   "ann_pct": 8.96,
+   "sharpe": 1.101,
+   "dd_pct": -14.58,
+   "halt15_triggers": 0,
+   "halt15_ann": 8.96,
+   "halt15_dd": -14.58,
+   "halt15_damage_pp": 0.0
+  },
+  "quarterly_zero": {
+   "n": 1887,
+   "ann_pct": 9.02,
+   "sharpe": 1.107,
+   "dd_pct": -13.69,
+   "halt15_triggers": 0,
+   "halt15_ann": 9.02,
+   "halt15_dd": -13.69,
+   "halt15_damage_pp": 0.0
+  },
+  "quarterly_last": {
+   "n": 1887,
+   "ann_pct": 13.1,
+   "sharpe": 1.52,
+   "dd_pct": -13.69,
+   "halt15_triggers": 0,
+   "halt15_ann": 13.1,
+   "halt15_dd": -13.69,
+   "halt15_damage_pp": 0.0
+  },
+  "quarterly_par": {
+   "n": 1887,
+   "ann_pct": 13.04,
+   "sharpe": 1.507,
+   "dd_pct": -13.69,
+   "halt15_triggers": 0,
+   "halt15_ann": 13.04,
+   "halt15_dd": -13.69,
+   "halt15_damage_pp": 0.0
+  }
+ },
+ "62.5/37.5 (实盘100/60名义)": {
+  "monthly_zero": {
+   "n": 1887,
+   "ann_pct": 7.37,
+   "sharpe": 0.856,
+   "dd_pct": -10.74,
+   "halt15_triggers": 0,
+   "halt15_ann": 7.37,
+   "halt15_dd": -10.74,
+   "halt15_damage_pp": 0.0
+  },
+  "monthly_last": {
+   "n": 1887,
+   "ann_pct": 9.82,
+   "sharpe": 1.107,
+   "dd_pct": -10.46,
+   "halt15_triggers": 0,
+   "halt15_ann": 9.82,
+   "halt15_dd": -10.46,
+   "halt15_damage_pp": 0.0
+  },
+  "monthly_par": {
+   "n": 1887,
+   "ann_pct": 9.76,
+   "sharpe": 1.099,
+   "dd_pct": -10.46,
+   "halt15_triggers": 0,
+   "halt15_ann": 9.76,
+   "halt15_dd": -10.46,
+   "halt15_damage_pp": 0.0
+  },
+  "nextday_zero": {
+   "n": 1887,
+   "ann_pct": 6.91,
+   "sharpe": 0.819,
+   "dd_pct": -10.72,
+   "halt15_triggers": 0,
+   "halt15_ann": 6.91,
+   "halt15_dd": -10.72,
+   "halt15_damage_pp": 0.0
+  },
+  "nextday_last": {
+   "n": 1887,
+   "ann_pct": 9.35,
+   "sharpe": 1.074,
+   "dd_pct": -10.12,
+   "halt15_triggers": 0,
+   "halt15_ann": 9.35,
+   "halt15_dd": -10.12,
+   "halt15_damage_pp": 0.0
+  },
+  "nextday_par": {
+   "n": 1887,
+   "ann_pct": 9.29,
+   "sharpe": 1.066,
+   "dd_pct": -10.12,
+   "halt15_triggers": 0,
+   "halt15_ann": 9.29,
+   "halt15_dd": -10.12,
+   "halt15_damage_pp": 0.0
+  },
+  "snapdelay_zero": {
+   "n": 1887,
+   "ann_pct": 6.75,
+   "sharpe": 0.803,
+   "dd_pct": -10.46,
+   "halt15_triggers": 0,
+   "halt15_ann": 6.75,
+   "halt15_dd": -10.46,
+   "halt15_damage_pp": 0.0
+  },
+  "snapdelay_last": {
+   "n": 1887,
+   "ann_pct": 9.19,
+   "sharpe": 1.058,
+   "dd_pct": -10.14,
+   "halt15_triggers": 0,
+   "halt15_ann": 9.19,
+   "halt15_dd": -10.14,
+   "halt15_damage_pp": 0.0
+  },
+  "snapdelay_par": {
+   "n": 1887,
+   "ann_pct": 9.14,
+   "sharpe": 1.051,
+   "dd_pct": -10.14,
+   "halt15_triggers": 0,
+   "halt15_ann": 9.14,
+   "halt15_dd": -10.14,
+   "halt15_damage_pp": 0.0
+  },
+  "biweekly_zero": {
+   "n": 1887,
+   "ann_pct": 6.55,
+   "sharpe": 0.776,
+   "dd_pct": -11.13,
+   "halt15_triggers": 0,
+   "halt15_ann": 6.55,
+   "halt15_dd": -11.13,
+   "halt15_damage_pp": 0.0
+  },
+  "biweekly_last": {
+   "n": 1887,
+   "ann_pct": 6.99,
+   "sharpe": 0.823,
+   "dd_pct": -11.13,
+   "halt15_triggers": 0,
+   "halt15_ann": 6.99,
+   "halt15_dd": -11.13,
+   "halt15_damage_pp": 0.0
+  },
+  "biweekly_par": {
+   "n": 1887,
+   "ann_pct": 6.95,
+   "sharpe": 0.819,
+   "dd_pct": -11.13,
+   "halt15_triggers": 0,
+   "halt15_ann": 6.95,
+   "halt15_dd": -11.13,
+   "halt15_damage_pp": 0.0
+  },
+  "quarterly_zero": {
+   "n": 1887,
+   "ann_pct": 6.99,
+   "sharpe": 0.82,
+   "dd_pct": -10.54,
+   "halt15_triggers": 0,
+   "halt15_ann": 6.99,
+   "halt15_dd": -10.54,
+   "halt15_damage_pp": 0.0
+  },
+  "quarterly_last": {
+   "n": 1887,
+   "ann_pct": 9.48,
+   "sharpe": 1.075,
+   "dd_pct": -10.48,
+   "halt15_triggers": 0,
+   "halt15_ann": 9.48,
+   "halt15_dd": -10.48,
+   "halt15_damage_pp": 0.0
+  },
+  "quarterly_par": {
+   "n": 1887,
+   "ann_pct": 9.44,
+   "sharpe": 1.069,
+   "dd_pct": -10.48,
+   "halt15_triggers": 0,
+   "halt15_ann": 9.44,
+   "halt15_dd": -10.48,
+   "halt15_damage_pp": 0.0
+  }
+ }
+}

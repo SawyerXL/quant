@@ -114,3 +114,16 @@ def test_maturity_band():
     # 正常
     assert maturity_band(121, False) == "ok"
     assert maturity_band(300, True) == "ok"
+
+
+def test_monthly_snapshot_trigger():
+    from scripts.cb_signal import monthly_snapshot_trigger
+    # 2026-10-21 用户批准: 月度=新快照出现（每月1日快照→当月首个交易日）
+    assert monthly_snapshot_trigger("2026-10-01", "2026-11-01")
+    # 同日重建（周更 append）/快照倒退（数据回滚）都不触发
+    assert not monthly_snapshot_trigger("2026-10-01", "2026-10-01")
+    assert not monthly_snapshot_trigger("2026-10-01", "2026-10-01 00:00:00")
+    assert not monthly_snapshot_trigger("2026-11-01", "2026-10-01")
+    # 迁移日/首日: prev 无 snap_date → 当前持仓视为已拍, 不凭空调仓
+    assert not monthly_snapshot_trigger(None, "2026-11-01")
+    assert not monthly_snapshot_trigger("2026-10-01", None)

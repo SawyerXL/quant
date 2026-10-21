@@ -1,0 +1,5 @@
+2026-10-21 09:59:41.766 | INFO     | __main__:main:79 - 补建当月快照: start=2026-10-01 end=2026-10-21 -> cb_snapshots_recent_test
+2026-10-21 09:59:41.767 | INFO     | build_cb_data:build_snapshots:350 - Stage 5: point-in-time快照 2026-10-01→2026-10-21 → cb_snapshots_recent_test...
+2026-10-21 09:59:44.577 | INFO     | build_cb_data:build_snapshots:428 -   ✓ 快照增量合并: 旧35772条 + 新1个月 → 共35772条
+2026-10-21 10:00:09.803 | INFO     | build_cb_data:build_snapshots:506 -   ✓ 快照: 1个月, 共35772条记录
+2026-10-21 10:00:09.835 | INFO     | __main__:main:97 - ✓ 当月快照 2026-10-01: 310 只

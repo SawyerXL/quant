@@ -10,9 +10,11 @@ Windows 端 fetch_and_execute --track cb 拉取执行（执行器已参数化 tr
 历史溢价被低估→回测超配→伪alpha, 与 V2 未来信息同族) ③需引正股不复权价=
 股票链污染传导风险(违反"CB 腿不依赖股票日线库"原则)。回测与实盘同口径。
 
-月调仓日：交易日中点 n//2−1（非固定日，n=当月交易日数，实现见
-daily_signal_a_v2.is_rebalance_day）+ 月末倒数第二（与股票侧一致的双周节奏，
-但 CB 只在这些日全量刷新；非调仓日仅提示强赎/退市）。
+月调仓日（2026-10-21 用户批准，替代原双周）：**快照日之后的首个交易日**
+（快照日期=每月 1 日；1 日休市→当月首个交易日，1 日交易→次一交易日；触发=
+最新快照未被上一信号使用，与 backtest_cb_sched_compare.py 的 snapdelay 臂
+同口径）。该日 08:10 由 build_cb_snapshot_recent.py 补齐当月快照（快照数据
+在快照日收盘后才可用，故不在 1 日当天建）；非调仓日仅提示强赎/退市。
 用法: python scripts/cb_signal.py
 """
 import json
@@ -54,6 +56,27 @@ def maturity_band(days_left: float, is_held: bool) -> str:
     if days_left < MATURITY_NO_BUY_DAYS:
         return "hold_no_buy" if is_held else "exclude"
     return "ok"
+
+
+def monthly_snapshot_trigger(prev_snap, latest_snap) -> bool:
+    """月度调仓触发（纯函数，可测）：最新快照严格新于上一信号所用快照。
+
+    快照日期=每月 1 日（build_snapshots freq="MS"；1 日休市→上月末收盘，
+    1 日交易→1 日收盘）。快照只在快照日收盘后才可用，wrapper 在**快照日之后**
+    的首个交易日 08:10 建表，所以"新快照出现"自然落在该执行日——与回测
+    snapdelay 臂同口径（不是 1 日交易的月份在 1 日 same-bar 的 nextday）。
+    迁移/首日 prev_snap=None → 不触发：当前持仓视为已按 latest 拍过，
+    避免代码切换当天盘中凭空多调一次仓；同日重建（周更 append）也不触发。
+    快照倒退（数据回滚）→ 不触发（> 而非 !=，防止用旧快照重调）。
+    """
+    if not prev_snap or not latest_snap:
+        return False
+    try:
+        return pd.Timestamp(latest_snap) > pd.Timestamp(prev_snap)
+    except Exception:
+        return False
+
+
 SIGNAL_FILE = Path("data_store/meta/signal_cb_latest.json")
 CB_DIR = Path("data_store/convertible_bonds")
 
@@ -279,11 +302,18 @@ def run():
 
     new_hold = set(shares.keys())
     actual_cb = _load_actual_cb()
-    # 月度调仓日才全量轮换；非调仓日保持持仓(仅输出状态)
-    from daily_signal_a_v2 import _get_trade_calendar, is_rebalance_day
-    cal = _get_trade_calendar()
+    # 2026-10-21 用户批准: 月度=快照日之后首个交易日（snapdelay 无前视口径）。
+    # 触发=最新快照未被上一信号使用（快照每月 1 日；wrapper 在快照日后首个
+    # 交易日 08:10 补齐）。非调仓日保持持仓(仅输出状态)。
+    prev_snap = prev.get("snap_date")
+    monthly_rb = monthly_snapshot_trigger(prev_snap, latest)
+    if monthly_rb:
+        logger.info(f"[CB] 月度调仓触发: 快照 {prev_snap} → {latest.date()}")
+    elif prev and not prev_snap:
+        logger.warning(f"[CB] 迁移: 上一信号无 snap_date, 当前持仓视为已按 "
+                       f"{latest.date()} 拍过; 下次新快照触发")
     interim = False  # 2026-09-24: 过渡期标记(非调仓日沿用旧持仓=部分部署)
-    if is_rebalance_day(today, cal):
+    if monthly_rb:
         buy = sorted(new_hold - prev_hold)
         sell = sorted(prev_hold - new_hold)
     elif not prev or not actual_cb:
@@ -333,7 +363,15 @@ def run():
         "prices": prices,
         "position_ratio": 1.0,
         "excluded": excluded,
-        "note": f"CB双低25只月调仓 | 资金60万 | 最新快照{latest.date()}",
+        # 2026-10-21: 记录"已拍快照"与最新快照, 供月度触发与对账追溯。
+        # snap_date=当前持仓所用快照; latest_snapshot=库内最新(可能尚未调仓)。
+        "snap_date": (str(latest.date())[:10]
+                      if (monthly_rb or not prev_snap) else str(prev_snap)[:10]),
+        "latest_snapshot": str(latest.date())[:10],
+        "schedule": "monthly_snapdelay",
+        "rebalance": bool(monthly_rb),
+        "note": f"CB双低25只月调仓(快照日后首个交易日) | 资金60万 | "
+                f"最新快照{latest.date()}",
     }
     SIGNAL_FILE.write_text(json.dumps(signal, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info(f"CB信号: {today} 持仓{len(codes)}只 买入{len(buy)} 卖出{len(sell)} 排除{len(excluded)}只")

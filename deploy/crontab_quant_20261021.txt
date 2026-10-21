@@ -42,7 +42,10 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # CB日线日更(2026-09-27用户批准: ETF晚场19:37之后; build_daily内置非交易日跳过,
 # 国庆长假空转已挡; 周更+10天门在10-12会全体误判停牌的根修)
 45 19 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/build_cb_data.py --stage 3 >> /root/quant/logs/cron_cb_data.log 2>&1
-# CB信号(每日14:28, 紧跟股票信号; 月调仓日全量轮换, 非调仓日刷新)
+# CB当月快照补齐(2026-10-21 月度调仓配套; 每月首个交易日08:10, 当月已存在则跳过;
+# 周一在06:30全量周更后, 周更在跑则跳过; 失败次日自动重试)
+10 8 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/build_cb_snapshot_recent.py >> /root/quant/logs/cron_cb_snap_recent.log 2>&1
+# CB信号(每日14:28, 紧跟股票信号; 月度=每月首个交易日全量轮换, 非调仓日刷新)
 28 14 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/cb_signal.py >> /root/quant/logs/cron_cb_signal.log 2>&1
 2,7,12,17,22,27,32,37,42,47,52,57 * * * * cd /root/quant && /root/quant/.venv/bin/python scripts/tunnel_watchdog.py >> /root/quant/logs/cron_tunnel.log 2>&1
 5 15 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/qmt_snapshot.py >> /root/quant/logs/cron_qmt_snapshot.log 2>&1
