@@ -338,3 +338,13 @@
   事件层强反向（N=67）但组合层回避砍掉的是池内动量赢家——**事件层负漂移
   不等于组合层可回避**，与 N=52/60 同型（方向相反但结论一致）。预注册
   `logs/prereg_lhb_overlay_20261020.md`；重叠审计 `scripts/lhb_overlap_audit.py`。
+
+- **N=69 CB 腿趋势过滤 — 主口径 FAIL，nav_yi 诊断强（post-hoc）**：
+  预注册主口径=CB 指数 MA200：年化 1.31%/夏普 1.172/DD −5.45%（time-in 21%），
+  OOS 2019-2026 年化 1.70% vs base 15.19% → FAIL。诊断 **nav_yi MA200**
+  （2019-2026 可信窗）：**14.21%/1.584/−10.88%** vs base **15.19%/1.382/−21.24%**
+  （年化 −0.98pp、夏普 +0.20、DD +10.36pp）——post-hoc 信号选择，**不能直接
+  实装**，只能前向纸面（`logs/cb_timing_forward_watch.md`）。
+  **数据发现：`cb_eligibility_arms_nav.csv` 的 2013-2018 恒等于 1.0（占位），
+  CB 研究一律以 2019+ 为可信窗**；此前引用 2013-2018 的结论须复核。
+  预注册 `logs/prereg_cb_timing_20261021.md`；脚本 `scripts/cb_timing_study.py`。
