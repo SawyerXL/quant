@@ -58,6 +58,8 @@ PATH=/usr/local/bin:/usr/bin:/bin
 35 22 * * * cd /root/quant && /root/quant/.venv/bin/python scripts/news_capture.py >> /root/quant/logs/cron_news.log 2>&1
 # 单位一致性审计(2026-10-21实装; 18:10 在健康行18:40之前; 只读; ionice/nice)
 10 18 * * 1-5 cd /root/quant && timeout 1800 ionice -c 2 -n 7 nice -n 10 /root/quant/.venv/bin/python scripts/unit_consistency_check.py --days 5 > /root/quant/logs/unit_consistency_check.log 2>&1
+# CB趋势过滤前向纸面(2026-10-21 用户裁定“先验证再动”; 18:20 在15:05快照之后)
+20 18 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/cb_overlay_paper.py >> /root/quant/logs/cron_cb_overlay_paper.log 2>&1
 # 健康行(2026-09-13 用户批准18:40, 2026-09-13晚实装; 每日含周末——dead-man:
 # p0 sweep 19:10 检查 ts≠今日=P0; bar_fresh/依赖追踪 bootstrap 已日历感知)
 40 18 * * * cd /root/quant && /root/quant/.venv/bin/python scripts/daily_health_line.py >> /root/quant/logs/cron_health_line.log 2>&1
