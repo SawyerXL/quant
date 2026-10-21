@@ -1,0 +1,172 @@
+{
+ "hypothesis": "N=70 passive ETF + engine five-tier MA200 timing",
+ "as_of": "2026-10-19",
+ "window": "2019-01-03~2026-10-19",
+ "n": 1887,
+ "basis": {
+  "timing": "exposure_ts.target (light panel, csi800-driven); tier0->0",
+  "passive": "510300/510500 cum_nav total return, biweekly 50/50",
+  "active": "engine 32w/group cached NAV (qfq contract, P0 blind spot)",
+  "cb": "nav_snapdelay_par",
+  "costs": "commission 0.0013/side, cash 0.014/yr"
+ },
+ "regime": {
+  "tier_switch_count": 217,
+  "target_counts": {
+   "0.3": 582,
+   "0.5": 253,
+   "0.7": 318,
+   "0.85": 116,
+   "1.0": 619
+  },
+  "first_rebal": "2020-01-13"
+ },
+ "standalone": {
+  "active_32w": {
+   "n": 1887,
+   "ann_pct": 1.56,
+   "sharpe": 0.216,
+   "dd_pct": -16.66
+  },
+  "passive_untimed": {
+   "n": 1887,
+   "ann_pct": 7.58,
+   "sharpe": 0.482,
+   "dd_pct": -34.71
+  },
+  "passive_timed": {
+   "n": 1887,
+   "ann_pct": 3.38,
+   "sharpe": 0.333,
+   "dd_pct": -15.59
+  },
+  "510300_timed": {
+   "n": 1887,
+   "ann_pct": 2.38,
+   "sharpe": 0.27,
+   "dd_pct": -22.37
+  },
+  "510500_timed": {
+   "n": 1887,
+   "ann_pct": 4.25,
+   "sharpe": 0.362,
+   "dd_pct": -17.15
+  }
+ },
+ "core_40_60_timed": {
+  "base": {
+   "n": 1887,
+   "ann_pct": 13.38,
+   "sharpe": 1.38,
+   "dd_pct": -14.64
+  },
+  "margin_15": 0.36,
+  "halts": {
+   "-0.1": {
+    "n": 1887,
+    "ann_pct": 13.36,
+    "sharpe": 1.379,
+    "dd_pct": -14.64,
+    "triggers": 2,
+    "days_halted": 49
+   },
+   "-0.15": {
+    "n": 1887,
+    "ann_pct": 13.38,
+    "sharpe": 1.38,
+    "dd_pct": -14.64,
+    "triggers": 0,
+    "days_halted": 0
+   },
+   "-0.2": {
+    "n": 1887,
+    "ann_pct": 13.38,
+    "sharpe": 1.38,
+    "dd_pct": -14.64,
+    "triggers": 0,
+    "days_halted": 0
+   },
+   "-0.25": {
+    "n": 1887,
+    "ann_pct": 13.38,
+    "sharpe": 1.38,
+    "dd_pct": -14.64,
+    "triggers": 0,
+    "days_halted": 0
+   }
+  },
+  "sat5": {
+   "n": 1887,
+   "ann_pct": 13.7,
+   "sharpe": 1.41,
+   "dd_pct": -14.99,
+   "margin_15": 0.01
+  }
+ },
+ "core_40_60_active": {
+  "base": {
+   "n": 1887,
+   "ann_pct": 12.55,
+   "sharpe": 1.482,
+   "dd_pct": -13.98
+  },
+  "margin_15": 1.02,
+  "sat5": {
+   "n": 1887,
+   "ann_pct": 12.91,
+   "sharpe": 1.507,
+   "dd_pct": -14.35,
+   "margin_15": 0.65
+  }
+ },
+ "mde": {
+  "stock_timed_vs_active": {
+   "n": 1887,
+   "years": 7.49,
+   "TE_pct": 7.55,
+   "SE_pp": 2.76,
+   "MDE_pp": 5.41
+  },
+  "core_timed_vs_active": {
+   "n": 1887,
+   "years": 7.49,
+   "TE_pct": 3.0,
+   "SE_pp": 1.1,
+   "MDE_pp": 2.15
+  }
+ },
+ "criteria_gate1": {
+  "ann>=2.02": true,
+  "dd>=-16.84": true,
+  "sharpe>=0.212": true
+ },
+ "gate1_pass": true,
+ "criteria_gate2": {
+  "ann>=13.04": true,
+  "dd>=-13.98": false,
+  "sat5_margin>=0.63": false,
+  "sharpe>=1.43": false
+ },
+ "gate2_pass": false,
+ "blind_spots": [
+  "active leg qfq old-history mixing (P0, unadjudicated)",
+  "ETF cum_nav excludes secondary premium/discount changes",
+  "timing target extracted from a light 2-ETF panel; signal is csi800-driven and identical to the full engine's state machine, but holiday rows are excluded via the csi800 calendar",
+  "no MA10 exit/stop/overheat rules — pure beta + timing"
+ ],
+ "oos_2015_2018": {
+  "timed": {
+   "n": 975,
+   "ann_pct": 0.71,
+   "sharpe": 0.132,
+   "dd_pct": -44.77
+  },
+  "untimed": {
+   "n": 975,
+   "ann_pct": -3.01,
+   "sharpe": 0.017,
+   "dd_pct": -51.62
+  },
+  "pass": false
+ }
+}
