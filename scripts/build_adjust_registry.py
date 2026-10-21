@@ -20,11 +20,17 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from data.storage import load_meta
 
-BACKUP = Path("data_store/backup_qfq_rebuild_20261011")
+BACKUPS = [
+    (Path("data_store/backup_qfq_rebuild_20261011"), "pit800_rebuild_20261011"),
+    (Path("data_store/backup_qfq_rebuild_20261021"), "d_rebuild_20261021"),
+]
 AUDIT = Path("logs/audit_adjust_convention_20261011.csv")
 OUT = Path("data_store/meta/adjust_basis_registry.parquet")
 META = Path("data_store/meta/adjust_basis_registry_meta.json")
-TAIL_GAP = {"601059", "601198"}
+# 中金公司换股吸并东兴/信达，2026-10-13 终止上市；源端 09-14 为最后
+# 真实 bar，09-15 起停牌——不是数据缺口，无需 qfq 重建（MCP 公告独立确认）
+DELISTED_MERGER = {"601059": "信达证券(CICC换股吸并,20261013终止上市)",
+                   "601198": "东兴证券(CICC换股吸并,20261013终止上市)"}
 
 MAP = {"qfq": "qfq", "raw": "raw",
        "混合(raw→qfq)": "mixed", "混合(qfq→raw)": "mixed",
@@ -32,19 +38,23 @@ MAP = {"qfq": "qfq", "raw": "raw",
 
 
 def main() -> int:
-    rebuilt = {f.stem for f in BACKUP.rglob("*.parquet")}
+    rebuilt = {}
+    for bak, src in BACKUPS:
+        if bak.exists():
+            for f in bak.rglob("*.parquet"):
+                rebuilt[f.stem] = src
     audit = pd.read_csv(AUDIT, dtype={"code": str})
     audit["code"] = audit["code"].str.zfill(6)
     audit_map = dict(zip(audit["code"], audit["分类"]))
     all_codes = load_meta("stock_info_full")["code"].astype(str).str.zfill(6)
-    # 并集: 当前库 + 审计集 + 重建集 + 残留(601059/601198 不在 stock_info_full)
-    universe = set(all_codes) | set(audit_map) | rebuilt | TAIL_GAP
+    # 并集: 当前库 + 审计集 + 重建集 + 终止上市(不在 stock_info_full)
+    universe = set(all_codes) | set(audit_map) | set(rebuilt) | set(DELISTED_MERGER)
     rows = []
     for c in sorted(universe):
         if c in rebuilt:
-            basis, src = "qfq", "pit800_rebuild_20261011"
-        elif c in TAIL_GAP:
-            basis, src = "raw_tail_gap", "audit_20261011(residual)"
+            basis, src = "qfq", rebuilt[c]
+        elif c in DELISTED_MERGER:
+            basis, src = "delisted_merger", "mcp_announcements_20261013/20261016"
         elif c in audit_map:
             cls = audit_map[c]
             basis = MAP.get(cls, "unknown_other")
@@ -61,17 +71,22 @@ def main() -> int:
         "as_of": "2026-10-21",
         "sources": {
             "pit800_rebuild": "data_store/backup_qfq_rebuild_20261011 (651 codes)",
+            "d_rebuild": f"data_store/backup_qfq_rebuild_20261021 "
+                         f"({'present' if Path('data_store/backup_qfq_rebuild_20261021').exists() else 'absent/not-run'})",
             "audit": "logs/audit_adjust_convention_20261011.csv (1120 codes, probes 2020-2026)",
+            "delisted_merger": "MCP公告: 中金换股吸并东兴/信达, 20261013终止上市",
         },
         "n_codes": int(len(df)),
         "counts": {k: int(v) for k, v in counts.items()},
         "rule": ("basis 是标签不是修复；unknown_* 不得当 qfq 用；"
                  "qfq=库内旧史已按新浪 qfq 重建或审计判定一致；"
-                 "raw/mixed/legacy=旧史未修；raw_tail_gap=源端尾部缺口。"),
+                 "raw/mixed/legacy=旧史未修；"
+                 "delisted_merger=换股吸并/终止上市, 源端最后bar=真实停牌边界, 无需qfq。"),
         "caveats": [
-            "审计探针 as_of=2026-10-09；重建 2026-10-11；其后日更只追加当日 bar，不改变旧史口径",
+            "审计探针 as_of=2026-10-09；A重建 2026-10-11；D重建 2026-10-21(453只, 见备份目录)",
             "北交所(4/8/92)新浪不覆盖，未审计",
             "689009 CDR 新浪拉取失败，未单列（不在重建集）",
+            "601059/601198: 中金换股吸并、2026-10-13终止上市; 源端止于09-14为真实停牌边界, 库内09-15~09-30为停牌重复行, 不重建",
             "loaders 尚未强制读本表；C 方案第二步=接入负载路径/健康行",
         ],
         "built_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
