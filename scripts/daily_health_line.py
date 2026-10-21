@@ -59,12 +59,22 @@ def main():
             except Exception:
                 pass
 
-    # 五审计结果(最新单位一致性日志尾部)
+    # 五审计结果(单位一致性日志：标记 + 新鲜度)
+    # 2026-10-21: 旧实现只看日志文本——日志在 9-15 后从未更新也报 pass/?"，
+    # 属"未知≠通过"盲区；改为 2 天内 + 标记才算 pass，否则 stale/fail。
     audit = "?"
     uclog = Path("logs/unit_consistency_check.log")
     if uclog.exists():
-        audit = "pass" if "单位一致性通过" in uclog.read_text(
-            encoding="utf-8", errors="ignore") else "?"
+        import time as _time
+        age_d = (_time.time() - uclog.stat().st_mtime) / 86400.0
+        has_ok = "单位一致性通过" in uclog.read_text(
+            encoding="utf-8", errors="ignore")
+        if has_ok and age_d <= 2:
+            audit = "pass"
+        elif has_ok:
+            audit = f"stale({age_d:.0f}d)"
+        else:
+            audit = "fail"
 
     # 结论依赖追踪心跳(2026-09-13 晚): try/except 吞异常会让"追踪器死了"
     # 与"没有结论受影响"同形——心跳缺失/err 必须告警, 不等静默积累
@@ -188,6 +198,8 @@ def main():
             snap_state = {"error": "状态文件不可读"}
 
     alerts = []
+    if audit != "pass":
+        alerts.append(f"单位一致性审计未通过/过期/缺失: audit={audit}")
     # bootstrap 是合法运行前的宽限态, 不告警; missing/err 才告警
     if dep.get("dep_scan") in ("missing", "err"):
         alerts.append(f"结论依赖追踪器异常: {dep.get('dep_scan')} "
