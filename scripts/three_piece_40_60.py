@@ -8,6 +8,7 @@
 窗口：股票引擎 2019-01~2026-10-19 ∩ CB NAV 至 2026-10-09。
 用法：python scripts/three_piece_40_60.py
 """
+import argparse
 import json
 import sys
 from dataclasses import replace
@@ -76,6 +77,14 @@ def combo(legs, halt=None, cost=0.0):
 
 
 def main():
+    global W_STOCK, W_CB
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--cb-col", default="nav_biweekly_par")
+    ap.add_argument("--stock-cap", type=float, default=320_000.0)
+    ap.add_argument("--w-stock", type=float, default=0.4)
+    ap.add_argument("--tag", default="biweekly")
+    args = ap.parse_args()
+    W_STOCK, W_CB = args.w_stock, 1.0 - args.w_stock
     sh = load_daily("SH000001", "2014-06-01", END)
     cal = sorted(set(pd.to_datetime(sh["date"]).astype(str).str[:10].tolist()))
     rebal = [d for d in make_rebal_dates(cal, "biweekly") if START <= d <= END]
@@ -105,10 +114,11 @@ def main():
     print(f"panel {panel.shape[0]}天×{panel.shape[1]}只, rebal {len(rebal)}", flush=True)
 
     out = {"as_of": "2026-10-19", "weights": [W_STOCK, W_CB],
-           "stock_per_group": 320_000, "cb_capital": 960_000, "part_b": {}}
-    # Part B: 32万/组 与 50万/组对照
+           "stock_per_group": args.stock_cap, "cb_col": args.cb_col,
+           "cb_capital": 1_600_000 * W_CB, "part_b": {}}
+    # Part B: 目标组资金 与 50万/组对照
     navs = {}
-    for cap in (320_000.0, 500_000.0):
+    for cap in (args.stock_cap, 500_000.0):
         cfg = replace(DEFAULT_CONFIG, lot_size=100, initial_capital=cap)
         nav, m = run_backtest(panel, ap, rebal, cfg, idx_c)
         navs[cap] = nav
@@ -119,9 +129,9 @@ def main():
             "trades": int(m.get("trades", 0))}
         print("PartB", cap, out["part_b"][f"{cap/10000:.0f}万/组"], flush=True)
 
-    r_s = navs[320_000.0].pct_change().dropna()
+    r_s = navs[args.stock_cap].pct_change().dropna()
     ncb = pd.read_csv("logs/cb_sched_compare_nav.csv", index_col=0, parse_dates=True)
-    r_cb = ncb["nav_biweekly_par"].pct_change().dropna()
+    r_cb = ncb[args.cb_col].pct_change().dropna()
     legs = pd.concat([r_s.rename("s"), r_cb.rename("cb")], axis=1,
                      join="inner").dropna()
     print(f"combo window {legs.index.min().date()}~{legs.index.max().date()} n={len(legs)}",
@@ -143,8 +153,9 @@ def main():
     # 成本敏感性
     c_nav, _, _ = combo(legs, cost=0.0013)
     out["part_a"]["cost_0.13"] = metrics_ret(c_nav.pct_change().fillna(0))
-    OUT.write_text(json.dumps(out, ensure_ascii=False, indent=1, default=str))
-    print("->", OUT)
+    outp = Path(f"logs/three_piece_40_60_{args.tag}_{int(args.stock_cap/10000)}w_20261021.json")
+    outp.write_text(json.dumps(out, ensure_ascii=False, indent=1, default=str))
+    print("->", outp)
 
 
 if __name__ == "__main__":
