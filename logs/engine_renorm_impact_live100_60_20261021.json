@@ -1,0 +1,195 @@
+{
+ "as_of": "2026-10-19",
+ "config": {
+  "stock_cap_per_group": 500000.0,
+  "w_stock": 0.625,
+  "w_cb": 0.375,
+  "satellite": 80000.0
+ },
+ "sandbox": "backtest_engine_renorm.py (only rebalance block differs)",
+ "window": "2019-01-03~2026-10-19",
+ "stock_leg": {
+  "buggy": {
+   "n": 1956,
+   "ann_pct": 2.57,
+   "sharpe": 0.293,
+   "dd_pct": -21.72
+  },
+  "fixed": {
+   "n": 1956,
+   "ann_pct": 2.41,
+   "sharpe": 0.284,
+   "dd_pct": -20.07
+  },
+  "fixed_minus_buggy_ann_pp": -0.16,
+  "final_nav_buggy": 1.2173,
+  "final_nav_fixed": 1.2034
+ },
+ "exposure": {
+  "buggy": {
+   "days": 1957,
+   "mean_actual": 0.2213,
+   "mean_target": 0.564,
+   "mean_gap": 0.3472,
+   "days_gap_gt_2pp": 1348,
+   "days_gap_gt_10pp": 1331,
+   "days_actual_lt_80pct_target": 1291,
+   "max_gap": 1.0
+  },
+  "fixed": {
+   "days": 1957,
+   "mean_actual": 0.2159,
+   "mean_target": 0.564,
+   "mean_gap": 0.3526,
+   "days_gap_gt_2pp": 1345,
+   "days_gap_gt_10pp": 1335,
+   "days_actual_lt_80pct_target": 1295,
+   "max_gap": 1.0
+  }
+ },
+ "by_year_stock": {
+  "2019": {
+   "buggy_pct": 1.36,
+   "fixed_pct": 1.36
+  },
+  "2020": {
+   "buggy_pct": 24.52,
+   "fixed_pct": 23.17
+  },
+  "2021": {
+   "buggy_pct": 0.75,
+   "fixed_pct": 1.62
+  },
+  "2022": {
+   "buggy_pct": 0.06,
+   "fixed_pct": 0.05
+  },
+  "2023": {
+   "buggy_pct": -1.53,
+   "fixed_pct": -1.24
+  },
+  "2024": {
+   "buggy_pct": -0.52,
+   "fixed_pct": -0.35
+  },
+  "2025": {
+   "buggy_pct": 9.43,
+   "fixed_pct": 5.0
+  },
+  "2026": {
+   "buggy_pct": -8.91,
+   "fixed_pct": -6.93
+  }
+ },
+ "core_40_60": {
+  "buggy": {
+   "base": {
+    "n": 1887,
+    "ann_pct": 9.14,
+    "sharpe": 1.051,
+    "dd_pct": -10.14
+   },
+   "margin15": 4.86,
+   "halts": {
+    "-0.1": {
+     "n": 1887,
+     "ann_pct": 9.14,
+     "sharpe": 1.051,
+     "dd_pct": -10.14,
+     "triggers": 1,
+     "days_halted": 23
+    },
+    "-0.15": {
+     "n": 1887,
+     "ann_pct": 9.14,
+     "sharpe": 1.051,
+     "dd_pct": -10.14,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.2": {
+     "n": 1887,
+     "ann_pct": 9.14,
+     "sharpe": 1.051,
+     "dd_pct": -10.14,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.25": {
+     "n": 1887,
+     "ann_pct": 9.14,
+     "sharpe": 1.051,
+     "dd_pct": -10.14,
+     "triggers": 0,
+     "days_halted": 0
+    }
+   },
+   "sat5": {
+    "n": 1887,
+    "ann_pct": 9.66,
+    "sharpe": 1.114,
+    "dd_pct": -10.08,
+    "margin15": 4.92
+   }
+  },
+  "fixed": {
+   "base": {
+    "n": 1887,
+    "ann_pct": 9.03,
+    "sharpe": 1.059,
+    "dd_pct": -10.32
+   },
+   "margin15": 4.68,
+   "halts": {
+    "-0.1": {
+     "n": 1887,
+     "ann_pct": 9.03,
+     "sharpe": 1.059,
+     "dd_pct": -10.32,
+     "triggers": 1,
+     "days_halted": 23
+    },
+    "-0.15": {
+     "n": 1887,
+     "ann_pct": 9.03,
+     "sharpe": 1.059,
+     "dd_pct": -10.32,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.2": {
+     "n": 1887,
+     "ann_pct": 9.03,
+     "sharpe": 1.059,
+     "dd_pct": -10.32,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.25": {
+     "n": 1887,
+     "ann_pct": 9.03,
+     "sharpe": 1.059,
+     "dd_pct": -10.32,
+     "triggers": 0,
+     "days_halted": 0
+    }
+   },
+   "sat5": {
+    "n": 1887,
+    "ann_pct": 9.55,
+    "sharpe": 1.122,
+    "dd_pct": -10.0,
+    "margin15": 5.0
+   }
+  }
+ },
+ "delta_core": {
+  "ann_pp": -0.11,
+  "sharpe": 0.008,
+  "dd_pp": -0.18,
+  "sat5_ann_pp": -0.11,
+  "sat5_dd_pp": 0.08,
+  "sat5_margin_pp": 0.08
+ },
+ "note": "生产文件未改；沙箱仅用于量化。若偏移显著，现有 40/60、被动化 A/B、50/50、N=70 结论都需在修复引擎上重跑。"
+}

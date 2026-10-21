@@ -7,6 +7,7 @@
 不改生产文件/配置；结论只用于决定是否重跑校准。
 用法：python scripts/engine_renorm_impact.py
 """
+import argparse
 import importlib.util
 import json
 import sys
@@ -131,6 +132,18 @@ def exposure_stats(m):
 
 
 def main() -> int:
+    global CAP, CORE_STOCK, CORE_CB, OUT
+    ap_ = argparse.ArgumentParser()
+    ap_.add_argument("--cap", type=float, default=CAP, help="每股资金")
+    ap_.add_argument("--w-stock", type=float, default=0.4, help="股票腿权重")
+    ap_.add_argument("--tag", default=None)
+    args = ap_.parse_args()
+    CAP = args.cap
+    CORE_STOCK = 1_600_000.0 * args.w_stock
+    CORE_CB = 1_600_000.0 * (1 - args.w_stock)
+    OUT = Path(f"logs/engine_renorm_impact_{args.tag or 'base'}_20261021.json")
+    print(f"config cap={CAP:,.0f} w_stock={args.w_stock:.3f} "
+          f"stock={CORE_STOCK:,.0f} cb={CORE_CB:,.0f}", flush=True)
     panel, ap, rebal, idx_c = load_panel()
     print(f"panel {panel.shape[0]}x{panel.shape[1]} rebal={len(rebal)}",
           flush=True)
@@ -170,6 +183,10 @@ def main() -> int:
 
     out = {
         "as_of": END,
+        "config": {"stock_cap_per_group": CAP,
+                   "w_stock": round(CORE_STOCK / (CORE_STOCK + CORE_CB), 4),
+                   "w_cb": round(CORE_CB / (CORE_STOCK + CORE_CB), 4),
+                   "satellite": SAT},
         "sandbox": "backtest_engine_renorm.py (only rebalance block differs)",
         "window": f"{common.min().date()}~{common.max().date()}",
         "stock_leg": {
