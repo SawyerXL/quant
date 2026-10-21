@@ -5,6 +5,14 @@
 > −49.18%@2022-03-30），收益类数字**作废**；溢价水平/分位/+22pp 溢价
 > 扩张**不受影响**（px/nav 比值拆分不变）。见
 > `logs/etf_split_contamination_20261021.md`。
+>
+> **2026-10-21 已修复重跑**：`scripts/etf_premium_study.py` 增加逐序列
+> 拆分检测（单日 <−15%）与拆分日溢价掩码。修正后 2019+ 年化：
+> **513100 NAV 22.07%/PX 25.10%；159941 NAV 21.02%/PX 23.43%；
+> 513500 NAV 16.40%/PX 17.75%**。159941 最大溢价 **297.86%→25.16%**
+> （NAV/PX 拆分日错一天，NAV 2022-07-04、PX 2022-07-05）；
+> "高溢价→未来 20 日低收益"方向在修正后**仍成立**。
+> 新工件 `logs/etf_premium_20261021.json`；parquet 新增 `*_ret_adj`。
 
 数据：NAV 历史 `ak.fund_open_fund_info_em`；二级市场价 `ak.fund_etf_hist_sina`。
 premium = price/NAV − 1。落盘 `data_store/meta/etf_premium_{code}.parquet`、

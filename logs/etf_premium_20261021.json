@@ -1,0 +1,146 @@
+{
+ "as_of": "2026-10-20",
+ "etfs": {
+  "513100": {
+   "n": 3168,
+   "start": "2013-07-31",
+   "end": "2026-10-19",
+   "prem_now_pct": 18.61,
+   "prem_mean_pct": 1.64,
+   "prem_median_pct": 0.51,
+   "prem_p10_pct": -1.17,
+   "prem_p90_pct": 6.19,
+   "prem_max_pct": 27.99,
+   "prem_min_pct": -6.24,
+   "prem_2019_now_change_pp": 20.85,
+   "px_ann_adj_pct": 21.73,
+   "nav_ann_adj_pct": 19.89,
+   "split_days": [
+    "2022-01-14"
+   ],
+   "prem_quintile_fwd20_pct": {
+    "0": {
+     "prem_mean_pct": -1.38,
+     "fwd20_mean_pct": 2.7,
+     "n": 634
+    },
+    "1": {
+     "prem_mean_pct": -0.22,
+     "fwd20_mean_pct": 2.31,
+     "n": 633
+    },
+    "2": {
+     "prem_mean_pct": 0.52,
+     "fwd20_mean_pct": 1.86,
+     "n": 633
+    },
+    "3": {
+     "prem_mean_pct": 1.81,
+     "fwd20_mean_pct": 1.49,
+     "n": 633
+    },
+    "4": {
+     "prem_mean_pct": 7.48,
+     "fwd20_mean_pct": 0.19,
+     "n": 634
+    }
+   }
+  },
+  "159941": {
+   "n": 2717,
+   "start": "2015-07-13",
+   "end": "2026-10-19",
+   "prem_now_pct": 16.5,
+   "prem_mean_pct": 1.26,
+   "prem_median_pct": 0.34,
+   "prem_p10_pct": -1.62,
+   "prem_p90_pct": 5.52,
+   "prem_max_pct": 25.16,
+   "prem_min_pct": -8.42,
+   "prem_2019_now_change_pp": 18.75,
+   "px_ann_adj_pct": 19.94,
+   "nav_ann_adj_pct": 17.92,
+   "split_days": [
+    "2022-07-04",
+    "2022-07-05"
+   ],
+   "prem_quintile_fwd20_pct": {
+    "0": {
+     "prem_mean_pct": -1.89,
+     "fwd20_mean_pct": 2.3,
+     "n": 543
+    },
+    "1": {
+     "prem_mean_pct": -0.54,
+     "fwd20_mean_pct": 2.32,
+     "n": 543
+    },
+    "2": {
+     "prem_mean_pct": 0.38,
+     "fwd20_mean_pct": 1.94,
+     "n": 543
+    },
+    "3": {
+     "prem_mean_pct": 1.9,
+     "fwd20_mean_pct": 1.74,
+     "n": 543
+    },
+    "4": {
+     "prem_mean_pct": 6.45,
+     "fwd20_mean_pct": -0.41,
+     "n": 543
+    }
+   }
+  },
+  "513500": {
+   "n": 3012,
+   "start": "2014-01-16",
+   "end": "2026-10-19",
+   "prem_now_pct": 9.47,
+   "prem_mean_pct": 1.47,
+   "prem_median_pct": 0.29,
+   "prem_p10_pct": -1.08,
+   "prem_p90_pct": 5.97,
+   "prem_max_pct": 36.34,
+   "prem_min_pct": -7.25,
+   "prem_2019_now_change_pp": 11.18,
+   "px_ann_adj_pct": 15.0,
+   "nav_ann_adj_pct": 14.1,
+   "split_days": [
+    "2022-03-30"
+   ],
+   "prem_quintile_fwd20_pct": {
+    "0": {
+     "prem_mean_pct": -1.25,
+     "fwd20_mean_pct": 2.15,
+     "n": 603
+    },
+    "1": {
+     "prem_mean_pct": -0.32,
+     "fwd20_mean_pct": 1.33,
+     "n": 602
+    },
+    "2": {
+     "prem_mean_pct": 0.31,
+     "fwd20_mean_pct": 1.37,
+     "n": 602
+    },
+    "3": {
+     "prem_mean_pct": 1.62,
+     "fwd20_mean_pct": 1.42,
+     "n": 602
+    },
+    "4": {
+     "prem_mean_pct": 7.0,
+     "fwd20_mean_pct": -0.09,
+     "n": 602
+    }
+   }
+  }
+ },
+ "current": {
+  "513100": 18.61,
+  "159941": 16.5,
+  "513500": 9.47
+ }
+}

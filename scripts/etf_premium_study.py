@@ -17,7 +17,24 @@ import akshare as ak
 
 META = Path("data_store/meta")
 ETFS = {"513100": "sh513100", "159941": "sz159941", "513500": "sh513500"}
-OUT = Path("logs/etf_premium_20261020.json")
+OUT = Path("logs/etf_premium_20261021.json")
+
+
+def adjust_series(s: pd.Series, thresh: float = -0.15):
+    """份额折算/拆分检测：单日 < thresh 视为拆分，收益置 0 后重算净值。
+
+    2026-10-21 实锤：513100 2022-01-14 −80.45%、159941 2022-07-05
+    （NAV 2022-07-04）−74.66%、513500 2022-03-30 −49.18% 均为未复权
+    份额折算；原始收益/年化被污染。真实拆分日市场收益≈0，单日误差对
+    年化 <0.05pp；不推断拆分比例。
+    返回 (调整后收益, 调整后水平, 拆分日列表)。
+    """
+    r = s.pct_change()
+    splits = r[r < thresh]
+    ra = r.copy()
+    ra.loc[splits.index] = 0.0
+    adj = (1 + ra.fillna(0.0)).cumprod() * float(s.iloc[0])
+    return ra, adj, [str(d.date()) for d in splits.index]
 
 
 def load_nav(code):
@@ -48,9 +65,17 @@ def main():
             df["prem"] = df["px"] / df["nav"] - 1
             df["nav_ret"] = df["nav"].pct_change()
             df["px_ret"] = df["px"].pct_change()
+            nav_ra, nav_adj, nav_splits = adjust_series(df["nav"])
+            px_ra, px_adj, px_splits = adjust_series(df["px"])
+            df["nav_ret_adj"] = nav_ra
+            df["px_ret_adj"] = px_ra
+            df["px_adj"] = px_adj
+            split_days = sorted(set(nav_splits) | set(px_splits))
+            # 拆分日（NAV/PX 可能错一天）溢价无意义，置 NaN
+            df.loc[df.index.isin(pd.to_datetime(split_days)), "prem"] = np.nan
             allprem[code] = df["prem"]
             df.to_parquet(META / f"etf_premium_{code}.parquet")
-            p = df["prem"]
+            p = df["prem"].dropna()
             cur = p.iloc[-1]
             out["etfs"][code] = {
                 "n": int(len(df)), "start": str(df.index.min().date()),
@@ -65,13 +90,14 @@ def main():
                 "prem_2019_now_change_pp": round(
                     float((p[p.index >= "2019-01-01"].iloc[-1]
                            - p[p.index >= "2019-01-01"].iloc[0]) * 100), 2),
-                "px_ann_pct": round(float(
-                    (df["px"].iloc[-1] / df["px"].iloc[0]) ** (252 / len(df)) - 1) * 100, 2),
-                "nav_ann_pct": round(float(
-                    (df["nav"].iloc[-1] / df["nav"].iloc[0]) ** (252 / len(df)) - 1) * 100, 2),
+                "px_ann_adj_pct": round(float(
+                    (px_adj.iloc[-1] / px_adj.iloc[0]) ** (252 / len(df)) - 1) * 100, 2),
+                "nav_ann_adj_pct": round(float(
+                    (nav_adj.iloc[-1] / nav_adj.iloc[0]) ** (252 / len(df)) - 1) * 100, 2),
+                "split_days": split_days,
             }
-            # 溢价分位 × 未来20日价格收益（诊断）
-            df["fwd20"] = df["px"].shift(-20) / df["px"] - 1
+            # 溢价分位 × 未来20日价格收益（诊断，用拆分校准价）
+            df["fwd20"] = df["px_adj"].shift(-20) / df["px_adj"] - 1
             df["q"] = pd.qcut(df["prem"], 5, labels=False, duplicates="drop")
             q = df.groupby("q").agg(prem_mean=("prem", "mean"),
                                     fwd20_mean=("fwd20", "mean"),
