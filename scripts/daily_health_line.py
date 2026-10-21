@@ -62,6 +62,27 @@ def main():
             except Exception:
                 pass
 
+    # 复权口径: 当前股票持仓的 basis (C 方案第二步; unknown/raw 不得当 qfq)
+    adj_holdings, adj_bad, adj_counts = {}, [], {}
+    try:
+        reg = pd.read_parquet("data_store/meta/adjust_basis_registry.parquet")
+        reg_map = dict(zip(reg["code"].astype(str), reg["basis"]))
+        adj_counts = {str(k): int(v) for k, v in
+                      reg["basis"].value_counts().items()}
+        held = set()
+        for g in ("g0", "g1"):
+            p = Path(f"data_store/meta/signal_a_{g}.json")
+            if p.exists():
+                sig = json.loads(p.read_text(encoding="utf-8"))
+                held |= {str(c).split(".")[0] for c in sig.get("holdings", [])}
+        for c in sorted(held):
+            b = reg_map.get(c, "not_in_registry")
+            adj_holdings[c] = b
+            if b != "qfq":
+                adj_bad.append(f"{c}:{b}")
+    except Exception as e:
+        adj_counts = {"error": str(e)[:80]}
+
     # 五审计结果(单位一致性日志：标记 + 新鲜度)
     # 2026-10-21: 旧实现只看日志文本——日志在 9-15 后从未更新也报 pass/?"，
     # 属"未知≠通过"盲区；改为 2 天内 + 标记才算 pass，否则 stale/fail。
@@ -207,6 +228,10 @@ def main():
         alerts.append(f"负持仓伪影 {len(neg_positions)} 只: "
                       f"{list(neg_positions)[:5]} (执行层已按0隔离, "
                       f"修复窗口 2026-10-29 前)")
+    if adj_bad:
+        alerts.append(f"股票持仓复权口径非qfq: {adj_bad[:5]} "
+                      f"(旧史raw/unknown, 信号与回测需复核; 见 "
+                      f"adjust_basis_registry)")
     # bootstrap 是合法运行前的宽限态, 不告警; missing/err 才告警
     if dep.get("dep_scan") in ("missing", "err"):
         alerts.append(f"结论依赖追踪器异常: {dep.get('dep_scan')} "
@@ -380,6 +405,8 @@ def main():
             "last_data_update": last_update, "tunnel": tunnel,
             "audit": audit, "positions_snapshot": snap_time,
             "negative_positions": neg_positions,
+            "adjust_basis_holdings": adj_holdings,
+            "adjust_basis_registry_counts": adj_counts,
             "cb_signal_date": cb_date, "cb_data_max_date": cb_data_max,
             "cb_unknown_gaps": cb_unknown, "cb_unknown_recent": cb_unknown_recent,
             "guard_rejected_rows": guard_rej, "snapshot_state": snap_state,
