@@ -36,10 +36,15 @@
   - 时间边界：今日不是调仓日；**下一股票调仓日=2026-10-29**（日历核实：
     10-19 为月中调仓日，10-20 非；月末=10-29）。修复窗口=10-29 前。
 
-## 待办
+## 待办（2026-10-21 跟进：三项已闭合）
 
-1. **10-29 前**给 `execution/trader.py` 加负持仓守卫（`volume = max(0, volume)` +
-   告警行），覆盖 `_build_gateway`/`compute_plan`；加单测。
-2. 快照导出：负持仓单独字段落盘（不得静默丢弃），健康行可见。
-3. 仿真户空头本身不做真实“买回补券”（会锁定伪盈利并引入不需要的持仓）；
-   由代码守卫隔离，并在 NAV 口径里排除。
+1. ✅ **负持仓守卫已实装并部署**：`trader._scoped_positions` 按 0 持仓隔离
+   + 去重告警，`_build_gateway` 的 NAV/cash 只用过滤后持仓（829e05a /
+   0df56f1；Windows 已同步）。
+2. ✅ **导出 + 健康行可见**（2026-10-21，7e67a1b）：`export_qmt_positions.py`
+   新增 `split_positions()` 与 `negative_positions` 字段（不再 `volume>0`
+   静默丢弃）；`daily_health_line.py` 读取该字段并进 alerts；
+   `tests/test_export_positions.py` 2 用例通过。Windows 已 scp 部署，
+   11:36 冒烟实测 `002028 −399` 已落盘（cost/mv 当日为 0）。
+3. ✅ NAV 排除：守卫过滤后的持仓进入 `_build_gateway`，负持仓的 mv/cost
+   不再计入 current_nav/cash。
