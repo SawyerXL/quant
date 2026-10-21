@@ -28,7 +28,8 @@ NAV = Path("logs/qmt_nav_history.parquet")
 STATE = Path("logs/satellite_cb_paper_state.json")
 OUT = Path("logs/satellite_cb_paper.csv")
 CORE = 1_600_000.0
-SIZES = {"sat10": 0.10, "sat20": 0.20, "sat30": 0.30}
+SIZES = {"sat05": 0.05, "sat10": 0.10, "sat20": 0.20, "sat30": 0.30,
+         "sat40": 0.40, "sat50": 0.50, "sat75": 0.75}
 
 
 def _metrics(ret: pd.Series):

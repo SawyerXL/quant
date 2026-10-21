@@ -4,6 +4,7 @@
  "nav_combined_start": 1.0085104607725217,
  "core_notional": 1600000.0,
  "sizes": {
+  "sat05": 0.05,
   "sat10": 0.1,
   "sat20": 0.2,
   "sat30": 0.3,
