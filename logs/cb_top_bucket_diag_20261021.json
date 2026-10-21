@@ -1,0 +1,75 @@
+{
+ "n_months": 92,
+ "avg_coverage_of_top40": 1.0,
+ "buckets": {
+  "1-10": {
+   "n": 92,
+   "mean_monthly_pct": 1.243,
+   "ann_pct": 15.98,
+   "t": 2.95,
+   "win_pct": 58.7
+  },
+  "11-20": {
+   "n": 92,
+   "mean_monthly_pct": 1.003,
+   "ann_pct": 12.72,
+   "t": 2.94,
+   "win_pct": 63.0
+  },
+  "21-25": {
+   "n": 92,
+   "mean_monthly_pct": 1.065,
+   "ann_pct": 13.56,
+   "t": 3.44,
+   "win_pct": 65.2
+  },
+  "26-30": {
+   "n": 92,
+   "mean_monthly_pct": 0.813,
+   "ann_pct": 10.2,
+   "t": 2.38,
+   "win_pct": 62.0
+  },
+  "31-40": {
+   "n": 92,
+   "mean_monthly_pct": 1.102,
+   "ann_pct": 14.06,
+   "t": 2.69,
+   "win_pct": 63.0
+  }
+ },
+ "diff_21_25_minus_26_30": {
+  "n": 92,
+  "mean_monthly_pct": 0.252,
+  "ann_pct": 3.07,
+  "t": 1.21,
+  "win_pct": 54.3
+ },
+ "diff_top20_minus_top25": {
+  "n": 92,
+  "mean_monthly_pct": 0.012,
+  "ann_pct": 0.14,
+  "t": 0.34,
+  "win_pct": 52.2
+ },
+ "top20": {
+  "n": 92,
+  "mean_monthly_pct": 1.123,
+  "ann_pct": 14.34,
+  "t": 3.09,
+  "win_pct": 64.1
+ },
+ "top25": {
+  "n": 92,
+  "mean_monthly_pct": 1.111,
+  "ann_pct": 14.18,
+  "t": 3.2,
+  "win_pct": 64.1
+ },
+ "criterion_note": "若 diff_21_25_minus_26_30 不显著(|t|<2)且分桶不单调→ 边界换人无害, TOP25 维持; 若单调递减且 21-25 显著高于 26-30 → 排名有效, TOP20 支持。",
+ "caveats": [
+  "快照 dblow=price-only(溢价恒0), 与实盘同口径",
+  "月收益为价格收益, 不含兑付/分红; 退市用最后收盘",
+  "非回测: 不含月度调仓成本/临期剔除/停牌补位"
+ ]
+}
