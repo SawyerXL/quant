@@ -1,0 +1,459 @@
+{
+ "as_of": "2026-10-19",
+ "core": "40/60 (stock 640k=2x cap, CB 960k)",
+ "funding": "US carved from stock leg; CB fixed 960k",
+ "us_primary": "IXIC T-1 (index, no premium)",
+ "us_reference": "513100 secondary price (premium-inclusive)",
+ "window": "2019-01-03~2026-10-19",
+ "arms": {
+  "IXIC_T1_u0": {
+   "weights": {
+    "s": 0.4,
+    "cb": 0.6,
+    "us": 0.0
+   },
+   "ann_pct": 11.88,
+   "sharpe": 1.403,
+   "dd_pct": -13.69,
+   "n": 1822,
+   "sat5": {
+    "ann_pct": 12.23,
+    "sharpe": 1.43,
+    "dd_pct": -14.04,
+    "n": 1822
+   },
+   "sat5_margin15": 0.96,
+   "halts": {
+    "-0.1": {
+     "ann_pct": 11.86,
+     "sharpe": 1.403,
+     "dd_pct": -13.69,
+     "n": 1822,
+     "triggers": 2,
+     "days_halted": 12
+    },
+    "-0.15": {
+     "ann_pct": 11.88,
+     "sharpe": 1.403,
+     "dd_pct": -13.69,
+     "n": 1822,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.2": {
+     "ann_pct": 11.88,
+     "sharpe": 1.403,
+     "dd_pct": -13.69,
+     "n": 1822,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.25": {
+     "ann_pct": 11.88,
+     "sharpe": 1.403,
+     "dd_pct": -13.69,
+     "n": 1822,
+     "triggers": 0,
+     "days_halted": 0
+    }
+   }
+  },
+  "IXIC_T1_u100": {
+   "weights": {
+    "s": 0.3,
+    "cb": 0.6,
+    "us": 0.1
+   },
+   "ann_pct": 14.86,
+   "sharpe": 1.746,
+   "dd_pct": -12.88,
+   "n": 1822,
+   "sat5": {
+    "ann_pct": 15.08,
+    "sharpe": 1.753,
+    "dd_pct": -13.26,
+    "n": 1822
+   },
+   "sat5_margin15": 1.74,
+   "halts": {
+    "-0.1": {
+     "ann_pct": 14.85,
+     "sharpe": 1.745,
+     "dd_pct": -12.88,
+     "n": 1822,
+     "triggers": 1,
+     "days_halted": 6
+    },
+    "-0.15": {
+     "ann_pct": 14.86,
+     "sharpe": 1.746,
+     "dd_pct": -12.88,
+     "n": 1822,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.2": {
+     "ann_pct": 14.86,
+     "sharpe": 1.746,
+     "dd_pct": -12.88,
+     "n": 1822,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.25": {
+     "ann_pct": 14.86,
+     "sharpe": 1.746,
+     "dd_pct": -12.88,
+     "n": 1822,
+     "triggers": 0,
+     "days_halted": 0
+    }
+   }
+  },
+  "IXIC_T1_u125": {
+   "weights": {
+    "s": 0.275,
+    "cb": 0.6,
+    "us": 0.125
+   },
+   "ann_pct": 15.62,
+   "sharpe": 1.804,
+   "dd_pct": -12.61,
+   "n": 1822,
+   "sat5": {
+    "ann_pct": 15.8,
+    "sharpe": 1.81,
+    "dd_pct": -13.0,
+    "n": 1822
+   },
+   "sat5_margin15": 2.0,
+   "halts": {
+    "-0.1": {
+     "ann_pct": 15.62,
+     "sharpe": 1.804,
+     "dd_pct": -12.61,
+     "n": 1822,
+     "triggers": 1,
+     "days_halted": 5
+    },
+    "-0.15": {
+     "ann_pct": 15.62,
+     "sharpe": 1.804,
+     "dd_pct": -12.61,
+     "n": 1822,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.2": {
+     "ann_pct": 15.62,
+     "sharpe": 1.804,
+     "dd_pct": -12.61,
+     "n": 1822,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.25": {
+     "ann_pct": 15.62,
+     "sharpe": 1.804,
+     "dd_pct": -12.61,
+     "n": 1822,
+     "triggers": 0,
+     "days_halted": 0
+    }
+   }
+  },
+  "IXIC_T1_u150": {
+   "weights": {
+    "s": 0.25,
+    "cb": 0.6,
+    "us": 0.15
+   },
+   "ann_pct": 16.36,
+   "sharpe": 1.852,
+   "dd_pct": -12.39,
+   "n": 1822,
+   "sat5": {
+    "ann_pct": 16.51,
+    "sharpe": 1.858,
+    "dd_pct": -12.79,
+    "n": 1822
+   },
+   "sat5_margin15": 2.21,
+   "halts": {
+    "-0.1": {
+     "ann_pct": 16.36,
+     "sharpe": 1.852,
+     "dd_pct": -12.39,
+     "n": 1822,
+     "triggers": 1,
+     "days_halted": 3
+    },
+    "-0.15": {
+     "ann_pct": 16.36,
+     "sharpe": 1.852,
+     "dd_pct": -12.39,
+     "n": 1822,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.2": {
+     "ann_pct": 16.36,
+     "sharpe": 1.852,
+     "dd_pct": -12.39,
+     "n": 1822,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.25": {
+     "ann_pct": 16.36,
+     "sharpe": 1.852,
+     "dd_pct": -12.39,
+     "n": 1822,
+     "triggers": 0,
+     "days_halted": 0
+    }
+   }
+  },
+  "513100_u0": {
+   "weights": {
+    "s": 0.4,
+    "cb": 0.6,
+    "us": 0.0
+   },
+   "ann_pct": 12.96,
+   "sharpe": 1.522,
+   "dd_pct": -13.99,
+   "n": 1886,
+   "sat5": {
+    "ann_pct": 13.3,
+    "sharpe": 1.545,
+    "dd_pct": -14.36,
+    "n": 1886
+   },
+   "sat5_margin15": 0.64,
+   "halts": {
+    "-0.1": {
+     "ann_pct": 12.94,
+     "sharpe": 1.522,
+     "dd_pct": -13.99,
+     "n": 1886,
+     "triggers": 2,
+     "days_halted": 17
+    },
+    "-0.15": {
+     "ann_pct": 12.96,
+     "sharpe": 1.522,
+     "dd_pct": -13.99,
+     "n": 1886,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.2": {
+     "ann_pct": 12.96,
+     "sharpe": 1.522,
+     "dd_pct": -13.99,
+     "n": 1886,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.25": {
+     "ann_pct": 12.96,
+     "sharpe": 1.522,
+     "dd_pct": -13.99,
+     "n": 1886,
+     "triggers": 0,
+     "days_halted": 0
+    }
+   }
+  },
+  "513100_u100": {
+   "weights": {
+    "s": 0.3,
+    "cb": 0.6,
+    "us": 0.1
+   },
+   "ann_pct": 16.01,
+   "sharpe": 1.818,
+   "dd_pct": -13.2,
+   "n": 1886,
+   "sat5": {
+    "ann_pct": 16.21,
+    "sharpe": 1.825,
+    "dd_pct": -13.61,
+    "n": 1886
+   },
+   "sat5_margin15": 1.39,
+   "halts": {
+    "-0.1": {
+     "ann_pct": 16.0,
+     "sharpe": 1.818,
+     "dd_pct": -13.2,
+     "n": 1886,
+     "triggers": 2,
+     "days_halted": 12
+    },
+    "-0.15": {
+     "ann_pct": 16.01,
+     "sharpe": 1.818,
+     "dd_pct": -13.2,
+     "n": 1886,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.2": {
+     "ann_pct": 16.01,
+     "sharpe": 1.818,
+     "dd_pct": -13.2,
+     "n": 1886,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.25": {
+     "ann_pct": 16.01,
+     "sharpe": 1.818,
+     "dd_pct": -13.2,
+     "n": 1886,
+     "triggers": 0,
+     "days_halted": 0
+    }
+   }
+  },
+  "513100_u125": {
+   "weights": {
+    "s": 0.275,
+    "cb": 0.6,
+    "us": 0.125
+   },
+   "ann_pct": 16.75,
+   "sharpe": 1.859,
+   "dd_pct": -12.97,
+   "n": 1886,
+   "sat5": {
+    "ann_pct": 16.92,
+    "sharpe": 1.866,
+    "dd_pct": -13.4,
+    "n": 1886
+   },
+   "sat5_margin15": 1.6,
+   "halts": {
+    "-0.1": {
+     "ann_pct": 16.75,
+     "sharpe": 1.858,
+     "dd_pct": -12.97,
+     "n": 1886,
+     "triggers": 2,
+     "days_halted": 11
+    },
+    "-0.15": {
+     "ann_pct": 16.75,
+     "sharpe": 1.859,
+     "dd_pct": -12.97,
+     "n": 1886,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.2": {
+     "ann_pct": 16.75,
+     "sharpe": 1.859,
+     "dd_pct": -12.97,
+     "n": 1886,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.25": {
+     "ann_pct": 16.75,
+     "sharpe": 1.859,
+     "dd_pct": -12.97,
+     "n": 1886,
+     "triggers": 0,
+     "days_halted": 0
+    }
+   }
+  },
+  "513100_u150": {
+   "weights": {
+    "s": 0.25,
+    "cb": 0.6,
+    "us": 0.15
+   },
+   "ann_pct": 17.52,
+   "sharpe": 1.893,
+   "dd_pct": -12.77,
+   "n": 1886,
+   "sat5": {
+    "ann_pct": 17.65,
+    "sharpe": 1.9,
+    "dd_pct": -13.2,
+    "n": 1886
+   },
+   "sat5_margin15": 1.8,
+   "halts": {
+    "-0.1": {
+     "ann_pct": 17.51,
+     "sharpe": 1.893,
+     "dd_pct": -12.77,
+     "n": 1886,
+     "triggers": 2,
+     "days_halted": 10
+    },
+    "-0.15": {
+     "ann_pct": 17.52,
+     "sharpe": 1.893,
+     "dd_pct": -12.77,
+     "n": 1886,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.2": {
+     "ann_pct": 17.52,
+     "sharpe": 1.893,
+     "dd_pct": -12.77,
+     "n": 1886,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.25": {
+     "ann_pct": 17.52,
+     "sharpe": 1.893,
+     "dd_pct": -12.77,
+     "n": 1886,
+     "triggers": 0,
+     "days_halted": 0
+    }
+   }
+  }
+ },
+ "mde_vs_u0": {
+  "IXIC_T1_u100": {
+   "delta_ann_pp": 1.96,
+   "n": 1822,
+   "TE_pct": 2.5,
+   "SE_pp": 0.93,
+   "MDE_pp": 1.83,
+   "delta_ann_pp_same_window": 2.98
+  },
+  "IXIC_T1_u125": {
+   "delta_ann_pp": 2.72,
+   "n": 1822,
+   "TE_pct": 3.11,
+   "SE_pp": 1.16,
+   "MDE_pp": 2.27,
+   "delta_ann_pp_same_window": 3.74
+  },
+  "IXIC_T1_u150": {
+   "delta_ann_pp": 3.46,
+   "n": 1822,
+   "TE_pct": 3.72,
+   "SE_pp": 1.38,
+   "MDE_pp": 2.71,
+   "delta_ann_pp_same_window": 4.48
+  }
+ },
+ "delta_vs_u0_513100": {
+  "513100_u0": 0.0,
+  "513100_u100": 3.05,
+  "513100_u125": 3.79,
+  "513100_u150": 4.56
+ },
+ "mde_note": "delta_ann_pp 原字段跨窗口(u=0 用 s/cb 全窗)；delta_ann_pp_same_window 为同窗口, 判读用后者"
+}
