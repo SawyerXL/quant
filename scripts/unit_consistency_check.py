@@ -164,10 +164,27 @@ def main():
     # 余量; 相对: top1/门槛 < 50(健康值~10倍内)
     cap_abs = 1e7  # 万元 = 1000亿元
     tail_bad = []
+    etf_bad = []
     top1 = 0.0
     thr60 = 0.0
+    # 2026-10-21: ETF/LOF(5/15/16/18 开头)成交额物理上限与个股不同
+    # (511360 单日 1,372 亿元, amount/volume=close 单位自洽), 不参与
+    # 股票尾部审计, 否则每日误报"单位一致性违规"。
+    ETF_PREFIX = ("5", "15", "16", "18")
     for f in sorted((DAILY_DIR / "2026").glob("*.parquet")):
         if f.stem.startswith(("SH", "SZ")):
+            continue
+        if f.stem.startswith(ETF_PREFIX):
+            # ETF 不做股票绝对上限；改做单位比值审计 amount/(volume*close)≈1
+            try:
+                dd = pd.read_parquet(f, columns=["close", "volume", "amount"])
+                dd = dd[(dd["close"] > 0) & (dd["volume"] > 0)]
+                if len(dd):
+                    r = float((dd["amount"] / dd["volume"] / dd["close"]).median())
+                    if not (0.5 <= r <= 2.0):
+                        etf_bad.append((f.stem, round(r, 3)))
+            except Exception:
+                pass
             continue
         if f.stem in uq_codes or f.stem.startswith(("920", "430", "83", "87")):
             continue  # 缓处理票不参与尾部审计
@@ -192,6 +209,7 @@ def main():
     print(f"断言④尾部上限: 绝对 {'✓' if not tail_bad else '✗ ' + str(tail_bad[:5])}"
           f" | 相对 top1={top1:.0f}/门槛60={thr60:.0f} 比 {top1/thr60 if thr60 else 0:.1f} "
           f"{'✓' if rel_ok else '✗'}")
+    print(f"断言④b ETF单位比值: {'✓' if not etf_bad else '✗ ' + str(etf_bad[:5])}")
     # 断言⑤(2026-09-13 过度归一修复后): 有交易日成交额<5万元的票=异常
     # (检测体系此前全部单向——只抓"归一不足", 过度归一方向无审计;
     # 17只新票被日期规则二次除到0.4~3.5万元全靠 MCP 抽验才暴露)
@@ -270,8 +288,8 @@ def main():
     import json as _j
     _j.dump({"totals_all": totals_all, "totals_ex": totals_ex},
             open("logs/daily_total_curve.json", "w"))
-    if v1 or v2 or new_deg or tail_bad or not rel_ok or over or agg_bad \
-            or ratio_bad:
+    if v1 or v2 or new_deg or tail_bad or etf_bad or not rel_ok or over \
+            or agg_bad or ratio_bad:
         print("⚠️ 单位一致性违规")
         sys.exit(1)
     print("单位一致性通过")
