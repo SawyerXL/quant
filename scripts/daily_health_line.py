@@ -51,11 +51,14 @@ def main():
 
     # 实盘持仓快照时间(最新 positions 文件)
     snap_time = "?"
+    neg_positions = {}
     for f in sorted(Path("logs").glob("*.json")):
         if "positions_latest" in f.name:
             try:
                 d = json.loads(f.read_text(encoding="utf-8"))
                 snap_time = str(d.get("exported_at", "?"))[:19]
+                # 2026-10-21 残差审计待办2: 负持仓必须在健康行可见
+                neg_positions = d.get("negative_positions") or {}
             except Exception:
                 pass
 
@@ -200,6 +203,10 @@ def main():
     alerts = []
     if audit != "pass":
         alerts.append(f"单位一致性审计未通过/过期/缺失: audit={audit}")
+    if neg_positions:
+        alerts.append(f"负持仓伪影 {len(neg_positions)} 只: "
+                      f"{list(neg_positions)[:5]} (执行层已按0隔离, "
+                      f"修复窗口 2026-10-29 前)")
     # bootstrap 是合法运行前的宽限态, 不告警; missing/err 才告警
     if dep.get("dep_scan") in ("missing", "err"):
         alerts.append(f"结论依赖追踪器异常: {dep.get('dep_scan')} "
@@ -372,6 +379,7 @@ def main():
             "last_trading_day": last_td, "bar_fresh": bar_fresh,
             "last_data_update": last_update, "tunnel": tunnel,
             "audit": audit, "positions_snapshot": snap_time,
+            "negative_positions": neg_positions,
             "cb_signal_date": cb_date, "cb_data_max_date": cb_data_max,
             "cb_unknown_gaps": cb_unknown, "cb_unknown_recent": cb_unknown_recent,
             "guard_rejected_rows": guard_rej, "snapshot_state": snap_state,
