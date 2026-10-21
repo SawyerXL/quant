@@ -1,12 +1,16 @@
 """40/60 配比三件套（用户 2026-10-21 裁定“先验证再动”）。
 
-口径：股票腿 64 万（2×32 万/组，lot=100，实盘日程）+ CB 腿 96 万
-（nav_biweekly_par，实盘 CB 双周 NAV）；月度回目标权重+日漂移；0 成本基准，
-另报 0.13% 再平衡成本敏感性。
+口径：股票腿 64 万（2×32 万/组，lot=100，实盘日程）+ CB 腿 96 万；
+月度回目标权重+日漂移；0 成本基准，另报 0.13% 再平衡成本敏感性。
 - Part A：组合画像 + 15% 熔断 B 模式网格（冻结权重至回撤回到 τ+2pp）。
 - Part B：股票腿 32 万/组跳票/覆盖率（引擎 lot_skips/trades）+ 50 万/组对照。
 窗口：股票引擎 2019-01~2026-10-19 ∩ CB NAV 至 2026-10-09。
-用法：python scripts/three_piece_40_60.py
+
+CB 腿日程由 --cb-col 选定，必须显式记录：默认 nav_biweekly_par 是
+**2026-11-02 之前的旧双周日程基线**；现产日程（月度 snapdelay）用
+--cb-col nav_snapdelay_par --tag snapdelay。两列相差 ~3.5pp，引用时
+必须核对 JSON 的 schedule/cb_nav_source，禁止只按"40/60"标签取数。
+用法：python scripts/three_piece_40_60.py [--cb-col ...] [--tag ...]
 """
 import argparse
 import json
@@ -113,9 +117,17 @@ def main():
     idx_c.index = pd.to_datetime(idx_c.index)
     print(f"panel {panel.shape[0]}天×{panel.shape[1]}只, rebal {len(rebal)}", flush=True)
 
+    schedule = ("monthly_snapdelay" if "snapdelay" in args.cb_col else
+                "biweekly" if "biweekly" in args.cb_col else "other")
     out = {"as_of": "2026-10-19", "weights": [W_STOCK, W_CB],
            "stock_per_group": args.stock_cap, "cb_col": args.cb_col,
+           "cb_nav_source": args.cb_col, "schedule": schedule,
+           "schedule_note": ("现产日程(2026-11-02起)" if schedule == "monthly_snapdelay"
+                             else "旧日程基线, 非现产"),
+           "return_basis": {"stock": "引擎原始口径(qfq契约, 旧史混存待审计)",
+                            "cb": args.cb_col},
            "cb_capital": 1_600_000 * W_CB, "part_b": {}}
+    print(f"CB schedule={schedule} cb_col={args.cb_col}", flush=True)
     # Part B: 目标组资金 与 50万/组对照
     navs = {}
     for cap in (args.stock_cap, 500_000.0):
