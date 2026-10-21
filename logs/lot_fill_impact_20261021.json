@@ -1,0 +1,140 @@
+{
+ "as_of": "2026-10-19",
+ "sandbox": "backtest_engine_lotfill.py (renorm + lot-fill, 5% cap)",
+ "window": "2019-01-03~2026-10-19",
+ "stock_leg": {
+  "current": {
+   "n": 1956,
+   "ann_pct": 1.5,
+   "sharpe": 0.212,
+   "dd_pct": -16.66
+  },
+  "lotfill": {
+   "n": 1956,
+   "ann_pct": 1.4,
+   "sharpe": 0.182,
+   "dd_pct": -22.24
+  }
+ },
+ "exposure_lotfill": {
+  "days": 1957,
+  "mean_actual": 0.2384,
+  "mean_target": 0.564,
+  "mean_gap": 0.3311,
+  "days_gap_gt_10pp": 1288
+ },
+ "core_40_60": {
+  "current": {
+   "base": {
+    "n": 1887,
+    "ann_pct": 12.54,
+    "sharpe": 1.48,
+    "dd_pct": -13.98
+   },
+   "margin15": 1.02,
+   "halts": {
+    "-0.1": {
+     "n": 1887,
+     "ann_pct": 12.51,
+     "sharpe": 1.479,
+     "dd_pct": -13.98,
+     "triggers": 2,
+     "days_halted": 39
+    },
+    "-0.15": {
+     "n": 1887,
+     "ann_pct": 12.54,
+     "sharpe": 1.48,
+     "dd_pct": -13.98,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.2": {
+     "n": 1887,
+     "ann_pct": 12.54,
+     "sharpe": 1.48,
+     "dd_pct": -13.98,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.25": {
+     "n": 1887,
+     "ann_pct": 12.54,
+     "sharpe": 1.48,
+     "dd_pct": -13.98,
+     "triggers": 0,
+     "days_halted": 0
+    }
+   },
+   "sat5": {
+    "n": 1887,
+    "ann_pct": 12.89,
+    "sharpe": 1.505,
+    "dd_pct": -14.35,
+    "margin15": 0.65
+   }
+  },
+  "lotfill": {
+   "base": {
+    "n": 1887,
+    "ann_pct": 12.53,
+    "sharpe": 1.398,
+    "dd_pct": -13.96
+   },
+   "margin15": 1.04,
+   "halts": {
+    "-0.1": {
+     "n": 1887,
+     "ann_pct": 12.51,
+     "sharpe": 1.397,
+     "dd_pct": -13.96,
+     "triggers": 2,
+     "days_halted": 39
+    },
+    "-0.15": {
+     "n": 1887,
+     "ann_pct": 12.53,
+     "sharpe": 1.398,
+     "dd_pct": -13.96,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.2": {
+     "n": 1887,
+     "ann_pct": 12.53,
+     "sharpe": 1.398,
+     "dd_pct": -13.96,
+     "triggers": 0,
+     "days_halted": 0
+    },
+    "-0.25": {
+     "n": 1887,
+     "ann_pct": 12.53,
+     "sharpe": 1.398,
+     "dd_pct": -13.96,
+     "triggers": 0,
+     "days_halted": 0
+    }
+   },
+   "sat5": {
+    "n": 1887,
+    "ann_pct": 12.89,
+    "sharpe": 1.429,
+    "dd_pct": -14.34,
+    "margin15": 0.66
+   }
+  }
+ },
+ "delta": {
+  "stock_ann_pp": -0.1,
+  "core_ann_pp": -0.01,
+  "core_dd_pp": 0.02,
+  "sat5_margin_pp": 0.01
+ },
+ "mde_core": {
+  "n": 1887,
+  "TE_pct": 1.24,
+  "SE_pp": 0.45,
+  "MDE_pp": 0.88
+ }
+}
