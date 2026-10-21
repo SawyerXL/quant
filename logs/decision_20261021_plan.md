@@ -47,5 +47,9 @@
 ## 下一步
 
 - 11-02：CB 月度首次调仓验证；卫星/overlay 纸面继续。
+  - 验证器 `scripts/verify_cb_monthly_rebalance.py`（15:40 cron）：快照
+    （当月1日、行数>0）/ 信号（schedule、rebalance=true、snap_date=最新、
+    holdings）/ 实盘 CB 持仓三查；`--selftest` 内置已知失败用例
+    （rebalance=False / 旧 snap_date），闸门十六。
 - 60 日：核心 40/60 + 5% 卫星落地评审；US 40/60 三件套；tick 前向。
 - 每日 18:30 QDII 溢价；≤5% 邮件告警。

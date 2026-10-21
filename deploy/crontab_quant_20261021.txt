@@ -45,8 +45,10 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # CB当月快照补齐(2026-10-21 月度调仓配套; 每月首个交易日08:10, 当月已存在则跳过;
 # 周一在06:30全量周更后, 周更在跑则跳过; 失败次日自动重试)
 10 8 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/build_cb_snapshot_recent.py >> /root/quant/logs/cron_cb_snap_recent.log 2>&1
-# CB信号(每日14:28, 紧跟股票信号; 月度=每月首个交易日全量轮换, 非调仓日刷新)
+# CB信号(每日14:28, 紧跟股票信号; 月度=快照日后首个交易日全量轮换, 非调仓日刷新)
 28 14 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/cb_signal.py >> /root/quant/logs/cron_cb_signal.log 2>&1
+# CB月度调仓验证(2026-10-21; 快照日后首个交易日15:40; 非调仓日跳过; 内置已知失败selftest)
+40 15 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/verify_cb_monthly_rebalance.py >> /root/quant/logs/cron_cb_monthly_verify.log 2>&1
 2,7,12,17,22,27,32,37,42,47,52,57 * * * * cd /root/quant && /root/quant/.venv/bin/python scripts/tunnel_watchdog.py >> /root/quant/logs/cron_tunnel.log 2>&1
 5 15 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/qmt_snapshot.py >> /root/quant/logs/cron_qmt_snapshot.log 2>&1
 55 15 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/measure_execution_costs.py --pull >> /root/quant/logs/cron_cost_pull.log 2>&1
