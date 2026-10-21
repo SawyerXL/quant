@@ -138,7 +138,12 @@ def main():
         out["part_b"][f"{cap/10000:.0f}万/组"] = {
             "ann": cm["年化收益率"], "sharpe": cm["夏普比率"],
             "dd": cm["最大回撤"], "lot_skips": int(m.get("lot_skips", 0)),
-            "trades": int(m.get("trades", 0))}
+            "trades": int(m.get("trades", 0)),
+            # 2026-10-21 成本审计: 引擎实际计入的累计/年化成本(占资本%)
+            "annual_cost_drag_pct": round(
+                float(m.get("annual_cost_drag", 0.0)) * 100, 3),
+            "total_commission_pct": round(
+                float(m.get("total_commission", 0.0)) * 100, 3)}
         print("PartB", cap, out["part_b"][f"{cap/10000:.0f}万/组"], flush=True)
 
     r_s = navs[args.stock_cap].pct_change().dropna()
