@@ -1,0 +1,83 @@
+END=2026-10-20 START=2019-01-01
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+load 1000/5575 25s
+load 2000/5575 51s
+load 3000/5575 73s
+load 4000/5575 98s
+load 5000/5575 122s
+panel (1958, 5395) rebal 188
+run bear30 ...
+done bear30 162s
+run bear0 ...
+done bear0 186s
+{
+ "as_of": "2026-10-20",
+ "start": "2019-01-01",
+ "data": "current data_store (qfq D rebuild, 2026-10-22)",
+ "arms": {
+  "bear30": {
+   "ma200_bear_pos": null,
+   "cash_yield": 0.014,
+   "limit_gate": true,
+   "pool_size": 30,
+   "ma200_thresh_shift": -0.03
+  },
+  "bear0": {
+   "ma200_bear_pos": 0.0,
+   "cash_yield": 0.014,
+   "limit_gate": true,
+   "pool_size": 30,
+   "ma200_thresh_shift": -0.03
+  }
+ },
+ "stats": {
+  "bear30": {
+   "total": 0.4337,
+   "ann": 0.0473,
+   "sharpe": 0.394,
+   "maxdd": -0.2995,
+   "w_20260720": -0.0117,
+   "ytd_2026": 0.0114
+  },
+  "bear0": {
+   "total": 0.4337,
+   "ann": 0.0473,
+   "sharpe": 0.394,
+   "maxdd": -0.2995,
+   "w_20260720": -0.0117,
+   "ytd_2026": 0.0114
+  }
+ },
+ "exposure": {
+  "bear30": {
+   "n_days": 1958,
+   "avg_actual": 0.3132,
+   "bear_days": 605,
+   "bear_avg_actual": 0.0219,
+   "bear_avg_target": 0.3,
+   "recent_avg_actual": 0.1556,
+   "tier_sells": 2.0705,
+   "tier_switch_count": 217
+  },
+  "bear0": {
+   "n_days": 1958,
+   "avg_actual": 0.3132,
+   "bear_days": 605,
+   "bear_avg_actual": 0.0219,
+   "bear_avg_target": 0.0,
+   "recent_avg_actual": 0.1556,
+   "tier_sells": 2.0705,
+   "tier_switch_count": 217
+  }
+ },
+ "diff": {
+  "ann_bear0_minus_bear30": 0.0,
+  "mean_daily_diff": 0.0,
+  "t": null,
+  "se_ann": 0.0,
+  "mde_ann": 0.0,
+  "corr": 1.0
+ },
+ "prereg": "logs/prereg_bear_floor_20261022.md"
+}
