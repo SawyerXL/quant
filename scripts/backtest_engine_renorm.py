@@ -308,7 +308,6 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
 
         if getattr(config, "vol_target", 0) <= 0:
             pos_ratio_now = TIER_POS[tier_state]
-            bear = getattr(config, "ma200_bear_pos", None)
             if bear is not None and tier_state == 0:
                 pos_ratio_now = bear
 

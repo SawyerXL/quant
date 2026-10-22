@@ -304,12 +304,6 @@ def run_backtest(panel, amount_panel, rebal_dates, config, index_close=None, ope
 
         if getattr(config, "vol_target", 0) <= 0:
             pos_ratio_now = TIER_POS[tier_state]
-            # 注意: 此覆盖只写 pos_ratio_now(曝光诊断 target), 调仓/切档权重走
-            # prev_pos_ratio/pos_ratio 另一路; 2019-2026 实证两臂逐位一致
-            # (logs/ab_bear_floor_20261022.json), 故 ma200_bear_pos 不是有效敏感性参数。
-            bear = getattr(config, "ma200_bear_pos", None)
-            if bear is not None and tier_state == 0:
-                pos_ratio_now = bear
 
         # ── Step 0: 回撤熔断检查 ──
         if getattr(config, "halt_mode", "none") != "none" and not halted:

@@ -59,7 +59,7 @@ def main():
                             (0.0, "bear_pos=0(显式清仓)"),
                             (0.5, "bear_pos=0.5(熊档持半仓替代案)")]:
         cfg = replace(DEFAULT_CONFIG, lot_size=100,
-                      initial_capital=500_000.0, ma200_bear_pos=bear_pos)
+                      initial_capital=500_000.0)  # ma200_bear_pos 已删除(no-op)
         nav, m = run_backtest(panel, ap, rebal, cfg, idx_c)
         cm = calc_metrics(nav)
         ar = float(str(cm["年化收益率"]).strip("%"))

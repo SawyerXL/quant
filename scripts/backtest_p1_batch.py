@@ -79,9 +79,9 @@ def main():
     run_line(panel, ap, rebal,
              BacktestConfig(**{**DEFAULT_CONFIG.to_dict(), "ma200_thresh_shift": -0.02}), ic, "阈值-0.02(更早降档)")
     run_line(panel, ap, rebal,
-             BacktestConfig(**{**DEFAULT_CONFIG.to_dict(), "ma200_bear_pos": 0.20}), ic, "熊市档0.30→0.20")
+             BacktestConfig(**DEFAULT_CONFIG.to_dict()), ic, "熊市档0.30(ma200_bear_pos已删)")
     run_line(panel, ap, rebal,
-             BacktestConfig(**{**DEFAULT_CONFIG.to_dict(), "ma200_bear_pos": 0.40}), ic, "熊市档0.30→0.40")
+             BacktestConfig(**DEFAULT_CONFIG.to_dict()), ic, "熊市档0.30(ma200_bear_pos已删)")
 
     # ── ③ 三段拆解 ──
     print()

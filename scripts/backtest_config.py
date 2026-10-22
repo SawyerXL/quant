@@ -67,8 +67,6 @@ class BacktestConfig:
     max_single: float = 0.15           # 单票绝对上限(旧持仓超标时削减)
     timing_scale: float = 1.0          # MA200择时仓位系数(1=现网; <1=熊市降仓更狠)
     ma200_thresh_shift: float = -0.03  # 择时阈值整体平移(2026-09-04定案: 更早降档3%, 回撤-4.2pp/收益-0.35pp全期, OOS反优)
-    ma200_bear_pos: float = None       # 熊市档覆盖: 仅改 exposure 诊断 target, 未接交易路径
-                                       # (A/B 8b7e7cd 两臂逐位一致; 交易由 rebal/切档 TIER_POS 决定)
 
     # ── 目标波动率控仓(0=关, 走五档; >0=仓位=min(1,target/realized_vol)) ──
     vol_target: float = 0.0            # 年化目标波动率(如0.12)

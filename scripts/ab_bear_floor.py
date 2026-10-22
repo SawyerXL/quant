@@ -60,7 +60,9 @@ def main():
     print(f"panel {panel.shape} rebal {len(rebal)}", flush=True)
 
     base = replace(DEFAULT_CONFIG, cash_yield=0.014, limit_gate=True, diag_exposure=True)
-    arms = {"bear30": base, "bear0": replace(base, ma200_bear_pos=0.0)}
+    # 2026-10-22: ma200_bear_pos 已删除(诊断为 no-op, A/B 两臂逐位一致);
+    # 本脚本保留为历史工件: 两臂同配置，仅用于复现当时的 exposure 诊断。
+    arms = {"bear30": base, "bear0": base}
     navs, results = {}, {}
     for name, cfg in arms.items():
         print(f"run {name} ...", flush=True)
@@ -122,7 +124,7 @@ def main():
     payload = {
         "as_of": END, "start": START,
         "data": "current data_store (qfq D rebuild, 2026-10-22)",
-        "arms": {n: {"ma200_bear_pos": c.ma200_bear_pos, "cash_yield": c.cash_yield,
+        "arms": {n: {"cash_yield": c.cash_yield,
                      "limit_gate": c.limit_gate, "pool_size": c.pool_size,
                      "ma200_thresh_shift": c.ma200_thresh_shift}
                  for n, c in arms.items()},
