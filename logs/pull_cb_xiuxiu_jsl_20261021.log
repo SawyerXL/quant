@@ -1,0 +1,12 @@
+20/220 rows=19 fails=0
+40/220 rows=29 fails=0
+60/220 rows=35 fails=0
+80/220 rows=56 fails=0
+100/220 rows=75 fails=0
+120/220 rows=112 fails=0
+140/220 rows=127 fails=0
+160/220 rows=142 fails=0
+180/220 rows=165 fails=0
+200/220 rows=181 fails=0
+220/220 rows=211 fails=0
+done codes=220 events=211 bonds=133 fails=0 -> logs/cb_xiuxiu_jsl_events_20261021.parquet

@@ -7,6 +7,7 @@
 **盲区声明(10-01 QC)**: 事件表漏计"初始转股价→首个有值事件"间的大幅下修
 (API 无事件行)——下修桶可能欠计数, 本结果为初步, 节后盲区修复后重跑定稿。
 """
+import argparse
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -20,6 +21,11 @@ from data.cb_select import select_double_low
 from cb_xiuxiu_marker import load_events, pit_mark
 
 logger.remove()
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--events", default="logs/cb_convert_price_events.parquet",
+                 help="事件表；JSL 权威下修史=logs/cb_xiuxiu_jsl_events_20261021.parquet")
+_ap.add_argument("--tag", default="g2")
+_args = _ap.parse_args()
 TOP_N = 25
 
 snapshots = load_meta("cb_snapshots")
@@ -67,7 +73,9 @@ for i, date in enumerate(all_dates):
             for c in sel:
                 instances.append((date, c, last_snap))
 
-events = load_events()
+events = load_events(_args.events)
+print(f"事件源: {_args.events} ({len(events)} 行/{events['code'].nunique()} 券)",
+      flush=True)
 
 # 持有月收益: (调仓日, 券) → 下次调仓日的券收益
 rows = []
@@ -92,6 +100,14 @@ df = pd.DataFrame(rows, columns=["code", "date", "ret", "mark"])
 df["bucket"] = df["mark"].map({0: "0无", 1: "1次", 2: "2+次"})
 print(f"持有月观测: {len(df)} 券-月 | 独立券: {df['code'].nunique()}")
 print(df["bucket"].value_counts().to_string())
+# 盲区量化(10-21 定稿前): 选入券无事件行 = 全被记 0; G2 单券上限 20 行截断
+seen = set(df["code"].astype(str))
+ev = events.assign(code=events["code"].astype(str).str.zfill(6))
+ev_codes = set(ev["code"])
+ev_n = ev.groupby("code").size()
+print(f"事件覆盖: 选入券{len(seen)}只, 无事件行{len(seen - ev_codes)}只; "
+      f"事件表20行截断{int((ev_n >= 20).sum())}/{len(ev_n)}券")
+df.to_csv(f"logs/cb_xiuxiu_buckets_20261021_{_args.tag}.csv", index=False)
 print("\n[模板判据执行] 每桶 N≥50 且独立券≥10; 对比双侧 t, 每对比 α=0.025")
 
 
@@ -121,7 +137,10 @@ if len(b0) >= 50 and len(you) >= 50 and b0["code"].nunique() >= 10 and you["code
     mu1 = you["ret"].mean() - b0["ret"].mean()
     se1 = d1.std(ddof=1) / np.sqrt(len(d1))
     t1 = mu1 / se1 if se1 > 0 else np.nan
+    se1n = np.sqrt(you["ret"].var(ddof=1) / len(you)
+                   + b0["ret"].var(ddof=1) / len(b0))
     print(f"  对比一(有vs无): Δ={mu1*100:+.2f}% SE={se1*100:.2f}% t={t1:+.2f} "
+          f"naive_t={mu1/se1n:+.2f} "
           f"{'显著(α=0.025)' if abs(t1) > 2.24 else '不显著'}")
 else:
     print(f"  对比一(有vs无): 样本不足(N无={len(b0)}/N有={len(you)})")
@@ -130,7 +149,10 @@ if len(b1) >= 50 and len(b2) >= 50 and b1["code"].nunique() >= 10 and b2["code"]
     mu2 = b2["ret"].mean() - b1["ret"].mean()
     se2 = d2.std(ddof=1) / np.sqrt(len(d2))
     t2 = mu2 / se2 if se2 > 0 else np.nan
+    se2n = np.sqrt(b2["ret"].var(ddof=1) / len(b2)
+                   + b1["ret"].var(ddof=1) / len(b1))
     print(f"  对比二(多次vs单次): Δ={mu2*100:+.2f}% SE={se2*100:.2f}% t={t2:+.2f} "
+          f"naive_t={mu2/se2n:+.2f} "
           f"{'显著(α=0.025)' if abs(t2) > 2.24 else '不显著'}")
 else:
     print(f"  对比二(多次vs单次): 样本不足(N单={len(b1)}/N多={len(b2)})")

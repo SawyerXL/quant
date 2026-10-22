@@ -21,13 +21,20 @@ import numpy as np
 import pandas as pd
 
 EVENTS_FILE = Path("logs/cb_convert_price_events.parquet")
-XIUXIU_THRESH = 0.05  # 单次转股价降幅>5% 判为下修(分红调整通常1~3%)
+# 单次转股价降幅>5% 判为下修——**仅对 JSL 权威下修表成立**。G2 全事件表
+# 含送转/分红机械调整(10转4 即 -28.6%), 用本阈值会误计(2026-10-21 实测
+# 312 条 G2 大降仅 196 条是 JSL 下修); 权威口径见 pull_cb_xiuxiu_jsl.py。
+XIUXIU_THRESH = 0.05
 
 
-def load_events() -> pd.DataFrame:
-    if not EVENTS_FILE.exists():
+def load_events(path=None) -> pd.DataFrame:
+    """path 可换权威下修史（2026-10-21: JSL 下修记录同构表；G2 事件含
+    送转/分红调整，>5% 阈值会误计——见 pull_cb_xiuxiu_jsl.py）。"""
+    f = Path(path) if path else EVENTS_FILE
+    if not f.exists():
         return pd.DataFrame(columns=["code", "change_date", "bef", "aft"])
-    df = pd.read_parquet(EVENTS_FILE)
+    df = pd.read_parquet(f)
+    df["code"] = df["code"].astype(str).str.zfill(6)
     df["change_date"] = pd.to_datetime(df["change_date"])
     return df
 
