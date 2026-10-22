@@ -275,7 +275,17 @@ def load_daily(code: str, start: str, end: str, columns: list | None = None) -> 
     if not frames:
         return pd.DataFrame()
     result = pd.concat(frames).sort_values("date")
-    return result[(result["date"] >= start_dt) & (result["date"] <= end_dt)].reset_index(drop=True)
+    result = result[(result["date"] >= start_dt) & (result["date"] <= end_dt)]
+    # 2026-10-22: 零价/NaN 收盘是停牌占位或脏值, 不是可交易价格。此前相对
+    # 跳变守卫用 `if prev_close and c` 判断, c=0 为假值被放行, 零价可进
+    # 面板(000016 *ST康佳 2026-09-24 close=0 实证)。读取侧统一拒收。
+    if "close" in result.columns:
+        c = pd.to_numeric(result["close"], errors="coerce")
+        bad = c.isna() | (c <= 0)
+        if bad.any():
+            logger.warning(f"{code}: load_daily 丢弃 {int(bad.sum())} 行 close<=0/NaN")
+            result = result[~bad]
+    return result.reset_index(drop=True)
 
 
 def load_daily_cross_section(date: str) -> pd.DataFrame:

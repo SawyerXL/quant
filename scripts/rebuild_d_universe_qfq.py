@@ -7,6 +7,8 @@
 "源端 max 之后已有 bar 保留"（防覆写丢当日）。as_of=2026-10-21。
 用法: python scripts/rebuild_d_universe_qfq.py
 """
+import argparse
+import signal
 import sys
 import shutil
 from pathlib import Path
@@ -24,25 +26,49 @@ ANCHOR_LO = "2026-10-01"  # 最新bar锚窗口
 BAK = Path("data_store/backup_qfq_rebuild_20261021")
 
 
+def _timeout_handler(signum, frame):
+    raise TimeoutError("source fetch timeout 150s")
+
+
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--codes-file", default=None,
+                    help="断点续跑: 每行一个代码; 只处理这些码")
+    ap.add_argument("--json-out", default="logs/rebuild_d_universe_20261021.json")
+    args = ap.parse_args()
     uni = pd.read_csv("logs/qfq_d_universe_20261021.csv", dtype={"code": str})
     uni["code"] = uni["code"].str.zfill(6)
     cand = set(uni.loc[uni["rebal60"], "code"])
     reg = pd.read_parquet("data_store/meta/adjust_basis_registry.parquet")
     qfq = set(reg.loc[reg["basis"] == "qfq", "code"].astype(str))
-    codes = sorted(c for c in cand
-                   if c not in qfq
-                   and not c.startswith(("4", "8", "92"))
-                   and c not in {"601059", "601198"})
+    if args.codes_file:
+        want = {ln.strip().zfill(6) for ln in
+                Path(args.codes_file).read_text().splitlines() if ln.strip()}
+        codes = sorted(c for c in want
+                       if c in cand
+                       and not c.startswith(("4", "8", "92"))
+                       and c not in {"601059", "601198"})
+    else:
+        codes = sorted(c for c in cand
+                       if c not in qfq
+                       and not c.startswith(("4", "8", "92"))
+                       and c not in {"601059", "601198"})
     print(f"D 宇宙: rebal60 {len(cand)} / 非qfq {len(codes)} "
           f"(排除北交所与 601059/601198)", flush=True)
 
     src = get_source()
     BAK.mkdir(parents=True, exist_ok=True)
-    fixed, skipped, failed = [], [], []
+    fixed, skipped, failed, tail_kept = [], [], [], 0
     for i, code in enumerate(codes):
         try:
-            df = src.get_daily(code, "1990-01-01", END)
+            # 2026-10-21 首跑在 600572 附近无限挂起被 2h timeout 杀; 单券
+            # 150s 硬超时→FallbackDataSource 捕获后落 MCP 备源(其自带 30s)
+            signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(150)
+            try:
+                df = src.get_daily(code, "1990-01-01", END)
+            finally:
+                signal.alarm(0)
             if df is None or df.empty:
                 failed.append((code, "拉取空"))
                 continue
@@ -87,20 +113,22 @@ def main():
                     (BAK / str(yr)).mkdir(parents=True, exist_ok=True)
                     shutil.copy2(p, BAK / str(yr) / f"{code}.parquet")
             for yr, grp in df.groupby(df["date"].dt.year):
-                p = Path(f"data_store/daily/{yr}")
-                p.mkdir(parents=True, exist_ok=True)
+                dyr = Path(f"data_store/daily/{yr}")
+                dyr.mkdir(parents=True, exist_ok=True)
+                fp = dyr / f"{code}.parquet"   # 2026-10-21 修: 原读目录
                 # 源端 max 之后已有 bar(日更写入)保留, 防覆写丢当日
-                if p.exists():
+                if fp.exists():
                     try:
-                        old = pd.read_parquet(p)
+                        old = pd.read_parquet(fp)
                         old["date"] = pd.to_datetime(old["date"])
                         tail = old[old["date"] > src_max]
                         if len(tail):
                             grp = pd.concat([grp, tail], ignore_index=True
                                             ).sort_values("date")
-                    except Exception:
-                        pass
-                grp.to_parquet(p / f"{code}.parquet", index=False)
+                            tail_kept += 1
+                    except Exception as e:  # noqa: BLE001
+                        logger.warning(f"{code} {yr} 尾部保留读取失败: {e}")
+                grp.to_parquet(fp, index=False)
             fixed.append(code)
             print(f"  {code}: 全史qfq覆写 {len(df)}行", flush=True)
         except Exception as e:
@@ -115,11 +143,11 @@ def main():
     if failed:
         print(f"失败: {failed[:20]}{'...' if len(failed) > 20 else ''}", flush=True)
     import json
-    Path("logs/rebuild_d_universe_20261021.json").write_text(
+    Path(args.json_out).write_text(
         json.dumps({"as_of": END, "anchor_lo": ANCHOR_LO,
                     "n_universe_rebal60": len(cand), "n_codes": len(codes),
                     "n_fixed": len(fixed), "n_skipped": len(skipped),
-                    "n_failed": len(failed),
+                    "n_failed": len(failed), "n_tail_kept": tail_kept,
                     "fixed": fixed, "skipped": skipped, "failed": failed},
                    ensure_ascii=False, indent=1), encoding="utf-8")
 

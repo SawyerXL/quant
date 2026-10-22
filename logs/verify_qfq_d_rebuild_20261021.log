@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/root/quant/scripts/verify_qfq_d_rebuild.py", line 98, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/root/quant/scripts/verify_qfq_d_rebuild.py", line 57, in main
+    d = json.loads(Path("logs/rebuild_d_universe_20261021.json").read_text())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1029, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1015, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'logs/rebuild_d_universe_20261021.json'

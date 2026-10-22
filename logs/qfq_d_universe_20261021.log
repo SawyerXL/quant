@@ -1,0 +1,17 @@
+load 0 ok 1
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+load 500 ok 489
+load 1000 ok 984
+load 1500 ok 1483
+load 2000 ok 1983
+load 2500 ok 2483
+load 3000 ok 2952
+load 3500 ok 3452
+load 4000 ok 3947
+load 4500 ok 4432
+load 5000 ok 4932
+load 5500 ok 5320
+amount panel (1957, 5394)
+{'rebal60': 882, 'rebal120': 1557, 'daily300': 4782, 'union': 4782}
+-> logs/qfq_d_universe_20261021.csv

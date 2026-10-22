@@ -1,0 +1,12 @@
+/root/quant/data/storage.py:277: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  result = pd.concat(frames).sort_values("date")
+panel 1957天×5394只, rebal 188
+CB schedule=monthly_snapdelay cb_col=nav_snapdelay_par
+PartB 320000.0 {'ann': '1.58%', 'sharpe': '0.22', 'dd': '-16.61%', 'lot_skips': 930, 'trades': 3528, 'annual_cost_drag_pct': 1.306, 'total_commission_pct': 10.19}
+PartB 500000.0 {'ann': '2.54%', 'sharpe': '0.29', 'dd': '-21.81%', 'lot_skips': 628, 'trades': 4004, 'annual_cost_drag_pct': 1.533, 'total_commission_pct': 11.954}
+combo window 2019-01-03~2026-10-19 n=1887
+halt -0.1 {'n': 1887, 'ann_pct': 12.55, 'sharpe': 1.482, 'dd_pct': -13.98, 'triggers': 2, 'days_halted': 39, 'damage_ann_pp': -0.02, 'damage_dd_pp': 0.0}
+halt -0.15 {'n': 1887, 'ann_pct': 12.57, 'sharpe': 1.483, 'dd_pct': -13.98, 'triggers': 0, 'days_halted': 0, 'damage_ann_pp': 0.0, 'damage_dd_pp': 0.0}
+halt -0.2 {'n': 1887, 'ann_pct': 12.57, 'sharpe': 1.483, 'dd_pct': -13.98, 'triggers': 0, 'days_halted': 0, 'damage_ann_pp': 0.0, 'damage_dd_pp': 0.0}
+halt -0.25 {'n': 1887, 'ann_pct': 12.57, 'sharpe': 1.483, 'dd_pct': -13.98, 'triggers': 0, 'days_halted': 0, 'damage_ann_pp': 0.0, 'damage_dd_pp': 0.0}
+-> logs/three_piece_40_60_d_final_32w_20261021.json

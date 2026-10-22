@@ -1,0 +1,93 @@
+{
+ "as_of": "2026-10-19",
+ "weights": [
+  0.4,
+  0.6
+ ],
+ "stock_per_group": 320000.0,
+ "cb_col": "nav_snapdelay_par",
+ "cb_nav_source": "nav_snapdelay_par",
+ "schedule": "monthly_snapdelay",
+ "schedule_note": "现产日程(2026-11-02起)",
+ "return_basis": {
+  "stock": "引擎原始口径(qfq契约, 旧史混存待审计)",
+  "cb": "nav_snapdelay_par"
+ },
+ "cb_capital": 960000.0,
+ "part_b": {
+  "32万/组": {
+   "ann": "1.58%",
+   "sharpe": "0.22",
+   "dd": "-16.61%",
+   "lot_skips": 930,
+   "trades": 3528,
+   "annual_cost_drag_pct": 1.306,
+   "total_commission_pct": 10.19
+  },
+  "50万/组": {
+   "ann": "2.54%",
+   "sharpe": "0.29",
+   "dd": "-21.81%",
+   "lot_skips": 628,
+   "trades": 4004,
+   "annual_cost_drag_pct": 1.533,
+   "total_commission_pct": 11.954
+  }
+ },
+ "part_a": {
+  "base": {
+   "n": 1887,
+   "ann_pct": 12.57,
+   "sharpe": 1.483,
+   "dd_pct": -13.98
+  },
+  "halts": {
+   "-0.1": {
+    "n": 1887,
+    "ann_pct": 12.55,
+    "sharpe": 1.482,
+    "dd_pct": -13.98,
+    "triggers": 2,
+    "days_halted": 39,
+    "damage_ann_pp": -0.02,
+    "damage_dd_pp": 0.0
+   },
+   "-0.15": {
+    "n": 1887,
+    "ann_pct": 12.57,
+    "sharpe": 1.483,
+    "dd_pct": -13.98,
+    "triggers": 0,
+    "days_halted": 0,
+    "damage_ann_pp": 0.0,
+    "damage_dd_pp": 0.0
+   },
+   "-0.2": {
+    "n": 1887,
+    "ann_pct": 12.57,
+    "sharpe": 1.483,
+    "dd_pct": -13.98,
+    "triggers": 0,
+    "days_halted": 0,
+    "damage_ann_pp": 0.0,
+    "damage_dd_pp": 0.0
+   },
+   "-0.25": {
+    "n": 1887,
+    "ann_pct": 12.57,
+    "sharpe": 1.483,
+    "dd_pct": -13.98,
+    "triggers": 0,
+    "days_halted": 0,
+    "damage_ann_pp": 0.0,
+    "damage_dd_pp": 0.0
+   }
+  },
+  "cost_0.13": {
+   "n": 1887,
+   "ann_pct": 12.56,
+   "sharpe": 1.482,
+   "dd_pct": -13.98
+  }
+ }
+}

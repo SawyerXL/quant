@@ -1,0 +1,46 @@
+{
+ "sample_n": 25,
+ "pass_n": 25,
+ "bad": [],
+ "skipped": [],
+ "anchor_shift": [
+  {
+   "code": "002250",
+   "sina_ratios": [
+    0.00758,
+    0.00758,
+    0.00662,
+    0.00729
+   ],
+   "bs_ratios": [
+    0.0,
+    3e-05,
+    0.00015,
+    0.00022
+   ],
+   "note": "同向一致偏移, 独立源验证库内值正确(疑似写入后新除权)"
+  }
+ ],
+ "selftest_raw": {
+  "code": "000090",
+  "ratios": [
+   0.0,
+   0.0108,
+   0.1544,
+   0.2465
+  ],
+  "detected_raw": true
+ },
+ "selftest_pass": true,
+ "independent_source": {
+  "name": "baostock_qfq",
+  "state": "ok",
+  "checked_n": 25,
+  "bad_n": 0,
+  "bad": [],
+  "skipped_n": 0,
+  "skipped": [],
+  "note": "PASS 需主验(Sina)+selftest+独立源全过; 独立源不可用→PASS(Sina-only)并显式记录"
+ },
+ "verdict": "PASS"
+}

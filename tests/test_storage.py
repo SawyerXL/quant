@@ -55,6 +55,14 @@ def test_polluted_row_still_rejected(tmp_store):
     assert list(out["date"]) == ["2016-01-04"]
 
 
+def test_load_daily_drops_zero_close(tmp_store):
+    # 2026-10-22: 零价占位行(000016 *ST康佳 2026-09-24)不得进入消费方
+    _mk({"000016": {2026: [("2026-09-03", 2.46), ("2026-09-24", 0.0),
+                           ("2026-09-25", float("nan"))]}})
+    out = storage.load_daily("000016", "2026-01-01", "2026-12-31")
+    assert list(out["close"]) == [2.46]
+
+
 def test_jump_where_store_disagrees_still_rejected(tmp_store):
     # 库内同日期存在但与入参不一致(真污染): 锚豁免不得放行
     _mk({"600001": {2016: [("2016-01-04", 10.0), ("2016-01-05", 10.1)]}})
