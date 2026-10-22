@@ -13,6 +13,8 @@ from pathlib import Path
 
 from loguru import logger
 
+sys.path.insert(0, str(Path(__file__).parent.parent))  # cron 直跑时可导入 monitoring
+
 WIN_HOST = "Administrator@127.0.0.1"
 WIN_PORT = "2222"
 SSH_KEY = "/root/.ssh/id_rsa"
@@ -29,7 +31,9 @@ def local_head() -> str:
 
 
 def win_head() -> str | None:
-    cmd = ["ssh"] + SSH_OPTS + [WIN_HOST, "git -C H:\\quant rev-parse HEAD"]
+    # 2026-10-22 实测: Windows ssh shell 下 git -C H:\quant 解析失败, 改 cd /d
+    # 进入仓库; 否则 HEAD 恒读空, 22:10 同步检查形同虚设(连续两日假落后)。
+    cmd = ["ssh"] + SSH_OPTS + [WIN_HOST, "cd /d H:\\quant && git rev-parse HEAD"]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True,
                            encoding="utf-8", errors="replace", timeout=45)

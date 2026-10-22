@@ -1,0 +1,69 @@
+warning: in the working copy of 'scripts/dump_qmt_orders.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/export_qmt_positions.py', LF will be replaced by CRLF the next time Git touches it
+diff --git a/scripts/export_qmt_positions.py b/scripts/export_qmt_positions.py
+index f243327..34db00a 100644
+--- a/scripts/export_qmt_positions.py
++++ b/scripts/export_qmt_positions.py
+@@ -32,6 +32,27 @@ SSH_KEY      = os.getenv("SSH_KEY", "")
+ OUT_FILE     = ROOT / "logs" / "qmt_positions_latest.json"
+ 
+ 
++def split_positions(positions: dict) -> tuple[dict, dict]:
++    """按 volume 正/负拆分；负持仓=仿真伪影，单独落盘不得静默丢弃。
++
++    2026-10-20 实锤：002028 −399 股被旧导出 `volume>0` 过滤，快照/对账全链
++    对负持仓盲（残差审计待办第 2 项）。执行层已在 `trader._scoped_positions`
++    按 0 持仓隔离，本函数只负责让观测层看得见。
++    """
++    pos, neg = {}, {}
++    for code, p in positions.items():
++        v = p.get("volume", 0) or 0
++        rec = {"volume": v,
++               "cost_price": p.get("cost_price", 0),
++               "market_value": p.get("market_value", 0)}
++        key = code.split(".")[0]
++        if v > 0:
++            pos[key] = rec
++        elif v < 0:
++            neg[key] = rec
++    return pos, neg
++
++
+ def export_positions() -> dict:
+     """连接 QMT 导出当前持仓和账户信息。"""
+     from execution.qmt_client import get_client
+@@ -43,6 +64,7 @@ def export_positions() -> dict:
+     account   = client.get_account_info()
+     orders    = client.get_today_orders()
+ 
++    pos, neg = split_positions(positions)
+     result = {
+         "exported_at":  datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+         "account": {
+@@ -50,22 +72,16 @@ def export_positions() -> dict:
+             "cash":         account.get("cash", 0),
+             "market_value": account.get("market_value", 0),
+         },
+-        "positions": {
+-            # 去掉交易所后缀，只保留6位代码
+-            code.split(".")[0]: {
+-                "volume":       pos["volume"],
+-                "cost_price":   pos["cost_price"],
+-                "market_value": pos["market_value"],
+-            }
+-            for code, pos in positions.items()
+-            if pos.get("volume", 0) > 0
+-        },
++        "positions": pos,
++        "negative_positions": neg,
+         "today_orders": orders,
+     }
+ 
+     logger.info(f"持仓: {len(result['positions'])} 只  "
+                 f"总资产: {account.get('total_assets', 0):,.0f}  "
+                 f"今日委托: {len(orders)} 笔")
++    if neg:
++        logger.error(f"负持仓伪影 {len(neg)} 只(已单独落盘): {neg}")
+     return result
+ 
+ 
