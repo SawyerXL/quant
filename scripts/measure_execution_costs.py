@@ -1,23 +1,27 @@
 """
-静跑期成本实测聚合工具 — §6.8 条件决策规则(18bp 裁决)的取数/计算端（2026-09-06 建）
+静跑期成本实测聚合工具 — 成本校准（18bp A/C 裁决已作废，2026-10-22 对齐）
 用法:
     python scripts/measure_execution_costs.py --pull            # 经2222隧道远程驱动Windows导出当日订单并拉回
-    python scripts/measure_execution_costs.py --report          # 聚合全部已落盘订单+执行记录, 输出成本报表与18bp裁决
+    python scripts/measure_execution_costs.py --report          # 聚合全部已落盘订单+执行记录, 输出成本报表与成本校准
     python scripts/measure_execution_costs.py --pull --report   # 先拉再算(收盘后一条命令)
 
-口径（与 §6.8 ④ 事前登记一致, 不得私自改动）:
+口径（成本测量；A/C 裁决规则已于 2026-09-07/08 作废，见下）:
   - 参考价: 一律用当日收盘价(local data_store), 与 §6.7 ①"成交价 vs 当日收盘价"同口径;
     历史 execution_result 里的"信号价"口径买入滑点仅作信息行展示, 不混入均值
   - 单边等效成本(bp) = 方向性滑点 + 佣金万2.5 + 印花税卖出万5, 按成交额加权平均
     (2026-10-21 更正: 印花税 2023-08-28 起为万5, 旧"千1"多算5bp)
-    **config/settings.py 的 STAMP_TAX 仍为 0.001（文件受权限保护未直改），
-    需用户改为 0.0005 后本脚本才按万5计量。**
+    **2026-10-22: config STAMP_TAX 已由 0.001 改为 0.0005；佣金仍万2.5
+    保守占位（券商实际万1~1.5 待确认后改）。**
   - 标签: 做T=与 config/t_settle_log.csv 的腿(同code+同方向+时间±5分钟)匹配;
     调仓=当日存在 execution_result 记录; 其余股票单=MA10触发
   - 裁决对象: 调仓+MA10 的股票单(排除做T/CB/基金); 累计 ≥100 笔成交才可裁决
-  - 阈值: 实测单边等效 >18bp → 切C; ≤18bp → 维持A(18bp 为 A/C 换手差与收益差的交叉点, 2026-09-06 钉死)
-    **2026-10-21 注**: 印花税更正(千1→万5)使实测成本少5bp; 18bp 阈值的
-    A/C 交叉系用旧成本推导, 阈值本身未改, 但下一次裁决前应重推导并留痕。
+  - **18bp A/C 裁决规则已于 2026-09-07/08 作废**：旧四臂表是在污染池上测的；
+    修正数据 A=+7.07/夏普0.65/回撤−11.2%（全表最优）vs C=+7.30/0.48/−23.5
+    ——C 回撤深 12pp，切 C 不再是无代价选项（spec §6.9 ⑪/⑫）。
+    本脚本**只做成本测量/校准**：≥100 笔后展示实测单边等效，不再输出
+    "切C/维持A"建议；若未来要改 A/C，须新预注册 + 修正四臂 + 回撤/成本
+    联合判据。
+    **2026-10-22 注**: 印花税配置已改万5；策略单 0/100，盲盒继续。
 """
 import argparse
 import json
@@ -49,10 +53,10 @@ ORDERS_PREFIX = "qmt_orders_"
 EXEC_PREFIX   = "execution_result_"
 T0_LOG        = ROOT / "config" / "t_settle_log.csv"
 
-MEASURED_THRESHOLD_BP = 18.0   # §6.8 钉死: 实测单边等效交叉点
-MIN_FILLS             = 100    # §6.8 钉死: 裁决所需最少成交笔数
-A_TURNOVER            = 9.03   # 完整栈年换手 903%
-C_TURNOVER            = 3.49   # 完整栈-MA10 年换手 349%
+MEASURED_THRESHOLD_BP = 18.0   # 历史值(§6.8); A/C规则已作废, 仅留追溯
+MIN_FILLS             = 100    # 成本校准所需最少成交笔数(盲盒纪律沿用)
+A_TURNOVER            = 9.03   # 完整栈年换手 903%(历史参考)
+C_TURNOVER            = 3.49   # 完整栈-MA10 年换手 349%(历史参考)
 
 from data.storage import INDEX_CODES as INDEX_SHADOW_CODES
 
@@ -162,7 +166,7 @@ def load_bear_clear_days() -> set:
 
     bear_clear 是 regime 集中清仓事件(如 9/7 32只全清), 与 MA10 逐笔
     触发结构不同: 单日样本 + 当日市场漂移混入滑点——入 100 笔池会拉偏
-    18bp 裁决线(且偏向切C)。单独归档, 不计入裁决(2026-09-07 用户定)。
+    成本测量。单独归档, 不计入成本池(2026-09-07 用户定)。
     """
     days = set()
     if not SIGNAL_ARCHIVE_DIR.exists():
@@ -366,7 +370,11 @@ def side_eq_of(m: pd.DataFrame) -> float | None:
 
 
 def _verdict_alert(measured: pd.DataFrame):
-    """裁决状态翻转时告警一次(状态持久化, 避免每天刷屏)。"""
+    """成本样本里程碑告警一次(状态持久化, 避免每天刷屏)。
+
+    2026-10-22: 18bp A/C 裁决作废 → 这里只报"样本是否已满 100 笔可校准",
+    不发切C/维持A 建议。
+    """
     from monitoring.alerts import send_alert
     n = len(measured)
     if n < MIN_FILLS:
@@ -374,7 +382,7 @@ def _verdict_alert(measured: pd.DataFrame):
         state = "样本不足"
     else:
         eq = side_eq_of(measured)
-        state = f"切C({eq:.1f}bp>18)" if eq > MEASURED_THRESHOLD_BP else f"维持A({eq:.1f}bp)"
+        state = f"样本已满({eq:.1f}bp, 仅校准)"
 
     state_file = LOGS_DIR / "cost_verdict_state.json"
     prev = ""
@@ -388,8 +396,9 @@ def _verdict_alert(measured: pd.DataFrame):
         state_file.write_text(json.dumps(
             {"state": state, "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
             indent=2), encoding="utf-8")
-        send_alert(f"[成本实测裁决] 状态变更: {prev or '无'} → {state}\n"
-                   f"规则(§6.8 ④): 策略单累计≥{MIN_FILLS}笔后, 单边等效>18bp切C, ≤18bp维持A")
+        send_alert(f"[成本实测] 状态变更: {prev or '无'} → {state}\n"
+                   f"成本校准：策略单累计≥{MIN_FILLS}笔后展示实测值；"
+                   f"18bp A/C 裁决已于2026-09-07/08作废，不作切C建议")
 
 
 # ── 输出 ─────────────────────────────────────────────────────────
@@ -425,7 +434,7 @@ def _dir_stats(sub):
     """卖出侧成交价 vs 收盘价的方向分布: (中位滑点bp, 低于收盘成交占比%)。
 
     卖出滑点>0 = 成交价低于收盘价 = 比回测(收盘价成交)卖得差。系统性为正
-    说明回测收盘价假设偏乐观, 直接影响 A vs C 裁决的证据权重。
+    说明回测收盘价假设偏乐观, 是成本校准的核心证据。
     """
     m = sub[(sub["side"] == "sell") & sub["slip_bp"].notna()]
     if not len(m):
@@ -514,20 +523,17 @@ def print_report(exec_days, df, measured):
             print(f"  {label}: 中位{med:+.1f}bp, 低于收盘成交占比 {below:.0f}%"
                   f"  {'⚠️系统性偏负, 回测收盘价假设偏乐观' if med > 3 else ''}")
 
-    # 裁决
-    print(f"\n[18bp 裁决]")
+    # 成本校准(18bp A/C 规则已于2026-09-07/08作废)
+    print(f"\n[成本校准]")
     n_total = len(measured)
     if n_total < MIN_FILLS:
-        print(f"  ⏳ 样本不足: 策略单 {n_total}/{MIN_FILLS} 笔 → 顺延, 不裁决")
+        print(f"  ⏳ 样本积累: 策略单 {n_total}/{MIN_FILLS} 笔 → 明细暂不展示(盲盒)")
     else:
         side_eq = side_eq_of(measured)
         print(f"  策略单累计 {n_total} 笔, 实测单边等效 = {side_eq:.1f} bp")
-        if side_eq > MEASURED_THRESHOLD_BP:
-            print(f"  🔴 {side_eq:.1f} > 18bp → A 严格劣于 C, 按 §6.8 ④ 切 C")
-        else:
-            print(f"  🟢 {side_eq:.1f} ≤ 18bp → 维持 A, 配置不动")
-        print(f"  对照(年化成本 = 单边等效 × 换手): A(903%) {side_eq * A_TURNOVER / 100:.2f}%/年"
-              f" vs C(349%) {side_eq * C_TURNOVER / 100:.2f}%/年")
+        print("  仅作成本校准；18bp A/C 规则已作废（2026-09-07/08 修正四臂："
+              "A +7.07/夏普0.65/回撤−11.2% 最优；C +7.30/0.48/−23.5，切C非无代价）")
+        print("  不作切C/维持A建议；若未来要改 A/C，须新预注册 + 修正四臂 + 回撤/成本联合判据")
 
     # 防御性提示
     ma10_n = len(df[df["tag"] == "MA10"])
@@ -541,7 +547,7 @@ def print_report(exec_days, df, measured):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="静跑期成本实测(§6.8 18bp 裁决)")
+    parser = argparse.ArgumentParser(description="静跑期成本实测(成本校准; 18bp A/C规则已作废)")
     parser.add_argument("--pull", action="store_true", help="远程驱动Windows导出并拉取当日订单")
     parser.add_argument("--report", action="store_true", help="输出成本报表与裁决")
     args = parser.parse_args()

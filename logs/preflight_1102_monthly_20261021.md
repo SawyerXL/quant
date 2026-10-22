@@ -24,10 +24,13 @@
 
 ## 残余风险与处置
 
-- **周一 06:30 全量周更拖过 08:10** → 快照补建跳过（`pgrep` 守卫），
-  14:28 无新快照 → `rebalance=false`；次日 08:10 补建、14:28 触发，
-  调仓顺延一天。验证器 11-02 会报"预期调仓日=今天但 rebalance=false"。
-  处置：当日 08:15 查 `logs/cron_cb_snap_recent.log`，未建则人工重跑。
+- **周一 06:30 全量周更拖过 08:10** → 快照补建跳过（`pgrep` 守卫）。
+  周更 stage 5 的 `build_snapshots` 默认 `freq="MS"`，正常会补 11-01；
+  但若周更失败/未跑到 stage 5，14:28 无新快照 → `rebalance=false`。
+  **2026-10-22 已加 13:30 幂等重试**（cron + 脚本 docstring）：08:10 跳过
+  后 13:30 兜底，周更早已结束；当月快照已存在则跳过。当日检查：
+  08:15 与 13:35 各看一次 `logs/cron_cb_snap_recent.log`；仍缺则人工
+  `python scripts/build_cb_snapshot_recent.py --force`。
 - **14:28 信号失败** → 查 `logs/cb_signal_2026-11-02.log` 与
   `logs/cron_cb_signal.log`；验证器 15:40 兜底告警。
 - **执行拒单** → 按 F2 v2 判据：拒单即停，不追单，人工确认后再补。

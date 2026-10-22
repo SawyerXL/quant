@@ -1,0 +1,6 @@
+SELFTEST_OK (good case passes)
+SELFTEST_OK (2 known failures caught)
+非预期调仓日（预期 2026-10-08，今天 2026-10-21）→ 跳过
+SELFTEST_OK (good case passes)
+SELFTEST_OK (2 known failures caught)
+非预期调仓日（预期 2026-10-08，今天 2026-10-22）→ 跳过

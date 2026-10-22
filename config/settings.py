@@ -27,8 +27,8 @@ WECHAT_WEBHOOK = os.getenv("WECHAT_WEBHOOK_URL", "")
 
 # ---------- 回测基础参数 ----------
 BACKTEST_INIT_CAPITAL = 1_000_000
-COMMISSION_RATE = 0.00025   # 双向万2.5
-STAMP_TAX       = 0.001     # 卖出印花税千1
+COMMISSION_RATE = 0.00025   # 双向万2.5（保守占位；券商实际万1~1.5 待确认后改）
+STAMP_TAX       = 0.0005    # 卖出印花税万5（2023-08-28 起减半；2026-10-22 修正）
 SLIPPAGE        = 0.002     # 默认滑点千2（强势股用千5）
 MIN_LOT         = 100       # A股最小手数
 
