@@ -36,9 +36,14 @@ OUT = Path("logs/qdii_premium_monitor.json")
 
 
 def scan_us_broad():
-    """全市场实时 IOPV 扫描：美股宽基最低溢价。负折价率=溢价。"""
+    """全市场实时 IOPV 扫描：美股宽基最低溢价。负折价率=溢价。
+
+    2026-10-22: 东财 fund_etf_spot_em 偶发 RemoteDisconnected(18:30 实测),
+    akshare 3 次退避失败后回落到 Tencent 单券 IOPV(CODES 8 只), 避免整段
+    us_scan 缺失; 仍失败才返回 err(健康行 us_scan_err)。
+    """
     err = None
-    for attempt in range(2):
+    for attempt in range(3):
         try:
             d = ak.fund_etf_spot_em()
             d["代码"] = d["代码"].astype(str).str.zfill(6)
@@ -53,7 +58,23 @@ def scan_us_broad():
             return m[cols].head(20).to_dict("records")
         except Exception as e:  # noqa: BLE001
             err = e
-            time.sleep(2)
+            if attempt < 2:
+                time.sleep(2 * (attempt + 1))
+    fallback = []
+    for code in CODES:
+        try:
+            q = tencent_quote(code)
+            if q.get("premium_pct") is not None:
+                fallback.append({"代码": code, "名称": code,
+                                 "最新价": q["price"],
+                                 "premium_pct": q["premium_pct"],
+                                 "source": "tencent_fallback"})
+        except Exception:
+            continue
+    if fallback:
+        logger.warning(f"us_scan: 东财失败({err}), 回落 Tencent {len(fallback)} 只")
+        fallback.sort(key=lambda x: x["premium_pct"])
+        return fallback
     return [{"err": str(err)[:150]}]
 
 
