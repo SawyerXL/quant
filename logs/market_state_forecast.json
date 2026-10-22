@@ -1,0 +1,36 @@
+{
+ "market_date": "2026-10-22",
+ "features": {
+  "vol20": 12.39,
+  "ret1": -1.48,
+  "ma200_dist": -8.6
+ },
+ "forecasts": [
+  {
+   "registered_at": "2026-10-22T22:35:51",
+   "market_date": "2026-10-22",
+   "event": "abs_ret_ge_1pct",
+   "p_event": 0.3254,
+   "base_rate": 0.2556,
+   "n_cond": 544,
+   "condition": "C1_big_move",
+   "features": "{\"vol20\": 12.39, \"ret1\": -1.48, \"ma200_dist\": -8.6}",
+   "outcome_event": "",
+   "scored_at": "",
+   "valid": "ok"
+  },
+  {
+   "registered_at": "2026-10-22T22:35:51",
+   "market_date": "2026-10-22",
+   "event": "abs_ret_ge_1.5pct",
+   "p_event": 0.1581,
+   "base_rate": 0.1177,
+   "n_cond": 544,
+   "condition": "C1_big_move",
+   "features": "{\"vol20\": 12.39, \"ret1\": -1.48, \"ma200_dist\": -8.6}",
+   "outcome_event": "",
+   "scored_at": "",
+   "valid": "ok"
+  }
+ ]
+}

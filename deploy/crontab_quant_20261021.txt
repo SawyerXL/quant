@@ -60,6 +60,7 @@ PATH=/usr/local/bin:/usr/bin:/bin
 10 19 * * * cd /root/quant && /root/quant/.venv/bin/python scripts/p0_alerts.py --sweep >> /root/quant/logs/cron_p0.log 2>&1
 # A股每日研究快照(2026-10-16 立项, 长期研究学习轨道; 写 logs/market_daily_study.csv, 不喂信号链)
 15 18 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/market_daily_study.py >> /root/quant/logs/cron_market_study.log 2>&1
+20 18 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/market_state_forecast.py >> /root/quant/logs/cron_state_forecast.log 2>&1 && /root/quant/.venv/bin/python scripts/market_state_forecast.py --score >> /root/quant/logs/cron_state_forecast.log 2>&1
 # 预测台账结算(研究轨道; 18:15快照之后)
 25 18 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/prediction_ledger.py score >> /root/quant/logs/cron_prediction.log 2>&1 && /root/quant/.venv/bin/python scripts/prediction_ledger.py report >> /root/quant/logs/cron_prediction.log 2>&1
 # 消息层采集(2026-10-18; 新浪全球快讯每小时, 22:35 加新闻联播; 含周末)

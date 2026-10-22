@@ -1,0 +1,3 @@
+registered_at,market_date,event,p_event,base_rate,n_cond,condition,features,outcome_event,scored_at,valid
+2026-10-22T22:35:51,2026-10-22,abs_ret_ge_1pct,0.3254,0.2556,544,C1_big_move,"{""vol20"": 12.39, ""ret1"": -1.48, ""ma200_dist"": -8.6}",,,ok
+2026-10-22T22:35:51,2026-10-22,abs_ret_ge_1.5pct,0.1581,0.1177,544,C1_big_move,"{""vol20"": 12.39, ""ret1"": -1.48, ""ma200_dist"": -8.6}",,,ok
