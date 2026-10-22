@@ -1,0 +1,18 @@
+{
+ "as_of": "2026-10-21",
+ "anchor_lo": "2026-10-01",
+ "n_universe_rebal60": 882,
+ "n_codes": 1,
+ "n_fixed": 1,
+ "n_skipped": 0,
+ "n_failed": 0,
+ "n_tail_kept": 0,
+ "reanchor": true,
+ "reanchor_file": "logs/reanchor_688825.txt",
+ "n_reanchor": 1,
+ "fixed": [
+  "688825"
+ ],
+ "skipped": [],
+ "failed": []
+}

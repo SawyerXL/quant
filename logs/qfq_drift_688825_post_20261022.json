@@ -1,0 +1,29 @@
+{
+ "ts": "2026-10-22",
+ "tol": 0.003,
+ "n_checked": 1,
+ "pool_n": 0,
+ "holdings_n": 0,
+ "flags": [],
+ "not_qfq": [],
+ "no_write": true,
+ "note": "只读；重锚需公告确认后走 D 重建(备份+验收)，本脚本不写库",
+ "results": [
+  {
+   "code": "688825",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 40.97,
+   "source": 40.97,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "basis": "qfq"
+  }
+ ]
+}

@@ -99,6 +99,16 @@ def _pool(top: int) -> list[str]:
     return [str(c).zfill(6) for c in get_top_n_by_turnover(ap, len(ap) - 1, top)]
 
 
+def _basis() -> dict:
+    """registry 历史口径: 非 qfq 的票 vol20/MA10 仍可能用 raw 旧史。"""
+    try:
+        reg = pd.read_parquet("data_store/meta/adjust_basis_registry.parquet")
+        reg["code"] = reg["code"].astype(str).str.zfill(6)
+        return dict(zip(reg["code"], reg["basis"]))
+    except Exception:
+        return {}
+
+
 def _check(code: str, src, today: str) -> dict:
     stored = load_daily(code, "2025-01-01", today)
     if stored is None or stored.empty:
@@ -141,6 +151,7 @@ def main() -> int:
     args = ap.parse_args()
     today = date.today().isoformat()
     src = get_source()
+    basis_map = _basis()
     if args.codes:
         codes = [x.strip().zfill(6) for x in args.codes.split(",") if x.strip()]
         pool, holdings = [], []
@@ -155,16 +166,20 @@ def main() -> int:
             r = _check(c, src, today)
         except Exception as e:  # noqa: BLE001
             r = {"code": c, "status": "error", "err": str(e)[:80]}
-        if r.get("status") not in ("ok",):
-            r["status"] = r.get("status")
+        r["basis"] = basis_map.get(c, "unknown")
         results.append(r)
         if r.get("status") in ("anchor_shift", "mismatch"):
             print(f"  ⚠ {c} {r['status']} last={r.get('ratio_last')} ratios={r.get('ratios')}", flush=True)
+        elif r.get("basis") != "qfq":
+            print(f"  ⚠ {c} basis={r.get('basis')} (历史口径非qfq)", flush=True)
     flags = [r["code"] for r in results
-             if r.get("status") in ("anchor_shift", "mismatch")]
+             if r.get("status") in ("anchor_shift", "mismatch")
+             or r.get("basis") != "qfq"]
+    not_qfq = [r["code"] for r in results if r.get("basis") != "qfq"]
     out = {"ts": today, "tol": args.tol,
            "n_checked": len(results), "pool_n": len(pool),
            "holdings_n": len(holdings), "flags": flags,
+           "not_qfq": not_qfq,
            "no_write": True,
            "note": "只读；重锚需公告确认后走 D 重建(备份+验收)，本脚本不写库",
            "results": results}
