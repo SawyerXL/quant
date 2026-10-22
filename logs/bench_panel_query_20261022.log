@@ -1,0 +1,16 @@
+2026-10-22 22:24:51.998 | WARNING  | data.storage:load_daily:286 - 000016: load_daily 丢弃 1 行 close<=0/NaN
+2026-10-22 22:24:56.920 | WARNING  | data.storage:load_daily:286 - 002667: load_daily 丢弃 1 行 close<=0/NaN
+2026-10-22 22:24:57.165 | WARNING  | data.storage:load_daily:286 - 002731: load_daily 丢弃 12 行 close<=0/NaN
+2026-10-22 22:24:57.462 | WARNING  | data.storage:load_daily:286 - 002813: load_daily 丢弃 1 行 close<=0/NaN
+2026-10-22 22:24:57.647 | WARNING  | data.storage:load_daily:286 - 002860: load_daily 丢弃 4 行 close<=0/NaN
+2026-10-22 22:24:57.692 | WARNING  | data.storage:load_daily:286 - 002870: load_daily 丢弃 4 行 close<=0/NaN
+2026-10-22 22:24:58.206 | WARNING  | data.storage:load_daily:286 - 002998: load_daily 丢弃 2 行 close<=0/NaN
+2026-10-22 22:24:58.725 | WARNING  | data.storage:load_daily:286 - 300082: load_daily 丢弃 4 行 close<=0/NaN
+2026-10-22 22:25:00.741 | WARNING  | data.storage:load_daily:286 - 300585: load_daily 丢弃 1 行 close<=0/NaN
+2026-10-22 22:25:03.149 | WARNING  | data.storage:load_daily:286 - 301139: load_daily 丢弃 8 行 close<=0/NaN
+2026-10-22 22:25:04.065 | WARNING  | data.storage:load_daily:286 - 301390: load_daily 丢弃 3 行 close<=0/NaN
+codes=5575 window=2026-09-07..2026-10-22
+pandas : (28, 5569) 24.73s
+polars : (28, 5576) 2.10s  speedup=11.8x
+common 28x5569 max_abs_diff=0
+RESULT PASS
