@@ -451,6 +451,24 @@ def main():
         except Exception:
             pass
 
+    # qfq漂移门(P1, 08:20 cron): 新除权后源端整体重锚; 只读检测
+    qfq_drift = {}
+    qdp = sorted(Path("logs").glob("qfq_drift_check_*.json"))
+    if qdp:
+        try:
+            qj = json.loads(qdp[-1].read_text(encoding="utf-8"))
+            flags = qj.get("flags") or []
+            qfq_drift = {"as_of": qj.get("ts"),
+                         "n_checked": qj.get("n_checked"),
+                         "pool_n": qj.get("pool_n"),
+                         "holdings_n": qj.get("holdings_n"),
+                         "flags": flags[:10], "n_flags": len(flags)}
+            if flags:
+                alerts.append(f"qfq漂移候选 {len(flags)} 只: {flags[:5]} "
+                              f"(新除权重锚? 核对公告后重锚)")
+        except Exception:
+            pass
+
     line = {"ts": now, "latest_bar": latest_bar,
             "last_trading_day": last_td, "bar_fresh": bar_fresh,
             "last_data_update": last_update, "tunnel": tunnel,
@@ -465,6 +483,7 @@ def main():
             "win_sync": win_sync, "live_reconcile": lvbc,
             "manual_exec_lock": manual_lock,
             "qdii_premium": qdii, "us_track": us_track,
+            "qfq_drift": qfq_drift,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")

@@ -47,6 +47,8 @@ PATH=/usr/local/bin:/usr/bin:/bin
 10 8 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/build_cb_snapshot_recent.py >> /root/quant/logs/cron_cb_snap_recent.log 2>&1
 # CB当月快照补建重试(2026-10-22): 11-02周一06:30周更可能拖过08:10; 13:30兜底(幂等)
 30 13 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/build_cb_snapshot_recent.py >> /root/quant/logs/cron_cb_snap_recent.log 2>&1
+# qfq漂移检查(P1 2026-10-22): 持仓+成交额TOP30 新除权重锚; 只读; 08:20
+20 8 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/qfq_drift_check.py --top 30 >> /root/quant/logs/cron_qfq_drift.log 2>&1
 # CB信号(每日14:28, 紧跟股票信号; 月度=快照日后首个交易日全量轮换, 非调仓日刷新)
 28 14 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/cb_signal.py >> /root/quant/logs/cron_cb_signal.log 2>&1
 # CB月度调仓验证(2026-10-21; 快照日后首个交易日15:40; 非调仓日跳过; 内置已知失败selftest)

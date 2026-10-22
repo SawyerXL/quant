@@ -1,0 +1,462 @@
+{
+ "ts": "2026-10-22",
+ "tol": 0.003,
+ "n_checked": 30,
+ "pool_n": 30,
+ "holdings_n": 0,
+ "flags": [],
+ "no_write": true,
+ "note": "只读；重锚需公告确认后走 D 重建(备份+验收)，本脚本不写库",
+ "results": [
+  {
+   "code": "000636",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 41.02,
+   "source": 41.02,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "000725",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 5.05,
+   "source": 5.05,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "002281",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 135.7,
+   "source": 135.7,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "002384",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 123.17,
+   "source": 123.17,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "002436",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 37.1,
+   "source": 37.1,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "002463",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 114.97,
+   "source": 114.97,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "300285",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 46.93,
+   "source": 46.93,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "300308",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 646.77,
+   "source": 646.77,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "300394",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 214.98,
+   "source": 214.98,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "300408",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 95.97,
+   "source": 95.97,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "300476",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 187.87,
+   "source": 187.87,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "300502",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 294.12,
+   "source": 294.12,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "300604",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 202.14,
+   "source": 202.14,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "300750",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 227.9,
+   "source": 227.9,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "600105",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 29.54,
+   "source": 29.54,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "600176",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 34.59,
+   "source": 34.59,
+   "ratio_last": 0.0,
+   "ratios": [
+    -0.00962,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "600183",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 118.99,
+   "source": 118.99,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "600487",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 51.45,
+   "source": 51.45,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "600522",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 28.3,
+   "source": 28.3,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "600584",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 57.23,
+   "source": 57.23,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "601138",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 49.7,
+   "source": 49.7,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "601899",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 28.87,
+   "source": 28.87,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "603259",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 147.35,
+   "source": 147.35,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "603986",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 288.02,
+   "source": 288.02,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "688008",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 178.34,
+   "source": 178.34,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "688012",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 274.0,
+   "source": 274.0,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "688041",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 193.3,
+   "source": 193.3,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "688256",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 916.42,
+   "source": 916.42,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "688498",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 1021.1,
+   "source": 1021.1,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "code": "688825",
+   "status": "ok",
+   "last_date": "2026-10-21",
+   "stored": 40.97,
+   "source": 40.97,
+   "ratio_last": 0.0,
+   "ratios": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  }
+ ]
+}

@@ -1,0 +1,3 @@
+2026-10-22 检查 30 只 (持仓0/池30)
+checked=30 flags=0 -> logs/qfq_drift_check_2026-10-22.json
+{"flags": [], "pool_n": 30, "holdings_n": 0}
