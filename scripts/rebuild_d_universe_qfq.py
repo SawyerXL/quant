@@ -35,13 +35,24 @@ def main():
     ap.add_argument("--codes-file", default=None,
                     help="断点续跑: 每行一个代码; 只处理这些码")
     ap.add_argument("--json-out", default="logs/rebuild_d_universe_20261021.json")
+    ap.add_argument("--reanchor-file", default=None,
+                    help="重锚(公告确认): 每行一个代码; 跳过前沿锚(源端权威), 备份+全史覆写")
     args = ap.parse_args()
     uni = pd.read_csv("logs/qfq_d_universe_20261021.csv", dtype={"code": str})
     uni["code"] = uni["code"].str.zfill(6)
     cand = set(uni.loc[uni["rebal60"], "code"])
     reg = pd.read_parquet("data_store/meta/adjust_basis_registry.parquet")
     qfq = set(reg.loc[reg["basis"] == "qfq", "code"].astype(str))
-    if args.codes_file:
+    reanchor = bool(args.reanchor_file)
+    if args.reanchor_file:
+        # 重锚(公告确认): 源端 qfq 在新除权后整体重锚, 库内旧史需按源端重写;
+        # 不受 rebal60 池限制, 但前沿锚 0.5% 会误跳过整体偏移, 故本模式跳过锚
+        want = {ln.strip().zfill(6) for ln in
+                Path(args.reanchor_file).read_text().splitlines() if ln.strip()}
+        codes = sorted(c for c in want
+                       if not c.startswith(("4", "8", "92"))
+                       and c not in {"601059", "601198"})
+    elif args.codes_file:
         want = {ln.strip().zfill(6) for ln in
                 Path(args.codes_file).read_text().splitlines() if ln.strip()}
         codes = sorted(c for c in want
@@ -53,8 +64,8 @@ def main():
                        if c not in qfq
                        and not c.startswith(("4", "8", "92"))
                        and c not in {"601059", "601198"})
-    print(f"D 宇宙: rebal60 {len(cand)} / 非qfq {len(codes)} "
-          f"(排除北交所与 601059/601198)", flush=True)
+    print(f"D 宇宙: rebal60 {len(cand)} / {'重锚' if reanchor else '非qfq'} "
+          f"{len(codes)} (排除北交所与 601059/601198)", flush=True)
 
     src = get_source()
     BAK.mkdir(parents=True, exist_ok=True)
@@ -93,18 +104,29 @@ def main():
                     dev = abs(float(f.loc[last]) / float(s.loc[last]) - 1)
                     if dev <= 0.005:
                         ok_anchor = True
+                    elif reanchor:
+                        logger.warning(f"{code} 重锚(源端权威): 前沿偏离{dev:.4f} (公告确认)")
+                        ok_anchor = True
                     else:
                         logger.warning(f"{code} 前沿锚不过(偏离{dev:.4f}), 跳过")
                         skipped.append((code, f"前沿偏离{dev:.4f}"))
                         continue
                 else:
-                    logger.warning(f"{code} 锚窗口无共同日, 跳过")
-                    skipped.append((code, "锚窗口无共同日"))
-                    continue
+                    if reanchor:
+                        logger.warning(f"{code} 重锚: 锚窗口无共同日, 源端权威")
+                        ok_anchor = True
+                    else:
+                        logger.warning(f"{code} 锚窗口无共同日, 跳过")
+                        skipped.append((code, "锚窗口无共同日"))
+                        continue
             else:
-                logger.warning(f"{code} 库内锚窗口无数据, 跳过")
-                skipped.append((code, "库内锚窗口无数据"))
-                continue
+                if reanchor:
+                    logger.warning(f"{code} 重锚: 库内锚窗口无数据, 源端权威")
+                    ok_anchor = True
+                else:
+                    logger.warning(f"{code} 库内锚窗口无数据, 跳过")
+                    skipped.append((code, "库内锚窗口无数据"))
+                    continue
             src_max = df["date"].max()
             # 备份 + 按年直写
             for yr in range(1990, 2027):
@@ -148,6 +170,8 @@ def main():
                     "n_universe_rebal60": len(cand), "n_codes": len(codes),
                     "n_fixed": len(fixed), "n_skipped": len(skipped),
                     "n_failed": len(failed), "n_tail_kept": tail_kept,
+                    "reanchor": reanchor, "reanchor_file": args.reanchor_file,
+                    "n_reanchor": len(fixed) if reanchor else 0,
                     "fixed": fixed, "skipped": skipped, "failed": failed},
                    ensure_ascii=False, indent=1), encoding="utf-8")
 
