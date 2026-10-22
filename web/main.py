@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from web.db import init_db
 from web.auth import current_user, optional_user, admin_user, generate_csrf_token
-from web.api import market, auth_routes, signals, portfolio, backtest, admin
+from web.api import market, auth_routes, signals, portfolio, backtest, admin, monitoring
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
@@ -56,6 +56,7 @@ app.include_router(signals.router)
 app.include_router(portfolio.router)
 app.include_router(backtest.router)
 app.include_router(admin.router)
+app.include_router(monitoring.router)
 
 
 # ═══ Page routes (SSR) ═══
