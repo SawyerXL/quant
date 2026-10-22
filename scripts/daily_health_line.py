@@ -400,6 +400,57 @@ def main():
         if str(manual_lock).startswith("不可读"):
             alerts.append("链隔离锁状态不可读(SSH失败)——未知≠无锁, 请人工核对")
 
+    # QDII 溢价(18:30 cron): 量不到也是事件(闸门十二); 美股腿入场判据
+    qdii = {}
+    qp = Path("logs/qdii_premium_monitor.json")
+    if qp.exists():
+        try:
+            qj = json.loads(qp.read_text(encoding="utf-8"))
+            prem = []
+            for v in qj.get("etfs", {}).values():
+                x = v.get("rt_premium_pct", v.get("premium_pct"))
+                if isinstance(x, (int, float)):
+                    prem.append(x)
+            qdii = {"data_gaps": qj.get("data_gaps", []),
+                    "us_scan_err": qj.get("us_scan_err", False),
+                    "watch_hits": qj.get("watch_hits", []),
+                    "min_premium_pct": min(prem) if prem else None}
+            if qdii["data_gaps"]:
+                alerts.append(f"QDII溢价不可测: {qdii['data_gaps']} "
+                              f"(美股腿入场判据缺失)")
+        except Exception:
+            pass
+
+    # US 独立 track 纸面(14:45 信号/14:50 成交/18:35 mark): 状态可见
+    us_track = {}
+    usp = Path("logs/us_track_state.json")
+    ussig = Path("data_store/meta/signal_us_latest.json")
+    if usp.exists():
+        try:
+            st = json.loads(usp.read_text(encoding="utf-8"))
+            sg = (json.loads(ussig.read_text(encoding="utf-8"))
+                  if ussig.exists() else {})
+            us_track = {
+                "as_of": st.get("as_of"), "nav": st.get("nav"),
+                "nav_high": st.get("nav_high"), "shares": st.get("shares"),
+                "cash": st.get("cash"),
+                "signal_date": sg.get("signal_date"),
+                "gate_pass": sg.get("gate_pass"),
+                "premium_pct": sg.get("premium_pct"),
+                "orders_n": len(sg.get("orders") or []),
+                "risk_pass": sg.get("risk_pass"),
+                "dry_run": sg.get("dry_run")}
+            sig_hm = str(sg.get("as_of", ""))[11:16]
+            if now[:10] in tds and st.get("as_of") != now[:10]:
+                alerts.append(f"US track 纸面未 mark: as_of={st.get('as_of')}")
+            if now[:10] in tds:
+                if sg.get("signal_date") != now[:10]:
+                    alerts.append(f"US track 信号缺失: signal_date={sg.get('signal_date')}")
+                elif sig_hm and sig_hm < "14:40":
+                    alerts.append(f"US track 信号非14:45窗口: as_of={sg.get('as_of')}")
+        except Exception:
+            pass
+
     line = {"ts": now, "latest_bar": latest_bar,
             "last_trading_day": last_td, "bar_fresh": bar_fresh,
             "last_data_update": last_update, "tunnel": tunnel,
@@ -413,6 +464,7 @@ def main():
             "cb_holdings_frozen": cb_frozen, "index_members_as_of": members_asof,
             "win_sync": win_sync, "live_reconcile": lvbc,
             "manual_exec_lock": manual_lock,
+            "qdii_premium": qdii, "us_track": us_track,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")

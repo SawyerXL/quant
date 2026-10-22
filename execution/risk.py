@@ -9,6 +9,10 @@ try:
     from config.strategy_params.trinity import STRATEGY_B
 except ImportError:
     STRATEGY_B = None  # Track B 未启用/配置缺失 → Track A 不受影响
+try:
+    from config.strategy_params.us_track import US_TRACK
+except ImportError:
+    US_TRACK = None    # 缺失时 track_us 单列 fail-closed，不回落 track_a
 
 
 # Track B 未启用时的兜底(2026-09-02 修复: 原{}会让单票/行业检查KeyError
@@ -18,6 +22,8 @@ _TRACK_B_DEFAULT_RISK = {"max_single_position": 0.08, "max_sector_position": 0.5
 _STRATEGY_RISK = {
     "track_a": STRATEGY_A["risk"],
     "track_b": STRATEGY_B["risk"] if STRATEGY_B else _TRACK_B_DEFAULT_RISK,
+    # 2026-10-22 独立 US track: 缺失时 None → fail-closed(不回落 track_a)
+    "track_us": US_TRACK["risk"] if US_TRACK else None,
 }
 
 
@@ -55,6 +61,8 @@ class RiskGateway:
         """
         order_value = shares * price
         risk = _STRATEGY_RISK.get(strategy_id, _STRATEGY_RISK["track_a"])
+        if risk is None:
+            return False, f"策略 {strategy_id} 风控配置缺失（fail-closed）"
 
         checks = [
             self._check_account_drawdown,
@@ -83,8 +91,11 @@ class RiskGateway:
     # ------------------------------------------------------------------
     def _check_account_drawdown(self, strategy_id, code, direction, shares, price, order_value, risk):
         drawdown = 1 - self.state["current_nav"] / self.state["nav_high"]
-        if drawdown >= MAX_ACCOUNT_DRAWDOWN:
-            return False, f"账户回撤 {drawdown:.1%} 已触及熔断线 {MAX_ACCOUNT_DRAWDOWN:.1%}"
+        # 2026-10-22: 按 track 取熔断线(track_a 0.15 不变; track_us=1.0 无
+        # sleeve 熔断, 核心 15% 线另计); 缺省回落全局 15%
+        limit = float(risk.get("max_drawdown_circuit", MAX_ACCOUNT_DRAWDOWN))
+        if drawdown >= limit:
+            return False, f"账户回撤 {drawdown:.1%} 已触及熔断线 {limit:.1%}"
         return True, ""
 
     def _check_order_amount(self, strategy_id, code, direction, shares, price, order_value, risk):

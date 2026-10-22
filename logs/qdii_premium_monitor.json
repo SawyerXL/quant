@@ -1,65 +1,137 @@
 {
- "checked_at": "2026-10-21",
+ "checked_at": "2026-10-22",
  "threshold": 0.05,
  "etfs": {
   "513100": {
    "price": 2.334,
    "price_date": "2026-10-20",
-   "nav": 1.977,
-   "nav_date": "2026-10-19",
-   "premium_pct": 18.06,
-   "buy_ok": false
+   "nav": 1.9741,
+   "nav_date": "2026-10-20",
+   "nav_source": "eastmoney_pingzhongdata.Data_netWorthTrend",
+   "premium_pct": 18.23,
+   "rt_price": 2.311,
+   "rt_iopv": 1.9963,
+   "rt_premium_pct": 15.76,
+   "rt_time": "20261022095040",
+   "gate_premium_pct": 15.76,
+   "buy_ok": false,
+   "watch_hit": false
   },
   "159941": {
    "price": 1.708,
    "price_date": "2026-10-20",
-   "nav": 1.479,
-   "nav_date": "2026-10-19",
-   "premium_pct": 15.48,
-   "buy_ok": false
+   "nav": 1.4768,
+   "nav_date": "2026-10-20",
+   "nav_source": "eastmoney_pingzhongdata.Data_netWorthTrend",
+   "premium_pct": 15.66,
+   "rt_price": 1.712,
+   "rt_iopv": 1.4932,
+   "rt_premium_pct": 14.65,
+   "rt_time": "20261022095003",
+   "gate_premium_pct": 14.65,
+   "buy_ok": false,
+   "watch_hit": false
   },
   "513500": {
    "price": 2.649,
    "price_date": "2026-10-20",
-   "nav": 2.4454,
-   "nav_date": "2026-10-19",
-   "premium_pct": 8.33,
-   "buy_ok": false
+   "nav": 2.4519,
+   "nav_date": "2026-10-20",
+   "nav_source": "eastmoney_pingzhongdata.Data_netWorthTrend",
+   "premium_pct": 8.04,
+   "rt_price": 2.657,
+   "rt_iopv": 2.4656,
+   "rt_premium_pct": 7.76,
+   "rt_time": "20261022095051",
+   "gate_premium_pct": 7.76,
+   "buy_ok": false,
+   "watch_hit": false
   },
   "513650": {
    "price": 1.982,
    "price_date": "2026-10-20",
-   "nav": 1.8623,
-   "nav_date": "2026-10-19",
-   "premium_pct": 6.43,
-   "buy_ok": false
+   "nav": 1.8673,
+   "nav_date": "2026-10-20",
+   "nav_source": "eastmoney_pingzhongdata.Data_netWorthTrend",
+   "premium_pct": 6.14,
+   "rt_price": 2.0,
+   "rt_iopv": 1.8779,
+   "rt_premium_pct": 6.5,
+   "rt_time": "20261022095053",
+   "gate_premium_pct": 6.5,
+   "buy_ok": false,
+   "watch_hit": false
   },
   "159655": {
    "price": 2.002,
    "price_date": "2026-10-20",
-   "nav": 1.8717,
-   "nav_date": "2026-10-19",
-   "premium_pct": 6.96,
-   "buy_ok": false
+   "nav": 1.8759,
+   "nav_date": "2026-10-20",
+   "nav_source": "eastmoney_pingzhongdata.Data_netWorthTrend",
+   "premium_pct": 6.72,
+   "rt_price": 2.015,
+   "rt_iopv": 1.8866,
+   "rt_premium_pct": 6.81,
+   "rt_time": "20261022095051",
+   "gate_premium_pct": 6.81,
+   "buy_ok": false,
+   "watch_hit": false
   },
   "159513": {
    "price": 1.813,
    "price_date": "2026-10-20",
-   "nav": 1.6471,
-   "nav_date": "2026-10-19",
-   "premium_pct": 10.07,
-   "buy_ok": false
+   "nav": 1.6446,
+   "nav_date": "2026-10-20",
+   "nav_source": "eastmoney_pingzhongdata.Data_netWorthTrend",
+   "premium_pct": 10.24,
+   "rt_price": 1.828,
+   "rt_iopv": 1.6633,
+   "rt_premium_pct": 9.9,
+   "rt_time": "20261022095000",
+   "gate_premium_pct": 9.9,
+   "buy_ok": false,
+   "watch_hit": false
   },
   "513110": {
    "price": 2.498,
    "price_date": "2026-10-20",
-   "nav": 2.2699,
-   "nav_date": "2026-10-19",
-   "premium_pct": 10.05,
-   "buy_ok": false
+   "nav": 2.2665,
+   "nav_date": "2026-10-20",
+   "nav_source": "eastmoney_pingzhongdata.Data_netWorthTrend",
+   "premium_pct": 10.21,
+   "rt_price": 2.518,
+   "rt_iopv": 2.2917,
+   "rt_premium_pct": 9.87,
+   "rt_time": "20261022095052",
+   "gate_premium_pct": 9.87,
+   "buy_ok": false,
+   "watch_hit": false
+  },
+  "513400": {
+   "price": 1.317,
+   "price_date": "2026-10-20",
+   "nav": 1.2834,
+   "nav_date": "2026-10-20",
+   "nav_source": "eastmoney_pingzhongdata.Data_netWorthTrend",
+   "premium_pct": 2.62,
+   "rt_price": 1.322,
+   "rt_iopv": 1.2923,
+   "rt_premium_pct": 2.3,
+   "rt_time": "20261022095053",
+   "gate_premium_pct": 2.3,
+   "buy_ok": false,
+   "watch_hit": true
   }
  },
  "alert": false,
+ "data_gaps": [],
+ "watch_only": [
+  "513400"
+ ],
+ "watch_hits": [
+  "513400"
+ ],
+ "watch_scan": [],
  "subscription_usable": [
   {
    "基金代码": "017436",
@@ -78,132 +150,8 @@
  ],
  "us_scan": [
   {
-   "代码": "513650",
-   "名称": "标普500ETF南方",
-   "最新价": 1.996,
-   "IOPV实时估值": 1.8673,
-   "premium_pct": 6.89,
-   "成交额": 152030128.0
-  },
-  {
-   "代码": "159655",
-   "名称": "标普500ETF华夏",
-   "最新价": 2.007,
-   "IOPV实时估值": 1.8762,
-   "premium_pct": 6.97,
-   "成交额": 112656599.7
-  },
-  {
-   "代码": "159612",
-   "名称": "标普500ETF国泰",
-   "最新价": 2.077,
-   "IOPV实时估值": 1.9236,
-   "premium_pct": 7.97,
-   "成交额": 6152387.063
-  },
-  {
-   "代码": "513500",
-   "名称": "标普500ETF博时",
-   "最新价": 2.66,
-   "IOPV实时估值": 2.452,
-   "premium_pct": 8.48,
-   "成交额": 138705692.0
-  },
-  {
-   "代码": "159577",
-   "名称": "美国50ETF汇添富",
-   "最新价": 1.717,
-   "IOPV实时估值": 1.5736,
-   "premium_pct": 9.11,
-   "成交额": 82320124.752
-  },
-  {
-   "代码": "513850",
-   "名称": "美国50ETF易方达",
-   "最新价": 1.916,
-   "IOPV实时估值": 1.7511,
-   "premium_pct": 9.42,
-   "成交额": 60458936.0
-  },
-  {
-   "代码": "159513",
-   "名称": "纳斯达克100ETF大成",
-   "最新价": 1.827,
-   "IOPV实时估值": 1.6449,
-   "premium_pct": 11.07,
-   "成交额": 56403960.36
-  },
-  {
-   "代码": "513390",
-   "名称": "纳指100ETF博时",
-   "最新价": 2.462,
-   "IOPV实时估值": 2.2155,
-   "premium_pct": 11.13,
-   "成交额": 186110566.0
-  },
-  {
-   "代码": "513110",
-   "名称": "纳指ETF华泰柏瑞",
-   "最新价": 2.519,
-   "IOPV实时估值": 2.2666,
-   "premium_pct": 11.14,
-   "成交额": 29285843.0
-  },
-  {
-   "代码": "159660",
-   "名称": "纳指ETF汇添富",
-   "最新价": 2.434,
-   "IOPV实时估值": 2.1573,
-   "premium_pct": 12.83,
-   "成交额": 24929340.2
-  },
-  {
-   "代码": "513870",
-   "名称": "纳指ETF富国",
-   "最新价": 2.124,
-   "IOPV实时估值": 1.8803,
-   "premium_pct": 12.96,
-   "成交额": 20854743.0
-  },
-  {
-   "代码": "159659",
-   "名称": "纳斯达克100ETF招商",
-   "最新价": 2.443,
-   "IOPV实时估值": 2.1338,
-   "premium_pct": 14.49,
-   "成交额": 36720423.848
-  },
-  {
-   "代码": "159941",
-   "名称": "纳指ETF广发",
-   "最新价": 1.719,
-   "IOPV实时估值": 1.4768,
-   "premium_pct": 16.4,
-   "成交额": 179906268.381
-  },
-  {
-   "代码": "159696",
-   "名称": "纳指ETF易方达",
-   "最新价": 2.146,
-   "IOPV实时估值": 1.8385,
-   "premium_pct": 16.73,
-   "成交额": 17539460.545
-  },
-  {
-   "代码": "159501",
-   "名称": "纳指ETF嘉实",
-   "最新价": 2.204,
-   "IOPV实时估值": 1.8544,
-   "premium_pct": 18.85,
-   "成交额": 23652028.055
-  },
-  {
-   "代码": "513100",
-   "名称": "纳指ETF国泰",
-   "最新价": 2.349,
-   "IOPV实时估值": 1.9742,
-   "premium_pct": 18.98,
-   "成交额": 67495674.0
+   "err": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))"
   }
- ]
+ ],
+ "us_scan_err": true
 }

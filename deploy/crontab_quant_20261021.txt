@@ -45,6 +45,8 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # CB当月快照补齐(2026-10-21 月度调仓配套; 每月首个交易日08:10, 当月已存在则跳过;
 # 周一在06:30全量周更后, 周更在跑则跳过; 失败次日自动重试)
 10 8 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/build_cb_snapshot_recent.py >> /root/quant/logs/cron_cb_snap_recent.log 2>&1
+# CB当月快照补建重试(2026-10-22): 11-02周一06:30周更可能拖过08:10; 13:30兜底(幂等)
+30 13 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/build_cb_snapshot_recent.py >> /root/quant/logs/cron_cb_snap_recent.log 2>&1
 # CB信号(每日14:28, 紧跟股票信号; 月度=快照日后首个交易日全量轮换, 非调仓日刷新)
 28 14 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/cb_signal.py >> /root/quant/logs/cron_cb_signal.log 2>&1
 # CB月度调仓验证(2026-10-21; 快照日后首个交易日15:40; 非调仓日跳过; 内置已知失败selftest)
@@ -69,6 +71,10 @@ PATH=/usr/local/bin:/usr/bin:/bin
 25 18 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/satellite_cb_paper.py >> /root/quant/logs/cron_satellite_cb.log 2>&1
 # QDII美股腿溢价日检(2026-10-21扩到全美股宽基; 18:30; ≤5%告警; 当前最低513650标普500)
 30 18 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/qdii_premium_monitor.py >> /root/quant/logs/cron_qdii_premium.log 2>&1
+# US 独立 track 纸面(2026-10-22 用户裁定A; 14:45信号/14:50纸面成交/18:35 mark; 只读不下单)
+45 14 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/us_track.py --signal >> /root/quant/logs/cron_us_track.log 2>&1
+50 14 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/us_track.py --paper-fill >> /root/quant/logs/cron_us_track.log 2>&1
+35 18 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/us_track.py --mark >> /root/quant/logs/cron_us_track.log 2>&1
 # 健康行(2026-09-13 用户批准18:40, 2026-09-13晚实装; 每日含周末——dead-man:
 # p0 sweep 19:10 检查 ts≠今日=P0; bar_fresh/依赖追踪 bootstrap 已日历感知)
 40 18 * * * cd /root/quant && /root/quant/.venv/bin/python scripts/daily_health_line.py >> /root/quant/logs/cron_health_line.log 2>&1

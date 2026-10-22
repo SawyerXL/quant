@@ -1,0 +1,73 @@
+{
+ "as_of": "2026-10-22 14:45:02",
+ "signal_date": "2026-10-22",
+ "vehicle": "513400",
+ "price": 1.312,
+ "prev_close": 1.319,
+ "iopv": 1.2923,
+ "premium_pct": 1.52,
+ "gate_threshold_pct": 5.0,
+ "gate_pass": true,
+ "djia_close": 52856.0898,
+ "djia_date": "2026-10-21",
+ "state": {
+  "cash": 200000.0,
+  "shares": 0,
+  "nav": 200000.0,
+  "nav_high": 200000.0
+ },
+ "current_value": 0.0,
+ "target_value": 200000.0,
+ "side": "buy",
+ "orders": [
+  76200,
+  76100
+ ],
+ "order_values": [
+  99974.4,
+  99843.2
+ ],
+ "total_order_value": 199817.6,
+ "risk_checks": [
+  {
+   "shares": 76200,
+   "value": 99974.4,
+   "ok": true,
+   "msg": "通过"
+  },
+  {
+   "shares": 76100,
+   "value": 99843.2,
+   "ok": true,
+   "msg": "通过"
+  }
+ ],
+ "risk_pass": true,
+ "dry_run": true,
+ "note": "paper/dry-run only; live execution pending account wiring"
+}
+{
+ "as_of": "2026-10-22",
+ "vehicle": "513400",
+ "cash": 122.45472000000882,
+ "shares": 152300,
+ "avg_price": 1.312,
+ "last_price": 1.312,
+ "nav": 199940.05472000001,
+ "nav_high": 200000.0,
+ "entry_premium_pct": 1.52,
+ "last_mark": "2026-10-22",
+ "fills": [
+  {
+   "date": "2026-10-22",
+   "side": "buy",
+   "shares": 152300,
+   "price": 1.312,
+   "premium_pct": 1.52,
+   "orders": [
+    76200,
+    76100
+   ]
+  }
+ ]
+}

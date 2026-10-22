@@ -1,0 +1,25 @@
+{
+ "as_of": "2026-10-22",
+ "vehicle": "513400",
+ "cash": 122.45472000000882,
+ "shares": 152300,
+ "avg_price": 1.312,
+ "last_price": 1.312,
+ "nav": 199940.05472000001,
+ "nav_high": 200000.0,
+ "entry_premium_pct": 1.52,
+ "last_mark": "2026-10-22",
+ "fills": [
+  {
+   "date": "2026-10-22",
+   "side": "buy",
+   "shares": 152300,
+   "price": 1.312,
+   "premium_pct": 1.52,
+   "orders": [
+    76200,
+    76100
+   ]
+  }
+ ]
+}
