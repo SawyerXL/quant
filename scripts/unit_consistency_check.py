@@ -163,6 +163,12 @@ def main():
     # 全绿)。绝对物理上限: A股单票单日成交额极值~400亿, 1000亿留2.5倍
     # 余量; 相对: top1/门槛 < 50(健康值~10倍内)
     cap_abs = 1e7  # 万元 = 1000亿元
+    # 闸门十一：尾部上限的已裁事件白名单（独立证据登记，不放行未登记条目）
+    wl_path = Path(__file__).parent.parent / "logs" / "unit_jump_whitelist.json"
+    whitelist = set()
+    if wl_path.exists():
+        for e in json.load(open(wl_path)).get("documented_events", []):
+            whitelist.add((e["code"], e["date"]))
     tail_bad = []
     etf_bad = []
     top1 = 0.0
@@ -197,10 +203,11 @@ def main():
         if len(a) == 0:
             continue
         mx = float(a.max())
-        # 688825@07-27(1411亿)保持 RED 待裁: 三项独立判别中 ①市场占比
-        # 0.13%<5% → 正常 ②分布距 p99.99(98.5亿) 14× → 疑似孤立点
-        # ③换手率/事件无数据——白名单不落地(用户 2026-09-13 纪律)
-        if mx > cap_abs:
+        mx_date = str(d.loc[a.idxmax(), "date"])[:10]
+        # 688825@07-27(1411亿) 2026-10-22 裁定: 长鑫科技科创板IPO 2026-07-24
+        # 上市, 07-27 为上市次日, 1411.87亿为真实巨量换手（MCP公告+行情确认:
+        # 市场占比0.13%、量额比≈收盘自洽）。白名单登记须有独立证据（闸门十一）。
+        if mx > cap_abs and (f.stem, mx_date) not in whitelist:
             tail_bad.append((f.stem, round(mx, 0)))
         top1 = max(top1, mx)
         if f.stem not in uq_codes and str(d["date"].max())[:10] >= "2026-09-01":
