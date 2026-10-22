@@ -65,7 +65,7 @@ def test_limit_gate_smoke():
     rebal = [str(d.date()) for d in idx[5::5]]
 
     cfg_base = replace(DEFAULT_CONFIG, pool_size=2, min_bars=5,
-                       lot_size=0, enable_stops=False)
+                       lot_size=0, enable_stops=False, limit_gate=False)
     nav_base, res_base = run_backtest(panel, amounts, rebal, cfg_base, None)
     cfg_gate = replace(cfg_base, limit_gate=True)
     nav_gate, res_gate = run_backtest(panel, amounts, rebal, cfg_gate, None)

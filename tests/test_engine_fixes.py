@@ -64,7 +64,7 @@ def test_ma10_exit_delay_open_sell_semantics():
 
     # 单票仓位=min(max_position_pct=0.10, 剩余/1)=10%; 卖出日现金100%计息
     w = 0.10
-    expected = w * (88.0 / 93.0 - 1) + 0.02 / 252
+    expected = w * (88.0 / 93.0 - 1) + DEFAULT_CONFIG.cash_yield / 252
     day_ret = nav.iloc[294] / nav.iloc[293] - 1
     assert day_ret == pytest.approx(expected, abs=1e-6), \
         f"开盘卖语义: 期望{expected:+.6f}, 实得{day_ret:+.6f}"
