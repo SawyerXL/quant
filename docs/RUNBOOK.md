@@ -96,3 +96,10 @@ A: 系统会自动停止开仓并推送告警。需要人工复盘后在 .env �
 
 **Q: 想换数据源（MCP 接口到位了）**
 A: 修改 `.env` 中 `DATA_SOURCE=mcp`，实现 `data/source/mcp_source.py`，重启即可。
+
+## 六、CB 月度调仓（每月首个交易日）
+
+详见 **`docs/cb_monthly_rebalance_runbook.md`**：11-02 首次月度调仓的日程、
+preflight 实测、五条停止判据与盲区声明。验证器每次运行落
+`logs/cb_monthly_verify_state.json`（非调仓日也落 `skipped`），18:40
+健康行的 `cb_monthly_verify` 字段可见。
