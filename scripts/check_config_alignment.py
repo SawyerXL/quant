@@ -41,6 +41,65 @@ SPEC = {
 }
 
 
+# 资金口径(2026-10-23 补): 实盘链多个脚本各写一份资金常量，切换时漏改一个
+# 就会"信号按40万下、NAV按100万算"——不报错、数字合理，与 TP 三方漂移同型。
+# 内部一致性(各常量互等)永远强制；声明计划(100万实盘)在切换日把
+# CAPITAL_PLAN 改为 "live100w" 后才强制(仿真期有意保持 160万口径)。
+CAPITAL_PLAN = "sim160w"
+PLANS = {"sim160w": {"stock": 1_000_000, "cb": 600_000},
+         "live100w": {"stock": 400_000, "cb": 600_000}}
+
+
+def _const(path: str, name: str):
+    """读模块级字面量常量(不 import, 避免副作用/重依赖)。"""
+    import ast
+    try:
+        tree = ast.parse(Path(path).read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            for t in node.targets:
+                if isinstance(t, ast.Name) and t.id == name:
+                    try:
+                        return ast.literal_eval(node.value)
+                    except Exception:
+                        return None
+    return None
+
+
+def capital_section() -> bool:
+    gc = _const("scripts/daily_signal_a_grouped.py", "GROUP_CAPITAL")
+    groups = _const("scripts/daily_signal_a_grouped.py", "GROUPS") or {}
+    cb = _const("scripts/cb_signal.py", "CB_CAPITAL")
+    nstock = _const("scripts/qmt_nav_track.py", "NOTIONAL")
+    ncb = _const("scripts/qmt_nav_track.py", "NOTIONAL_CB")
+    cash = _const("scripts/cash_sweep.py", "STOCK_CAPITAL")
+    stock_total = gc * len(groups) if gc and groups else None
+
+    def fmt(v):
+        return f"{v:,.0f}" if isinstance(v, (int, float)) else "?"
+
+    print("\n资金口径(实盘链):")
+    print(f"  {'grouped GROUP_CAPITAL×组数':<30}{fmt(stock_total):>12}")
+    print(f"  {'nav_track NOTIONAL':<30}{fmt(nstock):>12}")
+    print(f"  {'cash_sweep STOCK_CAPITAL':<30}{fmt(cash):>12}")
+    vals = [v for v in (stock_total, nstock, cash) if v is not None]
+    stock_ok = bool(vals) and len(set(vals)) == 1
+    cb_ok = cb is not None and ncb is not None and cb == ncb
+    print(f"  {'CB: cb_signal / nav_track':<30}{fmt(cb):>7} / {fmt(ncb)}"
+          f"  {'✅' if cb_ok else '❌'}")
+    if not (stock_ok and cb_ok):
+        print("  ❌ 资金常量内部不一致(部分切换?)")
+    plan = PLANS[CAPITAL_PLAN]
+    match = stock_total == plan["stock"] and cb == plan["cb"]
+    print(f"  声明计划 {CAPITAL_PLAN}: 股票{plan['stock']:,} + CB{plan['cb']:,}"
+          f" → {'已对齐 ✅' if match else '未对齐(切换未完成)'}")
+    if CAPITAL_PLAN == "live100w" and not match:
+        return False
+    return stock_ok and cb_ok
+
+
 def main():
     rows = []
     for key in sorted(set(list(ENGINE.to_dict().keys()) + list(LIVE.keys()) + list(SPEC.keys()))):
@@ -83,10 +142,13 @@ def main():
         print(f"调仓日程检查失败: {e}")
     # 开关类登记(2026-09-08: 实盘TP已关)
     print("开关: 实盘 TP_ENABLED=False (2026-09-08 关闭, 见§6.9深夜复核②)")
+    if not capital_section():
+        bad += 1
     if bad:
         from monitoring.alerts import send_alert
-        send_alert(f"配置一致性检查: {bad} 项漂移——引擎/实盘/spec 未对齐, "
-                   f"任何引用回测结论前必须先修复(见上方 diff)", level="warning")
+        send_alert(f"配置一致性检查: {bad} 项漂移——引擎/实盘/spec 或资金常量"
+                   f"未对齐, 任何引用回测结论前必须先修复(见上方 diff)",
+                   level="warning")
     return bad
 
 
