@@ -486,6 +486,63 @@ def main():
     if satellite_100w5w.get("error"):
         alerts.append(f"卫星100w5w账本异常: {satellite_100w5w['error']}")
 
+    # CB趋势过滤前向纸面(2026-10-21起): 账本停滞=纸面实验静默死亡(闸门十二)
+    cb_overlay_paper = {"error": "missing"}
+    cop = Path("logs/cb_overlay_paper.csv")
+    if cop.exists():
+        try:
+            od = pd.read_csv(cop)
+            ol = od.iloc[-1]
+            cb_overlay_paper = {
+                "date": str(ol["date"]),
+                "signal_prev": float(ol["signal_prev"]),
+                "signal_now": int(ol["signal_now"]),
+                "paper_nav": float(ol["paper_nav"]),
+                "n_days": int(len(od)),
+            }
+        except Exception as e:  # noqa: BLE001
+            cb_overlay_paper = {"error": f"read_fail: {str(e)[:60]}"}
+    if cb_overlay_paper.get("error"):
+        alerts.append(f"CB趋势过滤纸面账本异常: {cb_overlay_paper['error']}")
+    elif last_td != "?" and cb_overlay_paper["date"] < last_td:
+        alerts.append(f"CB趋势过滤纸面账本停滞: 最新{cb_overlay_paper['date']} "
+                      f"< 上一交易日{last_td}")
+
+    # 每日研究轨道: 状态预测未评分/已评分, 方向台账Brier——18:20/18:25 cron
+    # 静默失败时这里必须可见(研究轨道不进生产决策, 但不许无声停摆)
+    research_track = {}
+    try:
+        sfp = Path("logs/state_forecast_ledger.csv")
+        if sfp.exists():
+            sd = pd.read_csv(sfp)
+            scored = sd[sd["outcome_event"].notna()]
+            latest_md = str(sd["market_date"].max())
+            research_track["state_forecast"] = {
+                "latest_market_date": latest_md,
+                "n_pending": int(len(sd) - len(scored)),
+                "n_scored": int(len(scored)),
+            }
+            if last_td != "?" and latest_md < last_td:
+                alerts.append(f"状态预测台账停滞: 最新{latest_md} "
+                              f"< 上一交易日{last_td} (18:20 cron?)")
+        else:
+            research_track["state_forecast"] = {"error": "missing"}
+    except Exception as e:  # noqa: BLE001
+        research_track["state_forecast"] = {"error": str(e)[:60]}
+    try:
+        psp = Path("logs/prediction_score.json")
+        if psp.exists():
+            pj = json.loads(psp.read_text(encoding="utf-8"))
+            research_track["direction"] = {
+                "n_targets": pj.get("n_targets"),
+                "brier": pj.get("brier"),
+                "brier_base_rate": pj.get("brier_base_rate"),
+                "hit_rate": pj.get("hit_rate"),
+                "computed_at": pj.get("computed_at"),
+            }
+    except Exception as e:  # noqa: BLE001
+        research_track["direction"] = {"error": str(e)[:60]}
+
     line = {"ts": now, "latest_bar": latest_bar,
             "last_trading_day": last_td, "bar_fresh": bar_fresh,
             "last_data_update": last_update, "tunnel": tunnel,
@@ -502,6 +559,8 @@ def main():
             "qdii_premium": qdii, "us_track": us_track,
             "qfq_drift": qfq_drift,
             "satellite_100w5w": satellite_100w5w,
+            "cb_overlay_paper": cb_overlay_paper,
+            "research_track": research_track,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")

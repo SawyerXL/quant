@@ -91,6 +91,11 @@ def summary():
             "negative_positions": health.get("negative_positions"),
             "cb_unknown_gaps": health.get("cb_unknown_gaps"),
         },
+        "paper": {
+            "satellite_100w5w": health.get("satellite_100w5w"),
+            "cb_overlay_paper": health.get("cb_overlay_paper"),
+            "research_track": health.get("research_track"),
+        },
         "positions": None if positions is None else {
             "exported_at": positions.get("exported_at"),
             "n": len(positions.get("positions") or {}),
