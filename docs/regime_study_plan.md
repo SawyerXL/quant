@@ -10,7 +10,7 @@
 > 审计完成；Phase 1 描述性周期表（19 段，20% 阈值）完成；Phase 2 预注册
 > `logs/prereg_regime_20261023.md` 已锁定（N=73-76，MDE 先行）。关键缺口：
 > 社融止 2026-04、SHIBOR 2015-05 起、新基金 2023+、PE 分位 2010+、广度/解禁/
-> 减持未纳入。**Phase 3：H1/H2/H3 已各跑一次（H1 近失FAIL；H2/H3 FAIL），H4 待跑。**
+> 减持未纳入。**Phase 3 完成：H1 近失FAIL、H2/H3 FAIL、H4 UNDERPOWERED；均不接入、不做 overlay。**
 
 ## 0. 问题与边界
 
