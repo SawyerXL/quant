@@ -543,6 +543,29 @@ def main():
     except Exception as e:  # noqa: BLE001
         research_track["direction"] = {"error": str(e)[:60]}
 
+    # CB月度调仓验证器状态(2026-10-23): 15:40 每日跑, 跳过也落状态——
+    # "非调仓日→跳过"若不进健康行，验证器静默死亡与正常跳过不可区分(闸门十二)
+    cb_monthly_verify = {"error": "missing"}
+    vsp = Path("logs/cb_monthly_verify_state.json")
+    if vsp.exists():
+        try:
+            vj = json.loads(vsp.read_text(encoding="utf-8"))
+            cb_monthly_verify = {k: vj.get(k) for k in
+                                 ("date", "status", "expect_snap", "expect_day",
+                                  "rebalance", "n_snap", "n_cb", "fails",
+                                  "warns")}
+            vd = str(vj.get("date", ""))
+            if last_td != "?" and vd < last_td:
+                alerts.append(f"CB月度验证器未运行: 状态{vd} "
+                              f"< 上一交易日{last_td}")
+            if vj.get("status") in ("fail", "selftest_fail", "no_calendar"):
+                alerts.append(f"CB月度验证器异常: status={vj.get('status')} "
+                              f"{vj.get('fails') or vd}")
+        except Exception as e:  # noqa: BLE001
+            cb_monthly_verify = {"error": f"read_fail: {str(e)[:60]}"}
+    if cb_monthly_verify.get("error"):
+        alerts.append(f"CB月度验证器状态异常: {cb_monthly_verify['error']}")
+
     line = {"ts": now, "latest_bar": latest_bar,
             "last_trading_day": last_td, "bar_fresh": bar_fresh,
             "last_data_update": last_update, "tunnel": tunnel,
@@ -561,6 +584,7 @@ def main():
             "satellite_100w5w": satellite_100w5w,
             "cb_overlay_paper": cb_overlay_paper,
             "research_track": research_track,
+            "cb_monthly_verify": cb_monthly_verify,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")

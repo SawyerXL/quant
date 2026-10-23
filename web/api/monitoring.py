@@ -71,6 +71,7 @@ def summary():
                                "regime": reconcile.get("sig_regime")},
             "tunnel": health.get("tunnel"),
             "snapshot_state": health.get("snapshot_state"),
+            "cb_monthly_verify": health.get("cb_monthly_verify"),
         },
         "signal": {
             "stock_g0": leg(g0), "stock_g1": leg(g1),

@@ -19,7 +19,7 @@
 import argparse
 import json
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -33,8 +33,21 @@ from monitoring.alerts import send_alert
 
 SIGNAL = Path("data_store/meta/signal_cb_latest.json")
 POSITIONS = Path("logs/qmt_positions_latest.json")
+STATE = Path("logs/cb_monthly_verify_state.json")
 CB_PREFIX = ("110", "111", "113", "118", "123", "127", "128")
 TOP_N = 25
+
+
+def _write_state(**kw) -> None:
+    """每次运行落一次状态（含"非调仓日跳过"）——跳过也是事件，健康行要能看见
+    （闸门十二：正确跳过是最坏的静默形态）。监控件不打断主链，写失败不抛。"""
+    try:
+        payload = {"ts": datetime.now().isoformat(timespec="seconds")}
+        payload.update(kw)
+        STATE.write_text(json.dumps(payload, ensure_ascii=False, indent=1),
+                         encoding="utf-8")
+    except Exception:
+        pass
 
 
 def check_signal(date_str: str, expect_snap: str,
@@ -137,23 +150,28 @@ def main() -> int:
     ap.add_argument("--force", action="store_true", help="非预期调仓日也检查")
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args()
+    date_str = str(args.date)[:10]
     if args.selftest:
         return selftest()
     # 闸门十六：每次先跑已知失败用例
     st = selftest()
     if st != 0:
         print("SELFTEST_FAIL: 验证器自身失效，本次结果不可信")
+        _write_state(date=date_str, status="selftest_fail")
         send_alert("[CB月度验证] SELFTEST_FAIL：验证器失效", level="warning")
         return 2
 
-    date_str = str(args.date)[:10]
     expect_snap = args.expect_snap or f"{date_str[:7]}-01"
     expect_day = expected_rebalance_day(expect_snap)
     if not args.force and expect_day and date_str != expect_day:
         print(f"非预期调仓日（预期 {expect_day}，今天 {date_str}）→ 跳过")
+        _write_state(date=date_str, expect_snap=expect_snap,
+                     expect_day=expect_day, status="skipped")
         return 0
     if expect_day is None:
         print("无法从交易日历计算预期调仓日")
+        _write_state(date=date_str, expect_snap=expect_snap,
+                     status="no_calendar")
         return 1
 
     fails, n_snap = check_snapshot(expect_snap)
@@ -181,12 +199,21 @@ def main() -> int:
           f"snap_date={signal.get('snap_date')}")
     for w in warns:
         print(f"  WARN: {w}")
+    state = {"date": date_str, "expect_snap": expect_snap,
+             "expect_day": expect_day, "n_snap": n_snap, "n_cb": n_cb,
+             "signal_date": signal.get("signal_date"),
+             "rebalance": signal.get("rebalance"),
+             "snap_date": signal.get("snap_date"),
+             "latest_snapshot": signal.get("latest_snapshot"),
+             "fails": fails, "warns": warns}
     if fails:
         for f in fails:
             print(f"  FAIL: {f}")
+        _write_state(status="fail", **state)
         send_alert("[CB月度验证] FAIL: " + " | ".join(fails), level="warning")
         return 1
     print("  PASS")
+    _write_state(status="pass", **state)
     return 0
 
 
