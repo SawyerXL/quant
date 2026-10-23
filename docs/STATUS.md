@@ -28,6 +28,8 @@
 - Linux 研究/信号：`quant-linux`；Windows QMT 执行：`quant-win`（106.15.61.81），反向隧道 127.0.0.1:2222
 - 健康行 18:40 → `logs/daily_health_line.json`（dead-man 开关）；监控 API `/api/monitoring/summary`
 - 数据主源 = 新浪（东财封本机 IP），MCP 兜底；`data_store` → `/data/quant_data_store`
+- 分组信号日程 = `rebalance_schedule`（2026-10-23 修复；11 月月中锚点恢复，组交易 11-17/11-24）
+- H1 regime 前向纸面：月度 cron 1 日 08:00（2026-09 seed；只读，不交易）
 
 **近期节点**：
 - 2026-11-02（周一）CB 首次月度调仓 → `docs/cb_monthly_rebalance_runbook.md`
