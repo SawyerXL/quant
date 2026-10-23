@@ -84,8 +84,10 @@ def capital_section() -> bool:
     print(f"  {'grouped GROUP_CAPITAL×组数':<30}{fmt(stock_total):>12}")
     print(f"  {'nav_track NOTIONAL':<30}{fmt(nstock):>12}")
     print(f"  {'cash_sweep STOCK_CAPITAL':<30}{fmt(cash):>12}")
-    vals = [v for v in (stock_total, nstock, cash) if v is not None]
-    stock_ok = bool(vals) and len(set(vals)) == 1
+    # 缺失常量=fail（闸门五 fail-fast）：三处必须都读得到且互等，
+    # 少一处时"剩下的两处相等"不构成通过
+    vals = [stock_total, nstock, cash]
+    stock_ok = all(v is not None for v in vals) and len(set(vals)) == 1
     cb_ok = cb is not None and ncb is not None and cb == ncb
     print(f"  {'CB: cb_signal / nav_track':<30}{fmt(cb):>7} / {fmt(ncb)}"
           f"  {'✅' if cb_ok else '❌'}")

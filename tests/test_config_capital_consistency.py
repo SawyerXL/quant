@@ -23,6 +23,13 @@ def test_partial_switch_detected(monkeypatch):
     assert c.capital_section() is False
 
 
+def test_missing_constant_fails(monkeypatch):
+    vals = dict(SIM)
+    vals.pop("STOCK_CAPITAL")  # 文件改名/删除 → 不能靠剩下两处相等通过
+    monkeypatch.setattr(c, "_const", lambda p, n: vals.get(n))
+    assert c.capital_section() is False
+
+
 def test_live_plan_enforces(monkeypatch):
     monkeypatch.setattr(c, "_const", lambda p, n: SIM.get(n))
     monkeypatch.setattr(c, "CAPITAL_PLAN", "live100w")
