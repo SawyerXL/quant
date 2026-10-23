@@ -1,0 +1,69 @@
+{
+ "as_of": "2026-10-23",
+ "capital_per_group": 200000.0,
+ "window": [
+  "2019-01-03",
+  "2026-10-19"
+ ],
+ "stock": {
+  "single": {
+   "ann": "2.70%",
+   "sharpe": "0.39",
+   "dd": "-15.07%",
+   "lot_skips": 1259,
+   "trades": 3100
+  },
+  "g0": {
+   "ann": "-0.76%",
+   "sharpe": "-0.07",
+   "dd": "-22.21%",
+   "lot_skips": 1483,
+   "trades": 3004
+  },
+  "g1": {
+   "ann": "1.22%",
+   "sharpe": "0.21",
+   "dd": "-14.14%",
+   "lot_skips": 1368,
+   "trades": 2882
+  },
+  "two_group": {
+   "ann": "0.26%",
+   "sharpe": "0.07",
+   "dd": "-13.49%",
+   "lot_skips": 2851,
+   "trades": 5886
+  }
+ },
+ "combo": {
+  "single": {
+   "metrics": {
+    "n": 1886,
+    "ann_pct": 13.08,
+    "sharpe": 1.596,
+    "dd_pct": -13.92
+   },
+   "trig": 0,
+   "days_halted": 0,
+   "n": 1886
+  },
+  "two_group": {
+   "metrics": {
+    "n": 1886,
+    "ann_pct": 11.96,
+    "sharpe": 1.535,
+    "dd_pct": -13.84
+   },
+   "trig": 0,
+   "days_halted": 0,
+   "n": 1886
+  },
+  "monthly_diff": {
+   "n": 93,
+   "mean_pct": -0.0828,
+   "t": -1.84
+  }
+ },
+ "delta_combo_ann_pp": -1.12,
+ "delta_combo_dd_pp": 0.08
+}
