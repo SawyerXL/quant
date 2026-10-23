@@ -485,6 +485,9 @@ def main():
             satellite_100w5w = {"error": f"read_fail: {str(e)[:60]}"}
     if satellite_100w5w.get("error"):
         alerts.append(f"卫星100w5w账本异常: {satellite_100w5w['error']}")
+    elif last_td != "?" and satellite_100w5w.get("date", "") < last_td:
+        alerts.append(f"卫星100w5w账本停滞: 最新{satellite_100w5w['date']} "
+                      f"< 上一交易日{last_td} (18:25 cron?)")
 
     # CB趋势过滤前向纸面(2026-10-21起): 账本停滞=纸面实验静默死亡(闸门十二)
     cb_overlay_paper = {"error": "missing"}
@@ -540,6 +543,10 @@ def main():
                 "hit_rate": pj.get("hit_rate"),
                 "computed_at": pj.get("computed_at"),
             }
+            dts = str(pj.get("computed_at") or "")[:10]
+            if last_td != "?" and dts and dts < last_td:
+                alerts.append(f"方向预测机评停滞: 最新{dts} "
+                              f"< 上一交易日{last_td} (18:25 cron?)")
     except Exception as e:  # noqa: BLE001
         research_track["direction"] = {"error": str(e)[:60]}
 
