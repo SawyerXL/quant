@@ -3,11 +3,13 @@
 背景：2026-10-23 15:10 的 `Quant_Tick_Collect` 因 xtquant BSON assertion
 （0xC0000409）崩溃，20261023 文件缺失且无告警；23:13 重跑成功。本脚本
 每天 18:20 SSH 到 Windows 列 `data_store/intraday/tick/*.parquet`，与上一
-交易日对比，写 `logs/tick_state.json` 供健康行告警。
+交易日对比；**缺失时自动触发一次 `Quant_Tick_Collect` 并轮询 6 分钟**，
+写 `logs/tick_state.json` 供健康行告警。
 """
 import json
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -25,6 +27,17 @@ SSH_OPTS = ["-p", WIN_PORT, "-i", SSH_KEY, "-o", "StrictHostKeyChecking=no",
 OUT = ROOT / "logs" / "tick_state.json"
 
 
+def _list_files():
+    cmd = ["ssh"] + SSH_OPTS + [
+        WIN_HOST, "cmd /c dir /b H:\\quant\\data_store\\intraday\\tick 2>nul"]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+    if r.returncode != 0:
+        raise RuntimeError((r.stderr or r.stdout)[:120])
+    files = [x.strip() for x in r.stdout.splitlines()
+             if x.strip().lower().endswith(".parquet")]
+    return sorted(f[:8] for f in files if f[:8].isdigit())
+
+
 def main():
     now = datetime.now()
     cal = load_meta("trade_calendar")
@@ -34,19 +47,33 @@ def main():
     last_td = max((d for d in ds if d <= today), default=None)
     state = {"as_of": now.isoformat(timespec="seconds"),
              "last_trade_day": last_td, "latest_file": None,
-             "n_files": 0, "ok": None, "error": ""}
+             "n_files": 0, "ok": None, "error": "",
+             "retried": False, "retry_ok": None, "retry_error": ""}
     try:
-        cmd = ["ssh"] + SSH_OPTS + [
-            WIN_HOST, "cmd /c dir /b H:\\quant\\data_store\\intraday\\tick 2>nul"]
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
-        if r.returncode != 0:
-            raise RuntimeError((r.stderr or r.stdout)[:120])
-        files = [x.strip() for x in r.stdout.splitlines()
-                 if x.strip().lower().endswith(".parquet")]
-        dates = sorted(f[:8] for f in files if f[:8].isdigit())
+        dates = _list_files()
         state["n_files"] = len(dates)
         state["latest_file"] = dates[-1] if dates else None
         state["ok"] = bool(dates and last_td and dates[-1] >= last_td)
+        # 自愈：文件缺失时触发一次 Windows 任务，最多轮询 6 分钟
+        if state["ok"] is False and last_td:
+            state["retried"] = True
+            rr = subprocess.run(
+                ["ssh"] + SSH_OPTS + [WIN_HOST,
+                                      "schtasks /run /tn Quant_Tick_Collect"],
+                capture_output=True, text=True, timeout=20)
+            if rr.returncode != 0:
+                state["retry_error"] = (rr.stderr or rr.stdout)[:120]
+            for _ in range(6):
+                time.sleep(60)
+                d2 = _list_files()
+                if d2:
+                    state["n_files"] = len(d2)
+                    state["latest_file"] = d2[-1]
+                if d2 and d2[-1] >= last_td:
+                    break
+            state["ok"] = bool(state["latest_file"]
+                               and state["latest_file"] >= last_td)
+            state["retry_ok"] = state["ok"]
     except Exception as e:  # noqa: BLE001
         state["error"] = str(e)[:120]
     OUT.write_text(json.dumps(state, ensure_ascii=False, indent=1),
