@@ -72,6 +72,7 @@ def summary():
             "tunnel": health.get("tunnel"),
             "snapshot_state": health.get("snapshot_state"),
             "cb_monthly_verify": health.get("cb_monthly_verify"),
+            "cron_install": health.get("cron_install"),
         },
         "signal": {
             "stock_g0": leg(g0), "stock_g1": leg(g1),
