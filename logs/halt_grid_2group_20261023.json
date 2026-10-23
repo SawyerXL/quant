@@ -1,0 +1,50 @@
+{
+ "no_halt": {
+  "n": 1885,
+  "ann_pct": 11.96,
+  "sharpe": 1.535,
+  "dd_pct": -13.84
+ },
+ "grid": {
+  "-0.1": {
+   "metrics": {
+    "n": 1885,
+    "ann_pct": 11.94,
+    "sharpe": 1.534,
+    "dd_pct": -13.84
+   },
+   "trig": 2,
+   "days_halted": 39
+  },
+  "-0.15": {
+   "metrics": {
+    "n": 1885,
+    "ann_pct": 11.96,
+    "sharpe": 1.535,
+    "dd_pct": -13.84
+   },
+   "trig": 0,
+   "days_halted": 0
+  },
+  "-0.2": {
+   "metrics": {
+    "n": 1885,
+    "ann_pct": 11.96,
+    "sharpe": 1.535,
+    "dd_pct": -13.84
+   },
+   "trig": 0,
+   "days_halted": 0
+  },
+  "-0.25": {
+   "metrics": {
+    "n": 1885,
+    "ann_pct": 11.96,
+    "sharpe": 1.535,
+    "dd_pct": -13.84
+   },
+   "trig": 0,
+   "days_halted": 0
+  }
+ }
+}
