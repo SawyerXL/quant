@@ -62,7 +62,7 @@ PATH=/usr/local/bin:/usr/bin:/bin
 15 18 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/market_daily_study.py >> /root/quant/logs/cron_market_study.log 2>&1
 20 18 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/market_state_forecast.py >> /root/quant/logs/cron_state_forecast.log 2>&1 && /root/quant/.venv/bin/python scripts/market_state_forecast.py --score >> /root/quant/logs/cron_state_forecast.log 2>&1
 # 预测台账结算(研究轨道; 18:15快照之后)
-25 18 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/prediction_ledger.py score >> /root/quant/logs/cron_prediction.log 2>&1 && /root/quant/.venv/bin/python scripts/prediction_ledger.py report >> /root/quant/logs/cron_prediction.log 2>&1
+25 18 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/prediction_ledger.py auto-base >> /root/quant/logs/cron_prediction.log 2>&1 && /root/quant/.venv/bin/python scripts/prediction_ledger.py score >> /root/quant/logs/cron_prediction.log 2>&1 && /root/quant/.venv/bin/python scripts/prediction_ledger.py report >> /root/quant/logs/cron_prediction.log 2>&1
 # regime 前向纸面(月度; 1日08:00 刷新面板+记录上一完整月; 只读不交易)
 0 8 1 * * cd /root/quant && /root/quant/.venv/bin/python scripts/regime_data_build.py --refresh >> /root/quant/logs/cron_regime_panel.log 2>&1 && /root/quant/.venv/bin/python scripts/regime_forward_paper.py >> /root/quant/logs/cron_regime_forward.log 2>&1
 # 消息层采集(2026-10-18; 新浪全球快讯每小时, 22:35 加新闻联播; 含周末)

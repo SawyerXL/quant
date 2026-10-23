@@ -20,6 +20,7 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -66,6 +67,73 @@ def cmd_register(args):
     df.to_csv(LEDGER, index=False)
     print(f"已登记 #{ln}: {args.market_date} h={args.horizon}d p_up={args.p_up} "
           f"{args.direction}({args.confidence}) valid={valid}")
+
+
+def base_rate(s: pd.Series, dist: pd.Series, h: int, below: bool):
+    """按 MA200 位置条件化的 h 日上涨率（纯函数，供 auto-base/测试）。
+
+    s=收盘序列；dist=s/MA200−1；h=1/5；below=True 用 dist<0 的历史日。
+    结果只用 d 日及之前信息 + d+h 的收盘（与台账评分同口径）。
+    """
+    out = (s.shift(-h) / s - 1).dropna()
+    mask = (dist < 0) if below else (dist >= 0)
+    vals = out[mask.reindex(out.index).fillna(False)].dropna()
+    if len(vals) == 0:
+        return None, 0
+    return float((vals > 0).mean()), int(len(vals))
+
+
+def _next_trade_day(today: str):
+    from data.storage import load_meta
+    cal = load_meta("trade_calendar")
+    if cal is None or cal.empty:
+        return None
+    ds = sorted(pd.to_datetime(cal["trade_date"]).dt.strftime("%Y-%m-%d").unique())
+    return next((d for d in ds if d > today), None)
+
+
+def cmd_auto_base(_args):
+    """每日收盘后登记下一交易日的基准率预测（charter §3：无优势登记基准率）。
+
+    只在最新 bar=今天时运行（非交易日/数据未更新→跳过，不写行）。
+    同一 (market_date,horizon) 已有任何登记则跳过——人工盘前覆盖不会被覆盖。
+    """
+    s = _index_series()
+    today = str(date.today())
+    if s.empty or str(s.index[-1].date()) != today:
+        print(f"最新bar {s.index[-1].date() if len(s) else '?'} != 今天 {today} → 跳过")
+        return
+    target = _next_trade_day(today)
+    if not target:
+        print("无下一交易日，跳过")
+        return
+    r = s.pct_change()
+    ma200 = s.rolling(200).mean()
+    dist = s / ma200 - 1
+    vol20 = float(r.tail(20).std() * np.sqrt(252) * 100)
+    below = bool(dist.iloc[-1] < 0)
+    feats = (f"ma200_dist={float(dist.iloc[-1])*100:.2f};"
+             f"vol20={vol20:.2f};auto=base")
+    hist = pd.read_csv(LEDGER) if LEDGER.exists() else pd.DataFrame(columns=COLS)
+    for h in (1, 5):
+        has = hist[(hist["market_date"].astype(str) == target)
+                   & (hist["horizon_d"].astype(int) == h)]
+        if len(has):
+            print(f"{target} h={h} 已有登记，跳过")
+            continue
+        p, n = base_rate(s, dist, h, below)
+        if p is None:
+            print(f"{target} h={h} 无历史样本，跳过")
+            continue
+        direction = "up" if p > 0.5 else ("down" if p < 0.5 else "flat")
+        ns = argparse.Namespace(
+            market_date=target, horizon=h, p_up=round(p, 3),
+            direction=direction, confidence="low",
+            rationale=(f"auto base rate: MA200{'下方' if below else '上方'} "
+                       f"h={h} P(up)={p:.1%} (n={n})；无优势，登记基准率"
+                       f"（人工可在 {target} 09:30 前覆盖）"),
+            features=feats)
+        cmd_register(ns)
 
 
 def cmd_score(_args):
@@ -155,6 +223,8 @@ def main():
     p.add_argument("--rationale", required=True)
     p.add_argument("--features", default="")
     p.set_defaults(func=cmd_register)
+    p = sub.add_parser("auto-base")
+    p.set_defaults(func=cmd_auto_base)
     p = sub.add_parser("score")
     p.set_defaults(func=cmd_score)
     p = sub.add_parser("report")

@@ -553,6 +553,30 @@ def main():
     except Exception as e:  # noqa: BLE001
         research_track["direction"] = {"error": str(e)[:60]}
 
+    # 方向台账覆盖(2026-10-23): 下一交易日必须有登记(auto-base 18:25)
+    direction_coverage = {"error": "missing"}
+    try:
+        cal = load_meta("trade_calendar")
+        ds = (sorted(pd.to_datetime(cal["trade_date"]).dt.strftime("%Y-%m-%d")
+                     .unique()) if cal is not None and not cal.empty else [])
+        nxt = next((d for d in ds if d > now[:10]), None)
+        ledp = Path("logs/prediction_ledger.csv")
+        if nxt and ledp.exists():
+            led = pd.read_csv(ledp)
+            latest_md = str(led["market_date"].astype(str).max())
+            direction_coverage = {"next_trade_day": nxt,
+                                  "latest_market_date": latest_md,
+                                  "ok": latest_md >= nxt}
+            if latest_md < nxt:
+                alerts.append(f"方向台账缺下一交易日登记: latest {latest_md} "
+                              f"< {nxt} (18:25 auto-base?)")
+        else:
+            direction_coverage = {"error": "no calendar/ledger"}
+    except Exception as e:  # noqa: BLE001
+        direction_coverage = {"error": str(e)[:60]}
+    if direction_coverage.get("error"):
+        alerts.append(f"方向台账覆盖检查异常: {direction_coverage['error']}")
+
     # CB月度调仓验证器状态(2026-10-23): 15:40 每日跑, 跳过也落状态——
     # "非调仓日→跳过"若不进健康行，验证器静默死亡与正常跳过不可区分(闸门十二)
     cb_monthly_verify = {"error": "missing"}
@@ -644,6 +668,7 @@ def main():
             "satellite_100w5w": satellite_100w5w,
             "cb_overlay_paper": cb_overlay_paper,
             "research_track": research_track,
+            "direction_coverage": direction_coverage,
             "regime_forward_paper": regime_forward_paper,
             "cb_monthly_verify": cb_monthly_verify,
             "cron_install": cron_install,
