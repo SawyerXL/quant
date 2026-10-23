@@ -142,6 +142,22 @@ def main():
             bad += 1
     except Exception as e:
         print(f"调仓日程检查失败: {e}")
+    # 分组信号日程(2026-10-23): 10-19 统一漏掉的第四条实现
+    try:
+        import daily_signal_a_grouped as _grp
+        from rebalance_schedule import biweekly_dates as _bd
+        from data.storage import load_meta as _lm
+        _cal = sorted(_lm("trade_calendar")["trade_date"].astype(str).tolist())
+        _base = [d for d in _cal if _grp._is_base_rebalance_day(d, _cal)]
+        _canon = [d for d in _cal if d in set(_bd(_cal))]
+        _grp_ok = _base == _canon
+        print(f"分组信号日程: 与唯一日程{'一致 ✅' if _grp_ok else '不一致 ❌'}"
+              f" (各 {len(_base)}/{len(_canon)} 个)")
+        if not _grp_ok:
+            bad += 1
+    except Exception as e:
+        print(f"分组信号日程检查失败: {e}")
+        bad += 1
     # 开关类登记(2026-09-08: 实盘TP已关)
     print("开关: 实盘 TP_ENABLED=False (2026-09-08 关闭, 见§6.9深夜复核②)")
     if not capital_section():

@@ -49,13 +49,15 @@ LEGACY_FILE = Path("data_store/meta/signal_a_latest.json")
 
 
 def _is_base_rebalance_day(today: str, calendar: list[str]) -> bool:
-    """15日+月末锚点(与回测make_rebal_dates同口径; 旧v2用倒数第二+月中是
-    回测-实盘口径错位的遗留, 摊平日历必须与回测锚点一致)。"""
-    t = pd.Timestamp(today)
-    if t.day == 15:
-        return True
-    month_dates = sorted([d for d in calendar if d.startswith(today[:7])])
-    return bool(month_dates) and today == month_dates[-1]
+    """与全链唯一日程 `rebalance_schedule` 同源（2026-10-23 修复）。
+
+    原实现是字面15日+自然月末——10-19 统一前引擎的旧口径。10-19 后
+    v2/A2/引擎/回测已统一为 n//2−1 + 倒数第二，但分组路径漏改，导致
+    live 与 100 万基准/回测不同构；且 15 日休市时整月缺月中锚点
+    （2026-11-15 周日 → 旧实现 11 月只有月末一次调仓）。
+    """
+    from rebalance_schedule import is_rebalance_day
+    return is_rebalance_day(today, calendar)
 
 
 def _is_group_rebalance_day(today, calendar, offset):
