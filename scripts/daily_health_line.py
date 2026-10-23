@@ -573,6 +573,37 @@ def main():
     if cb_monthly_verify.get("error"):
         alerts.append(f"CB月度验证器状态异常: {cb_monthly_verify['error']}")
 
+    # cron 安装一致性(2026-10-23): deploy 文件更新≠已安装——18:20 状态预测
+    # cron 在 deploy 里躺了一天但实机 root crontab 没有(批准不落地同型)。
+    cron_install = {"error": "missing"}
+    try:
+        dep_files = sorted(Path("deploy").glob("cron*_quant_*.txt"))
+        inst = Path("/var/spool/cron/crontabs/root")
+        if dep_files and inst.exists():
+            def _cron_lines(p):
+                return {ln.strip() for ln in
+                        p.read_text(encoding="utf-8", errors="ignore").splitlines()
+                        if ln.strip() and not ln.strip().startswith("#")}
+            d_lines, i_lines = _cron_lines(dep_files[-1]), _cron_lines(inst)
+            missing, extra = sorted(d_lines - i_lines), sorted(i_lines - d_lines)
+            cron_install = {"deploy": dep_files[-1].name, "n_deploy": len(d_lines),
+                            "n_installed": len(i_lines),
+                            "n_missing": len(missing), "n_extra": len(extra),
+                            "missing": [m[:120] for m in missing[:5]],
+                            "extra": [m[:120] for m in extra[:5]]}
+            if missing:
+                alerts.append(f"cron未安装 {len(missing)} 行"
+                              f"(deploy有/实机无): {missing[0][:90]}")
+            if extra:
+                alerts.append(f"cron多出 {len(extra)} 行"
+                              f"(实机有/deploy无): {extra[0][:90]}")
+        else:
+            cron_install = {"error": "deploy 文件或 root crontab 缺失"}
+    except Exception as e:  # noqa: BLE001
+        cron_install = {"error": str(e)[:80]}
+    if cron_install.get("error"):
+        alerts.append(f"cron安装检查异常: {cron_install['error']}")
+
     line = {"ts": now, "latest_bar": latest_bar,
             "last_trading_day": last_td, "bar_fresh": bar_fresh,
             "last_data_update": last_update, "tunnel": tunnel,
@@ -592,6 +623,7 @@ def main():
             "cb_overlay_paper": cb_overlay_paper,
             "research_track": research_track,
             "cb_monthly_verify": cb_monthly_verify,
+            "cron_install": cron_install,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")
