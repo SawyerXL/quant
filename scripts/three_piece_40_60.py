@@ -85,6 +85,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cb-col", default="nav_biweekly_par")
     ap.add_argument("--stock-cap", type=float, default=320_000.0)
+    ap.add_argument("--cb-cap", type=float, default=None,
+                    help="CB腿资金; 默认=2组股票总资金×W_CB/W_STOCK")
     ap.add_argument("--w-stock", type=float, default=0.4)
     ap.add_argument("--tag", default="biweekly")
     args = ap.parse_args()
@@ -126,7 +128,11 @@ def main():
                              else "旧日程基线, 非现产"),
            "return_basis": {"stock": "引擎原始口径(qfq契约, 旧史混存待审计)",
                             "cb": args.cb_col},
-           "cb_capital": 1_600_000 * W_CB, "part_b": {}}
+           # 2026-10-23 修: 原硬编码 160万×W_CB=96万只在32万/组下成立;
+           # 100万口径(20万/组→股票40万)的CB应为60万, 改按股票总资金推导。
+           "cb_capital": (args.cb_cap if args.cb_cap is not None
+                          else args.stock_cap * 2 * W_CB / W_STOCK),
+           "part_b": {}}
     print(f"CB schedule={schedule} cb_col={args.cb_col}", flush=True)
     # Part B: 目标组资金 与 50万/组对照
     navs = {}
