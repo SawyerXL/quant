@@ -20,8 +20,10 @@
 | 时点 | 动作 | 方式 |
 |---|---|---|
 | 18:15（交易日） | 快照 `scripts/market_daily_study.py` → `logs/market_daily_study.csv` | cron 自动 |
+| 18:20（交易日） | 状态预测 `scripts/market_state_forecast.py`：登记次日 \|上证收益\| ≥1% / ≥1.5% 概率 → `logs/state_forecast_ledger.csv`；同时结算前一交易日 | cron 自动 |
+| 18:25（交易日） | 方向台账机评 `scripts/prediction_ledger.py` → `logs/prediction_score.json` | cron 自动 |
 | 盘后 | 阅读快照 + 分析（宽度/波动/位置/情绪） | 人工/会话 |
-| 次日 09:30 前 | 登记预测 `scripts/prediction_ledger.py register` | 会话 |
+| 次日 09:30 前 | 登记方向预测 `scripts/prediction_ledger.py register` | 会话 |
 | 目标日收盘后 | 结算 `prediction_ledger.py score`，月度 `report` | 会话 |
 
 ## 3. 预测登记规则（事前锁）
@@ -41,6 +43,17 @@
 - **技能成立门槛（出数前锁）**：≥60 条有效预测 且 Brier 优于基准率基线
   的幅度 > 1×SE（SE 用配对差分的样本标准误）且方向命中率 > 基准 + 1×SE。
   未达标 → 只记录，不改任何交易。
+- **状态预测轨道（2026-10-22 起）**：目标不是方向，而是"次日波动幅度"
+  （`abs_ret ≥ 1% / 1.5%`），依据是已知的波动聚集结构。条件基准率三档：
+  C1 大波动日（今日 |ret|≥1%）、C2 vol20 当前值 ±2.5pp 档、C3 MA200 距离
+  ±2pp 档；按 C1→C2→C3 取第一个样本 ≥200 的条件，都没有则用无条件基准。
+  预测概率=条件历史频率。18:20 收盘后登记（当日收盘已知，无前视），
+  次日 18:20 自动结算。
+  技能判据同上：**每个事件 ≥60 条已评分且 Brier 优于基准率 >1×SE**
+  才谈接入；接入方向只可能是仓位/风险预算（不做方向下注），且仍须过
+  新假设与参数三件套。台账 `logs/state_forecast_ledger.csv`，汇总
+  `logs/market_state_forecast.json`；18:40 健康行 `research_track` 可见
+  （停滞/缺失进 alerts）。
 
 ## 5. 盈利接入规则
 

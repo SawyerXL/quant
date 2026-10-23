@@ -96,6 +96,13 @@ def _conditional(s: pd.Series, t: pd.Timestamp, ev: float):
 def register():
     s = _series()
     t = s.index[-1]
+    # 2026-10-23: 只登记"今天"的收盘特征。非交易日/数据未更新时最新 bar 不是
+    # 今天，继续登记会把同一 market_date 重复写入（节假日每跑一次加一行），
+    # 也会让盘前手动运行登记出无收盘依据的行。跳过不写行（日志可查）。
+    if t.date() != date.today():
+        print(f"最新bar {t.date()} != 今天 {date.today()} → 跳过登记"
+              f"(非交易日或数据未更新)")
+        return
     feats = _features(s, t)
     now = datetime.now()
     rows = []
