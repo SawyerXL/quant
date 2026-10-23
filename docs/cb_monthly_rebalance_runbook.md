@@ -14,7 +14,7 @@
 | 13:30 | 同上（幂等重试） | 保证 14:28 前 `cb_snapshots` 有 11-01 |
 | 14:28 | `cb_signal.py` | `rebalance=True`、`snap_date=2026-11-01`、`latest_snapshot=2026-11-01`、holdings=25 |
 | 14:45 | `fetch_and_execute.py` | 按 buy/sell 增量下单；tick 归一、单笔≤10 万、涨停禁买/跌停禁卖 |
-| 15:40 | `verify_cb_monthly_rebalance.py` | selftest 通过 + 五项字段 PASS；状态落 `logs/cb_monthly_verify_state.json`（**跳过也落**，18:40 健康行 `cb_monthly_verify` 可见） |
+| 15:40 | `verify_cb_monthly_rebalance.py` | selftest 通过 + 五项字段 PASS；状态落 `logs/cb_monthly_verify_state.json`（**跳过也落**，18:40 健康行 `cb_monthly_verify` 可见；含 `next_expect_day`=下一次调仓日） |
 
 关键日期核对（`trade_calendar`，2026-10-23 查）：10-30 周五交易、**11-01 周日休市**、11-02 周一交易。
 

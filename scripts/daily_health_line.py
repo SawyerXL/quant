@@ -559,8 +559,8 @@ def main():
             vj = json.loads(vsp.read_text(encoding="utf-8"))
             cb_monthly_verify = {k: vj.get(k) for k in
                                  ("date", "status", "expect_snap", "expect_day",
-                                  "rebalance", "n_snap", "n_cb", "fails",
-                                  "warns")}
+                                  "next_expect_day", "rebalance", "n_snap",
+                                  "n_cb", "fails", "warns")}
             vd = str(vj.get("date", ""))
             if last_td != "?" and vd < last_td:
                 alerts.append(f"CB月度验证器未运行: 状态{vd} "

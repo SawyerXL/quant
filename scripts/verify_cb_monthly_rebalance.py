@@ -104,6 +104,16 @@ def expected_rebalance_day(expect_snap: str) -> str | None:
     return None
 
 
+def next_expect_day(expect_day: str | None, date_str: str,
+                    expect_snap: str) -> str | None:
+    """健康行每天显示"下一次 CB 调仓"：本月调仓日未到→本月；
+    已过→下月快照日的执行日。否则非调仓日的状态只能看到已过去的日期。"""
+    if expect_day and expect_day >= date_str:
+        return expect_day
+    nxt = (pd.Timestamp(expect_snap) + pd.DateOffset(months=1)).strftime("%Y-%m-%d")
+    return expected_rebalance_day(nxt)
+
+
 def check_snapshot(expect_snap: str) -> tuple[list[str], int]:
     fails, n = [], 0
     snaps = load_meta("cb_snapshots")
@@ -163,15 +173,18 @@ def main() -> int:
 
     expect_snap = args.expect_snap or f"{date_str[:7]}-01"
     expect_day = expected_rebalance_day(expect_snap)
+    nxt_day = next_expect_day(expect_day, date_str, expect_snap)
     if not args.force and expect_day and date_str != expect_day:
-        print(f"非预期调仓日（预期 {expect_day}，今天 {date_str}）→ 跳过")
+        print(f"非预期调仓日（预期 {expect_day}，今天 {date_str}）→ 跳过；"
+              f"下一次 {nxt_day}")
         _write_state(date=date_str, expect_snap=expect_snap,
-                     expect_day=expect_day, status="skipped")
+                     expect_day=expect_day, next_expect_day=nxt_day,
+                     status="skipped")
         return 0
     if expect_day is None:
         print("无法从交易日历计算预期调仓日")
         _write_state(date=date_str, expect_snap=expect_snap,
-                     status="no_calendar")
+                     next_expect_day=nxt_day, status="no_calendar")
         return 1
 
     fails, n_snap = check_snapshot(expect_snap)
@@ -200,7 +213,8 @@ def main() -> int:
     for w in warns:
         print(f"  WARN: {w}")
     state = {"date": date_str, "expect_snap": expect_snap,
-             "expect_day": expect_day, "n_snap": n_snap, "n_cb": n_cb,
+             "expect_day": expect_day, "next_expect_day": nxt_day,
+             "n_snap": n_snap, "n_cb": n_cb,
              "signal_date": signal.get("signal_date"),
              "rebalance": signal.get("rebalance"),
              "snap_date": signal.get("snap_date"),

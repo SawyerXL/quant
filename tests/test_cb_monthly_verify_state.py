@@ -24,6 +24,15 @@ def test_skip_writes_state(tmp_path, monkeypatch):
     assert d["expect_day"] == "2026-11-02"
 
 
+def test_next_expect_day(monkeypatch):
+    days = {"2026-10-01": "2026-10-08", "2026-11-01": "2026-11-02"}
+    monkeypatch.setattr(v, "expected_rebalance_day", lambda s: days.get(s[:10]))
+    # 本月调仓日还没到 → 返回本月
+    assert v.next_expect_day("2026-10-08", "2026-10-05", "2026-10-01") == "2026-10-08"
+    # 本月已过 → 返回下月快照日的执行日
+    assert v.next_expect_day("2026-10-08", "2026-10-23", "2026-10-01") == "2026-11-02"
+
+
 def test_write_state_payload(tmp_path, monkeypatch):
     monkeypatch.setattr(v, "STATE", tmp_path / "state.json")
     v._write_state(date="2026-11-02", status="pass", n_cb=25)
