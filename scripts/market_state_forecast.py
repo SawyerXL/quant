@@ -71,8 +71,10 @@ def _conditional(s: pd.Series, t: pd.Timestamp, ev: float):
     cur_r1 = cur_f["ret1"] / 100 if cur_f["ret1"] is not None else np.nan
     cur_md = cur_f["ma200_dist"]
     cands = []
-    # C1 波动聚集：今日 |ret|>=1%
-    if cur_r1 == cur_r1:
+    # C1 波动聚集：条件=**今天也是大波动日**（|ret|>=1%）。
+    # 2026-10-23 修：原实现只检查 ret 非空，C1 因 n>=200 恒成立而每天被选中，
+    # 非大波动日也套用"大波动日次日"的基准率——条件标签与条件集不符。
+    if cur_r1 == cur_r1 and abs(cur_r1) >= 0.01:
         m = ok & (r.abs() >= 0.01)
         if int(m.sum()) >= 200:
             cands.append(("C1_big_move", float(hit[m].mean()), int(m.sum())))
@@ -137,6 +139,10 @@ def score():
     for col in ("outcome_event", "scored_at", "valid"):
         df[col] = df[col].astype(object)
     for i, row in df.iterrows():
+        # 无效登记（如 2026-10-23 C1 条件 bug）不参与评分；成交价类错误
+        # 必须在评分前隔离，不能等到事后归因(闸门十四精神)
+        if str(row.get("valid", "ok")) != "ok":
+            continue
         if str(row.get("outcome_event", "")) not in ("", "nan"):
             continue
         t = pd.Timestamp(row["market_date"])

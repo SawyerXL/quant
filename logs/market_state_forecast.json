@@ -1,33 +1,33 @@
 {
- "market_date": "2026-10-22",
+ "market_date": "2026-10-23",
  "features": {
-  "vol20": 12.39,
-  "ret1": -1.48,
-  "ma200_dist": -8.6
+  "vol20": 13.08,
+  "ret1": 0.89,
+  "ma200_dist": -7.76
  },
  "forecasts": [
   {
-   "registered_at": "2026-10-22T22:35:51",
-   "market_date": "2026-10-22",
+   "registered_at": "2026-10-23T22:16:50",
+   "market_date": "2026-10-23",
    "event": "abs_ret_ge_1pct",
-   "p_event": 0.3254,
-   "base_rate": 0.2556,
-   "n_cond": 544,
-   "condition": "C1_big_move",
-   "features": "{\"vol20\": 12.39, \"ret1\": -1.48, \"ma200_dist\": -8.6}",
+   "p_event": 0.2156,
+   "base_rate": 0.2555,
+   "n_cond": 1002,
+   "condition": "C2_vol20_bin",
+   "features": "{\"vol20\": 13.08, \"ret1\": 0.89, \"ma200_dist\": -7.76}",
    "outcome_event": "",
    "scored_at": "",
    "valid": "ok"
   },
   {
-   "registered_at": "2026-10-22T22:35:51",
-   "market_date": "2026-10-22",
+   "registered_at": "2026-10-23T22:16:50",
+   "market_date": "2026-10-23",
    "event": "abs_ret_ge_1.5pct",
-   "p_event": 0.1581,
+   "p_event": 0.0778,
    "base_rate": 0.1177,
-   "n_cond": 544,
-   "condition": "C1_big_move",
-   "features": "{\"vol20\": 12.39, \"ret1\": -1.48, \"ma200_dist\": -8.6}",
+   "n_cond": 1002,
+   "condition": "C2_vol20_bin",
+   "features": "{\"vol20\": 13.08, \"ret1\": 0.89, \"ma200_dist\": -7.76}",
    "outcome_event": "",
    "scored_at": "",
    "valid": "ok"

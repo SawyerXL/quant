@@ -518,12 +518,15 @@ def main():
         sfp = Path("logs/state_forecast_ledger.csv")
         if sfp.exists():
             sd = pd.read_csv(sfp)
-            scored = sd[sd["outcome_event"].notna()]
+            valid_rows = (sd[sd["valid"].astype(str) == "ok"]
+                          if "valid" in sd.columns else sd)
+            scored = valid_rows[valid_rows["outcome_event"].notna()]
             latest_md = str(sd["market_date"].max())
             research_track["state_forecast"] = {
                 "latest_market_date": latest_md,
-                "n_pending": int(len(sd) - len(scored)),
+                "n_pending": int(len(valid_rows) - len(scored)),
                 "n_scored": int(len(scored)),
+                "n_invalid": int(len(sd) - len(valid_rows)),
             }
             if last_td != "?" and latest_md < last_td:
                 alerts.append(f"状态预测台账停滞: 最新{latest_md} "
