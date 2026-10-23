@@ -12,6 +12,7 @@
 > 社融止 2026-04、SHIBOR 2015-05 起、新基金 2023+、PE 分位 2010+、广度/解禁/
 > 减持未纳入。**Phase 3 完成：H1 近失FAIL、H2/H3 FAIL、H4 UNDERPOWERED；均不接入、不做 overlay。**
 > Phase 4/5 **不启动**（无通过项）；批次判读 `logs/regime_h1_h4_verdict_20261023.md`。
+> **H1 前向纸面已搭**（`scripts/regime_forward_paper.py`，月度 cron 1日08:00；2026-09 起记录，只读不交易）。
 
 ## 0. 问题与边界
 

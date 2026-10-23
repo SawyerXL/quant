@@ -576,6 +576,25 @@ def main():
     if cb_monthly_verify.get("error"):
         alerts.append(f"CB月度验证器状态异常: {cb_monthly_verify['error']}")
 
+    # H1 regime 前向纸面(月度, 1日08:00): 只读测量; 月度cron静默失败必须可见
+    regime_forward_paper = {"error": "missing"}
+    rfp = Path("logs/regime_forward_paper_state.json")
+    if rfp.exists():
+        try:
+            rj = json.loads(rfp.read_text(encoding="utf-8"))
+            regime_forward_paper = {k: rj.get(k) for k in
+                                    ("as_of", "last_complete_month",
+                                     "latest_recorded", "n_rows", "n_scored",
+                                     "ok")}
+            if rj.get("ok") is False:
+                alerts.append(f"regime前向纸面未记录最新完整月: "
+                              f"{rj.get('latest_recorded')} < "
+                              f"{rj.get('last_complete_month')}")
+        except Exception as e:  # noqa: BLE001
+            regime_forward_paper = {"error": f"read_fail: {str(e)[:60]}"}
+    if regime_forward_paper.get("error"):
+        alerts.append(f"regime前向纸面状态异常: {regime_forward_paper['error']}")
+
     # cron 安装一致性(2026-10-23): deploy 文件更新≠已安装——18:20 状态预测
     # cron 在 deploy 里躺了一天但实机 root crontab 没有(批准不落地同型)。
     cron_install = {"error": "missing"}
@@ -625,6 +644,7 @@ def main():
             "satellite_100w5w": satellite_100w5w,
             "cb_overlay_paper": cb_overlay_paper,
             "research_track": research_track,
+            "regime_forward_paper": regime_forward_paper,
             "cb_monthly_verify": cb_monthly_verify,
             "cron_install": cron_install,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}

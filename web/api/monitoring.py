@@ -97,6 +97,7 @@ def summary():
             "satellite_100w5w": health.get("satellite_100w5w"),
             "cb_overlay_paper": health.get("cb_overlay_paper"),
             "research_track": health.get("research_track"),
+            "regime_forward_paper": health.get("regime_forward_paper"),
         },
         "positions": None if positions is None else {
             "exported_at": positions.get("exported_at"),
