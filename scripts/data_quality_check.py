@@ -187,14 +187,18 @@ def check_index_data():
 def check_index_code_contamination():
     """000001等代码同时是指数和个股, 回补时可能被stock_zh_a_daily拉成个股价格。
     上证指数~4000点, 个股~10元。正常值范围: 指数>1000, 个股<10000。"""
+    # 2026-10-23: 原窄区间(SH000906 4500-6500)会随指数水平漂移误报——10-22
+    # 中证800 收 4482.438(daily 与 meta 一致, 真实 −2.07%), 仅因跌破下限被判
+    # "个股污染"。改为量级判据 + 单日异动上限, 只用"指数 vs 个股"的物理量级:
+    #   指数 ~500-20000; 个股 ~1-500(混入必被下限捕获); |日涨跌| <= 15%。
     idx_expected_range = {
         # 2026-09-09 normalize: 指数键全部改 SH/SZ 前缀命名空间
-        'SH000001': (3000, 5000),   # 上证指数 3000-5000
-        'SH000300': (3500, 5500),   # 沪深300
-        'SZ399006': (2500, 5000),   # 创业板
-        'SH000688': (800, 2500),    # 科创50
-        'SH000905': (6000, 10000),  # 中证500
-        'SH000906': (4500, 6500),   # 中证800
+        'SH000001': (500, 20000),   # 上证指数
+        'SH000300': (500, 20000),   # 沪深300
+        'SZ399006': (500, 20000),   # 创业板
+        'SH000688': (500, 20000),   # 科创50
+        'SH000905': (500, 20000),   # 中证500
+        'SH000906': (500, 20000),   # 中证800
     }
     contaminated = []
     for code, (lo, hi) in idx_expected_range.items():
@@ -204,8 +208,12 @@ def check_index_code_contamination():
             cl = pd.to_numeric(df['close'], errors='coerce').dropna()
             if cl.empty: continue
             latest = cl.iloc[-1]
+            prev = cl.iloc[-2] if len(cl) >= 2 else latest
+            pct = abs(latest / prev - 1) if prev else 0.0
             if latest < lo or latest > hi:
-                contaminated.append(f'{code}({latest:.0f}, 应在{lo}-{hi})')
+                contaminated.append(f'{code}({latest:.0f}, 量级异常[{lo}-{hi}])')
+            elif pct > 0.15:
+                contaminated.append(f'{code}({latest:.0f}, 单日异动{pct:.1%})')
         except:
             pass
     if contaminated:
