@@ -31,6 +31,7 @@
 - 分组信号日程 = `rebalance_schedule`（2026-10-23 修复；11 月月中锚点恢复，组交易 11-17/11-24）
 - H1 regime 前向纸面：月度 cron 1 日 08:00（2026-09 seed；只读，不交易）
 - 方向预测台账 auto-base：每日 18:25 登记下一交易日基准率（h1/h5），健康行 `direction_coverage` 缺失告警
+- tick 采集：Windows 15:10（199 代码/日）；Linux 18:20 新鲜度检查（SSH 只读），健康行 `tick_freshness` 告警
 
 **近期节点**：
 - 2026-11-02（周一）CB 首次月度调仓 → `docs/cb_monthly_rebalance_runbook.md`

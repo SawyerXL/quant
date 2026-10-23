@@ -577,6 +577,27 @@ def main():
     if direction_coverage.get("error"):
         alerts.append(f"方向台账覆盖检查异常: {direction_coverage['error']}")
 
+    # tick采集新鲜度(Windows 15:10; Linux 18:20检查): 缺失/检查未跑=事件
+    tick_freshness = {"error": "missing"}
+    tfp = Path("logs/tick_state.json")
+    if tfp.exists():
+        try:
+            tj = json.loads(tfp.read_text(encoding="utf-8"))
+            tick_freshness = {k: tj.get(k) for k in
+                              ("as_of", "last_trade_day", "latest_file",
+                               "n_files", "ok", "error")}
+            if tj.get("ok") is False:
+                alerts.append(f"tick采集缺失: 最新{tj.get('latest_file')} "
+                              f"< 上一交易日{tj.get('last_trade_day')} "
+                              f"(Windows 15:10任务?)")
+            if last_td != "?" and str(tj.get("as_of", ""))[:10] < last_td:
+                alerts.append(f"tick新鲜度检查未运行: {tj.get('as_of')} "
+                              f"< 上一交易日{last_td}")
+        except Exception as e:  # noqa: BLE001
+            tick_freshness = {"error": f"read_fail: {str(e)[:60]}"}
+    if tick_freshness.get("error"):
+        alerts.append(f"tick新鲜度状态异常: {tick_freshness['error']}")
+
     # CB月度调仓验证器状态(2026-10-23): 15:40 每日跑, 跳过也落状态——
     # "非调仓日→跳过"若不进健康行，验证器静默死亡与正常跳过不可区分(闸门十二)
     cb_monthly_verify = {"error": "missing"}
@@ -670,6 +691,7 @@ def main():
             "research_track": research_track,
             "direction_coverage": direction_coverage,
             "regime_forward_paper": regime_forward_paper,
+            "tick_freshness": tick_freshness,
             "cb_monthly_verify": cb_monthly_verify,
             "cron_install": cron_install,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
