@@ -28,6 +28,9 @@ NAV = Path("logs/qmt_nav_history.parquet")
 STATE = Path("logs/satellite_cb_paper_state.json")
 OUT = Path("logs/satellite_cb_paper.csv")
 CORE = 1_600_000.0
+# 2026-10-23: 100万实盘口径的卫星账本(40万股票+60万CB核心 + 5万CB-only卫星)
+CORE_100W = 1_000_000.0
+SAT_100W = 50_000.0
 SIZES = {"sat05": 0.05, "sat10": 0.10, "sat20": 0.20, "sat30": 0.30,
          "sat40": 0.40, "sat50": 0.50, "sat75": 0.75}
 
@@ -84,6 +87,11 @@ def main():
         row[f"sat_nav_{name}"] = round(sat_nav, 0)
         row[f"combined_nav_{name}"] = round(comb, 6)
         row[f"sat_ret_{name}"] = round(mult - 1, 6)
+    # 100万核心 + 5万卫星(用户 2026-10-23 指定): 核心=100万, 卫星=5万 CB-only 1x
+    row["sat_nav_100w5w"] = round(SAT_100W * mult, 0)
+    row["combined_nav_100w5w"] = round(
+        (CORE_100W * nav_comb + SAT_100W * mult) / (CORE_100W + SAT_100W), 6)
+    row["sat_ret_100w5w"] = round(mult - 1, 6)
 
     hist = pd.read_csv(OUT) if OUT.exists() else pd.DataFrame()
     if not hist.empty and date in set(hist["date"].astype(str)):

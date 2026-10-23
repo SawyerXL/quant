@@ -469,6 +469,23 @@ def main():
         except Exception:
             pass
 
+    # 100万+5万CB卫星纸面账本(2026-10-23): 读最新行; 缺失/读失败必须告警(闸门十二)
+    satellite_100w5w = {"error": "missing"}
+    sp = Path("logs/satellite_cb_paper.csv")
+    if sp.exists():
+        try:
+            sd = pd.read_csv(sp)
+            sl = sd.iloc[-1]
+            satellite_100w5w = {
+                "date": str(sl["date"]),
+                "combined_nav": float(sl.get("combined_nav_100w5w")),
+                "sat_ret": float(sl.get("sat_ret_100w5w")),
+            }
+        except Exception as e:  # noqa: BLE001
+            satellite_100w5w = {"error": f"read_fail: {str(e)[:60]}"}
+    if satellite_100w5w.get("error"):
+        alerts.append(f"卫星100w5w账本异常: {satellite_100w5w['error']}")
+
     line = {"ts": now, "latest_bar": latest_bar,
             "last_trading_day": last_td, "bar_fresh": bar_fresh,
             "last_data_update": last_update, "tunnel": tunnel,
@@ -484,6 +501,7 @@ def main():
             "manual_exec_lock": manual_lock,
             "qdii_premium": qdii, "us_track": us_track,
             "qfq_drift": qfq_drift,
+            "satellite_100w5w": satellite_100w5w,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")
