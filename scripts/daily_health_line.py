@@ -638,6 +638,15 @@ def main():
                 alerts.append(f"regime前向纸面未记录最新完整月: "
                               f"{rj.get('latest_recorded')} < "
                               f"{rj.get('last_complete_month')}")
+            # 2026-10-25: 月度 cron 不跑时状态文件会"自洽地 ok"——用期望的
+            # 上一日历月对照（11-01 应覆盖 2026-10，否则告警）
+            exp_prev = (pd.Timestamp(now[:10]).to_period("M")
+                        - 1).strftime("%Y-%m")
+            regime_forward_paper["expected_prev_month"] = exp_prev
+            lc = str(rj.get("last_complete_month") or "")
+            if lc and lc < exp_prev:
+                alerts.append(f"regime前向纸面未覆盖最新完整月: "
+                              f"{lc} < {exp_prev}")
         except Exception as e:  # noqa: BLE001
             regime_forward_paper = {"error": f"read_fail: {str(e)[:60]}"}
     if regime_forward_paper.get("error"):
