@@ -116,10 +116,12 @@ def monthly_stats(ev, col):
         vals = np.concatenate([groups[i] for i in pick])
         boots.append(vals.mean())
     boots = np.array(boots)
+    sd = float(m[col].std(ddof=1))
     return {
         "n_events": int(len(m)), "n_months": len(groups),
         "mean": float(m[col].mean()), "median": float(m[col].median()),
         "win_rate": float((m[col] > 0).mean()),
+        "naive_t": float(m[col].mean() / (sd / np.sqrt(len(m)))) if sd > 0 else None,
         "boot_se": float(boots.std(ddof=1)),
         "boot_t": float(boots.mean() / boots.std(ddof=1)) if boots.std(ddof=1) > 0 else None,
         "boot_ci95": [float(np.quantile(boots, 0.025)), float(np.quantile(boots, 0.975))],

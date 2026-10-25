@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from chip_structure import P, load_float_shares  # noqa: E402
+from chip_structure import P, CACHE_DIR, load_float_shares  # noqa: E402
 from data.storage import load_daily  # noqa: E402
 
 WEIGHTS = ROOT / "data_store" / "meta" / "csi800_pit_weights.parquet"
@@ -56,7 +56,7 @@ def turnover_range(turn: np.ndarray, valid: np.ndarray, i0: int, i1: int):
 
 
 def scan_code(code: str, snap: dict, snap_dates: list, start: pd.Timestamp,
-              end: pd.Timestamp) -> dict:
+              end: pd.Timestamp, cache_only: bool = False) -> dict:
     out = {"code": code, "bars": 0, "missing": False, "events": [],
            "cand_price": 0, "cand_float_missing": 0, "cand_turnover_low": 0,
            "skipped_member": 0, "skipped_liquidity": 0}
@@ -75,7 +75,19 @@ def scan_code(code: str, snap: dict, snap_dates: list, start: pd.Timestamp,
     if n < 300:
         return out
 
-    fs, fs_status = load_float_shares(code, asof=end.strftime("%Y-%m-%d"))
+    if cache_only:
+        p = CACHE_DIR / f"{code}.parquet"
+        if p.exists():
+            try:
+                fs = pd.read_parquet(p)
+                fs["date"] = pd.to_datetime(fs["date"])
+                fs_status = "cache_ok"
+            except Exception:
+                fs, fs_status = None, "cache_error"
+        else:
+            fs, fs_status = None, "missing"
+    else:
+        fs, fs_status = load_float_shares(code, asof=end.strftime("%Y-%m-%d"))
     if fs is not None and len(fs):
         f = fs.drop_duplicates("date").sort_values("date")
         d = pd.merge_asof(d, f, on="date", direction="backward")
@@ -172,6 +184,8 @@ def main():
     ap.add_argument("--start", default="2019-02-01")
     ap.add_argument("--end", default="2026-10-23")
     ap.add_argument("--limit", type=int, default=0, help="仅调试：限制股票数")
+    ap.add_argument("--cache-only", action="store_true",
+                    help="只读 float 缓存，不触网（先跑 build_float_cache.py）")
     args = ap.parse_args()
     start, end = pd.Timestamp(args.start), pd.Timestamp(args.end)
     snap, snap_dates = load_membership()
@@ -184,7 +198,7 @@ def main():
     all_events, stats = [], {"missing": [], "bars_lt300": [], "by_code": {}}
     for i, code in enumerate(codes, 1):
         try:
-            r = scan_code(code, snap, snap_dates, start, end)
+            r = scan_code(code, snap, snap_dates, start, end, cache_only=args.cache_only)
         except Exception as e:
             logger.warning(f"{code} scan fail: {type(e).__name__} {str(e)[:80]}")
             stats["missing"].append(code)
@@ -209,6 +223,9 @@ def main():
 
     df = pd.DataFrame(all_events)
     if len(df):
+        df["code"] = df["code"].astype(str).str.zfill(6)
+        # 覆盖率：换手有效天数/区间天数（闸门十四）
+        df["turnover_cov"] = df["turnover_ok_days"] / df["turnover_days"].replace(0, np.nan)
         df = df.sort_values(["date", "code"]).reset_index(drop=True)
         df.to_csv(LOG_DIR / "washout_census_events_20261025.csv", index=False)
 
@@ -229,15 +246,18 @@ def main():
         "window": [args.start, args.end],
         "codes_missing_bars": len(stats["missing"]),
         "codes_bars_lt300": len(stats["bars_lt300"]),
+        "funnel_note": "price_candidate_days 是候选'日'（未去重）；dedup 在事件阶段",
         "funnel": {
-            "price_candidates": sum(v["cand_price"] for v in stats["by_code"].values()),
-            "float_missing": sum(v["float_missing"] for v in stats["by_code"].values()),
-            "turnover_low": sum(v["turnover_low"] for v in stats["by_code"].values()),
+            "price_candidate_days": sum(v["cand_price"] for v in stats["by_code"].values()),
+            "float_missing_days": sum(v["float_missing"] for v in stats["by_code"].values()),
+            "turnover_low_days": sum(v["turnover_low"] for v in stats["by_code"].values()),
             "events_dedup": int(len(df)),
             "events_mature60": int(df["mature_60"].sum()) if len(df) else 0,
             "events_tradable": int((df["mature_60"] & ~df["limit_up_t1"]).sum()) if len(df) else 0,
             "unique_stocks": int(df["code"].nunique()) if len(df) else 0,
             "event_months": int(df["date"].str[:7].nunique()) if len(df) else 0,
+            "turnover_cov_p50": round(float(df["turnover_cov"].median()), 4) if len(df) else None,
+            "turnover_cov_min": round(float(df["turnover_cov"].min()), 4) if len(df) else None,
         },
         "by_year": by_year,
         "by_month": by_month,
