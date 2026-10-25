@@ -85,18 +85,20 @@ def main():
 
     # 五审计结果(单位一致性日志：标记 + 新鲜度)
     # 2026-10-21: 旧实现只看日志文本——日志在 9-15 后从未更新也报 pass/?"，
-    # 属"未知≠通过"盲区；改为 2 天内 + 标记才算 pass，否则 stale/fail。
+    # 属"未知≠通过"盲区；改为标记 + 新鲜度才算 pass，否则 stale/fail。
+    # 2026-10-25 修: 审计 cron 是工作日 18:10，周末不跑是正常；旧实现用
+    # 2 天墙钟→周日必报 stale 假警。改为"审计日期 >= 最新 bar"（交易日语义）。
     audit = "?"
     uclog = Path("logs/unit_consistency_check.log")
     if uclog.exists():
-        import time as _time
-        age_d = (_time.time() - uclog.stat().st_mtime) / 86400.0
+        audit_date = datetime.fromtimestamp(
+            uclog.stat().st_mtime).strftime("%Y-%m-%d")
         has_ok = "单位一致性通过" in uclog.read_text(
             encoding="utf-8", errors="ignore")
-        if has_ok and age_d <= 2:
+        if has_ok and audit_date >= latest_bar:
             audit = "pass"
         elif has_ok:
-            audit = f"stale({age_d:.0f}d)"
+            audit = f"stale(since {audit_date} < bar {latest_bar})"
         else:
             audit = "fail"
 
