@@ -103,3 +103,11 @@ A: 修改 `.env` 中 `DATA_SOURCE=mcp`，实现 `data/source/mcp_source.py`，�
 preflight 实测、五条停止判据与盲区声明。验证器每次运行落
 `logs/cb_monthly_verify_state.json`（非调仓日也落 `skipped`），18:40
 健康行的 `cb_monthly_verify` 字段可见。
+
+## 七、数据洞扫描与受控回填
+
+详见 **`docs/data_hole_runbook.md`**：`calendar_coverage_scan.py`（已修上市前
+假阳性/`--full`/文件名）→ `calendar_gap_dates.py` 日级频次 → Sina 独立源确认
+→ `backfill_2026_holes_full.py`（只补缺失日、源无 bar=停牌、锚±0.5%、备份）
+→ `verify_backfill_2026.py` 验收。**指数自身的洞（2007-10 类）本扫描发现不了**，
+需独立日历源；补洞前不切 100 万、不引用受影响窗口研究数字。
