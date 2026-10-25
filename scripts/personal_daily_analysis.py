@@ -21,6 +21,42 @@ def sf(v):
             if '万' in v: return float(v.replace('万','')) * 1e4
         return 0.0
 
+
+def _exch(code):
+    """交易所前缀：5xx 是沪市 ETF/基金（2026-10-25 修：旧逻辑只认 6/68，
+    把 588000 发到 sz588000 拿到空串后静默 fallback 到成本价，盈亏恒 0）。"""
+    if code.startswith(('6', '5', '9', '11')):
+        return 'sh'
+    if code.startswith(('0', '3', '1', '2')):
+        return 'sz'
+    return None
+
+
+def get_quote(code):
+    """返回 (价格, 来源)。来源 sina/local/unavailable；绝不静默把成本当现价。"""
+    exch = _exch(code)
+    if exch:
+        try:
+            r = requests.get(f'http://hq.sinajs.cn/list={exch}{code}',
+                             headers={'Referer': 'https://finance.sina.com.cn'}, timeout=3)
+            parts = r.text.split('"')
+            if len(parts) > 1 and parts[1].strip():
+                px = float(parts[1].split(',')[3])
+                if px > 0:
+                    return px, 'sina'
+        except Exception:
+            pass
+    # 兜底：本地日线最后一根（ETF/停牌/新浪无报价），仍拿不到才 unavailable
+    try:
+        from data.storage import load_daily
+        from datetime import date as _d, timedelta as _td
+        d = load_daily(code, (_d.today() - _td(days=30)).isoformat(), _d.today().isoformat())
+        if d is not None and len(d):
+            return float(d['close'].iloc[-1]), 'local'
+    except Exception:
+        pass
+    return None, 'unavailable'
+
 # ══════════════════════════════════
 # Part A: 十维快速筛查 (所有持仓)
 # ══════════════════════════════════
@@ -30,14 +66,10 @@ def ten_dim_screen(holdings, flow_data):
 
     results = []
     for code, (name, cost, shares) in holdings.items():
-        # 现价
-        exch = 'sh' if code.startswith(('6','68')) else 'sz'
-        try:
-            r = requests.get(f'http://hq.sinajs.cn/list={exch}{code}',
-                headers={'Referer':'https://finance.sina.com.cn'}, timeout=3)
-            cur = float(r.text.split('"')[1].split(',')[3])
-        except:
-            cur = cost
+        # 现价（sina；无报价→本地末bar；仍无→成本并标 unavailable）
+        cur, qsrc = get_quote(code)
+        if cur is None:
+            cur, qsrc = cost, 'unavailable'
 
         pnl_pct = (cur/cost - 1) * 100 if cost > 0 else 0
         ft = flow_data.get(code)
@@ -74,7 +106,7 @@ def ten_dim_screen(holdings, flow_data):
         results.append({
             'code': code, 'name': name, 'cur': cur, 'cost': cost, 'shares': shares,
             'pnl_pct': pnl_pct, 'score': score, 'plus': plus, 'minus': minus,
-            'flow': ft, 'mkt_val': cur * shares,
+            'flow': ft, 'mkt_val': cur * shares, 'qsrc': qsrc,
         })
 
     results.sort(key=lambda x: x['score'], reverse=True)
@@ -88,13 +120,9 @@ def enhanced_deep_dive(code, name, cost, shares):
     from data.storage import load_daily
     import akshare as ak
 
-    # 实时行情
-    exch = 'sh' if code.startswith(('6','68')) else 'sz'
-    try:
-        r = requests.get(f'http://hq.sinajs.cn/list={exch}{code}',
-            headers={'Referer':'https://finance.sina.com.cn'}, timeout=3)
-        cur = float(r.text.split('"')[1].split(',')[3])
-    except:
+    # 实时行情（与 Part A 同一入口，避免 ETF 走错交易所）
+    cur, _qsrc = get_quote(code)
+    if cur is None:
         cur = cost
 
     # 技术面
@@ -205,7 +233,8 @@ def run():
         elif s['pnl_pct'] > 50: flags.append('⚠️浮盈'); actionable.append(s)
         elif s['pnl_pct'] < -20: flags.append('🔴深亏'); actionable.append(s)
         flag_str = ','.join(flags) if flags else '—'
-        print(f"  {s['code']:<8} {s['name']:<6} {s['cur']:>7.2f} {s['pnl_pct']:>+6.1f}% {s['score']:>+3d}  {flag_str}")
+        qmark = '' if s.get('qsrc') == 'sina' else f" [{s.get('qsrc')}]"
+        print(f"  {s['code']:<8} {s['name']:<6} {s['cur']:>7.2f} {s['pnl_pct']:>+6.1f}% {s['score']:>+3d}  {flag_str}{qmark}")
 
     # ═══ Part B: 增强深挖 ═══
     if actionable:
@@ -222,6 +251,33 @@ def run():
             print(f"    盈亏比A(→MA20): {d['rr1']:.1f}:1 | 盈亏比B(→MA60): {d['rr2']:.1f}:1")
             print(f"    关键位: 目标1={d['target1']:.1f} 目标2={d['target2']:.1f} 止损={d['stop1']:.1f}")
             print(f"    建议: {d['action']}")
+
+    # ═══ Part C: 筹码/洗盘结构 (观察项, 不进评分、不构成买卖信号) ═══
+    print(f"\n  ── 筹码/洗盘结构（观察项，不是买卖信号）──")
+    try:
+        sys.path.insert(0, str(Path(__file__).parent))
+        from chip_structure import analyze as chip_analyze
+
+        def _pct(x, sign=False, nd=0):
+            if x is None:
+                return '—'
+            return (f"{x:+.{nd}%}" if sign else f"{x:.{nd}%}")
+
+        print(f"  {'代码':<8}{'名称':<6}{'距高':>5}{'回调':>7}{'换手':>7}{'获利盘':>7}{'90%带宽':>8}  状态")
+        for code, (name, cost, shares) in holdings.items():
+            c = chip_analyze(code, name)
+            ch = c.get('chip') or {}
+            days = c.get('days_since_high')
+            print(f"  {code:<8}{name:<6}{str(days) if days is not None else '—':>5}"
+                  f"{_pct(c.get('dd_from_high'), True):>7}"
+                  f"{_pct(c.get('cum_turnover')):>7}"
+                  f"{_pct(ch.get('winner_rate')):>7}"
+                  f"{_pct(ch.get('width90')):>8}  {c['stage']}{' ✅' if c.get('watch') else ''}")
+            if c.get('stage') == 'WASHOUT_WATCH' or c.get('watch'):
+                print(f"         · {'; '.join(c.get('reasons', []))}")
+    except Exception as e:
+        # 降级必须可见（闸门十二）：模块不可用不能静默当"无结构"
+        print(f"  ⚠️ 筹码模块不可用: {type(e).__name__}: {e}")
 
     # ═══ 汇总 ═══
     total_mkt = sum(s['mkt_val'] for s in screen)

@@ -103,3 +103,9 @@
 - 数据：`data_store/regime/panel_monthly.parquet`（as_of 2026-10-23）；审计 `logs/regime_data_audit_20261023.md`。
 - OOS=2019-01~2026-10 只用一次；PASS 只进入 overlay 设计，不部署。
 - **批次判读**：`logs/regime_h1_h4_verdict_20261023.md`。H1 稳健性：`pe_pct_10y` IS −38.0pp/t−1.91 但 OOS 空（固定阈值不迁移）；原始 ERP OOS +19.0pp 但 n=4/6（t 不可信）——三构造方向一致，阈值迁移是限制；**不翻案、不重跑**。
+
+## 2026-10-25 个股洗盘预注册（N=79，出数前锁）
+
+| N | 方向 | 日期 | 判据 | 结果 | 是否耗预算 |
+|---|---|---|---|---|---|
+| 79 | H-W1 洗盘形态（WASHOUT_WATCH）→ T+1开→T+60 超额 | 10-25 | `logs/prereg_washout_20261025.md`：同日×前期涨幅×流通市值 FE 后 OOS 超额≥MDE_cluster 且与 IS 同号；MDE 由 census 锁定；OOS 2023-01~2026-10 只用一次 | **预注册，未出数**（census 只数事件、不看收益；MDE 锁定后才跑收益） | 是（预留） |
