@@ -1,6 +1,6 @@
 {
   "as_of": "2026-10-23",
-  "generated_at": "2026-10-25T21:12:19",
+  "generated_at": "2026-10-25T22:13:08",
   "params": {
     "lookback_days": 520,
     "high_window": 250,
@@ -25,7 +25,7 @@
     "2026-10-23"
   ],
   "codes_missing_bars": 51,
-  "codes_bars_lt300": 7,
+  "codes_bars_lt300": 6,
   "funnel_note": "price_candidate_days 是候选'日'（未去重）；dedup 在事件阶段",
   "funnel": {
     "price_candidate_days": 86156,
@@ -194,7 +194,7 @@
       "n": 3110
     }
   },
-  "excluded_member": 101190,
+  "excluded_member": 101481,
   "per_code": {
     "000001": {
       "bars": 2867,
@@ -215,7 +215,7 @@
       "float_status": "cache_ok"
     },
     "000006": {
-      "bars": 2474,
+      "bars": 2506,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -224,7 +224,7 @@
       "float_status": "cache_ok"
     },
     "000008": {
-      "bars": 2521,
+      "bars": 2552,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -386,7 +386,7 @@
       "float_status": "cache_ok"
     },
     "000069": {
-      "bars": 2612,
+      "bars": 2623,
       "cand_price": 74,
       "float_missing": 0,
       "turnover_low": 35,
@@ -584,7 +584,7 @@
       "float_status": "cache_ok"
     },
     "000426": {
-      "bars": 2518,
+      "bars": 2520,
       "cand_price": 1,
       "float_missing": 0,
       "turnover_low": 0,
@@ -602,11 +602,11 @@
       "float_status": "cache_ok"
     },
     "000488": {
-      "bars": 2603,
+      "bars": 2616,
       "cand_price": 44,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 64,
+      "skipped_member": 66,
       "events": 2,
       "float_status": "cache_ok"
     },
@@ -620,7 +620,7 @@
       "float_status": "cache_ok"
     },
     "000503": {
-      "bars": 2433,
+      "bars": 2446,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -728,16 +728,16 @@
       "float_status": "cache_ok"
     },
     "000553": {
-      "bars": 2414,
+      "bars": 2431,
       "cand_price": 56,
       "float_missing": 0,
       "turnover_low": 56,
-      "skipped_member": 44,
+      "skipped_member": 41,
       "events": 0,
       "float_status": "cache_ok"
     },
     "000559": {
-      "bars": 2578,
+      "bars": 2608,
       "cand_price": 123,
       "float_missing": 0,
       "turnover_low": 51,
@@ -863,7 +863,7 @@
       "float_status": "cache_ok"
     },
     "000629": {
-      "bars": 2212,
+      "bars": 2213,
       "cand_price": 70,
       "float_missing": 0,
       "turnover_low": 18,
@@ -1007,7 +1007,7 @@
       "float_status": "cache_ok"
     },
     "000717": {
-      "bars": 2523,
+      "bars": 2536,
       "cand_price": 34,
       "float_missing": 0,
       "turnover_low": 3,
@@ -1016,7 +1016,7 @@
       "float_status": "cache_ok"
     },
     "000718": {
-      "bars": 2476,
+      "bars": 2488,
       "cand_price": 15,
       "float_missing": 0,
       "turnover_low": 15,
@@ -1124,7 +1124,7 @@
       "float_status": "cache_ok"
     },
     "000761": {
-      "bars": 2610,
+      "bars": 2621,
       "cand_price": 12,
       "float_missing": 0,
       "turnover_low": 12,
@@ -1187,7 +1187,7 @@
       "float_status": "cache_ok"
     },
     "000786": {
-      "bars": 2586,
+      "bars": 2616,
       "cand_price": 66,
       "float_missing": 0,
       "turnover_low": 66,
@@ -1232,7 +1232,7 @@
       "float_status": "cache_ok"
     },
     "000813": {
-      "bars": 2595,
+      "bars": 2605,
       "cand_price": 9,
       "float_missing": 0,
       "turnover_low": 0,
@@ -1259,7 +1259,7 @@
       "float_status": "cache_ok"
     },
     "000826": {
-      "bars": 2568,
+      "bars": 2581,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -1268,11 +1268,11 @@
       "float_status": "cache_ok"
     },
     "000829": {
-      "bars": 2411,
+      "bars": 2424,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 231,
+      "skipped_member": 233,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -1322,7 +1322,7 @@
       "float_status": "cache_ok"
     },
     "000860": {
-      "bars": 2612,
+      "bars": 2623,
       "cand_price": 49,
       "float_missing": 0,
       "turnover_low": 36,
@@ -1349,7 +1349,7 @@
       "float_status": "cache_ok"
     },
     "000877": {
-      "bars": 1870,
+      "bars": 1881,
       "cand_price": 18,
       "float_missing": 0,
       "turnover_low": 0,
@@ -1385,7 +1385,7 @@
       "float_status": "cache_ok"
     },
     "000893": {
-      "bars": 2486,
+      "bars": 2487,
       "cand_price": 34,
       "float_missing": 0,
       "turnover_low": 17,
@@ -1421,7 +1421,7 @@
       "float_status": "cache_ok"
     },
     "000926": {
-      "bars": 2584,
+      "bars": 2597,
       "cand_price": 17,
       "float_missing": 0,
       "turnover_low": 0,
@@ -1520,7 +1520,7 @@
       "float_status": "cache_ok"
     },
     "000967": {
-      "bars": 2530,
+      "bars": 2560,
       "cand_price": 119,
       "float_missing": 0,
       "turnover_low": 54,
@@ -1673,11 +1673,11 @@
       "float_status": "cache_ok"
     },
     "001289": {
-      "bars": 1119,
+      "bars": 1148,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 57,
+      "skipped_member": 83,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -2006,11 +2006,11 @@
       "float_status": "cache_ok"
     },
     "002092": {
-      "bars": 2586,
+      "bars": 2597,
       "cand_price": 3,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 79,
+      "skipped_member": 80,
       "events": 1,
       "float_status": "cache_ok"
     },
@@ -2024,7 +2024,7 @@
       "float_status": "cache_ok"
     },
     "002110": {
-      "bars": 2453,
+      "bars": 2462,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -2204,7 +2204,7 @@
       "float_status": "cache_ok"
     },
     "002180": {
-      "bars": 2505,
+      "bars": 2515,
       "cand_price": 109,
       "float_missing": 0,
       "turnover_low": 69,
@@ -2231,7 +2231,7 @@
       "float_status": "cache_ok"
     },
     "002191": {
-      "bars": 2603,
+      "bars": 2614,
       "cand_price": 64,
       "float_missing": 0,
       "turnover_low": 6,
@@ -2258,7 +2258,7 @@
       "float_status": "cache_ok"
     },
     "002202": {
-      "bars": 2587,
+      "bars": 2617,
       "cand_price": 95,
       "float_missing": 0,
       "turnover_low": 5,
@@ -2276,7 +2276,7 @@
       "float_status": "cache_ok"
     },
     "002212": {
-      "bars": 2490,
+      "bars": 2499,
       "cand_price": 81,
       "float_missing": 0,
       "turnover_low": 56,
@@ -2321,7 +2321,7 @@
       "float_status": "cache_ok"
     },
     "002233": {
-      "bars": 2603,
+      "bars": 2613,
       "cand_price": 61,
       "float_missing": 0,
       "turnover_low": 1,
@@ -2411,11 +2411,11 @@
       "float_status": "cache_ok"
     },
     "002254": {
-      "bars": 2576,
+      "bars": 2586,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 340,
+      "skipped_member": 341,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -2510,11 +2510,11 @@
       "float_status": "cache_ok"
     },
     "002285": {
-      "bars": 2593,
+      "bars": 2602,
       "cand_price": 7,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 134,
+      "skipped_member": 136,
       "events": 1,
       "float_status": "cache_ok"
     },
@@ -2591,7 +2591,7 @@
       "float_status": "cache_ok"
     },
     "002318": {
-      "bars": 2584,
+      "bars": 2614,
       "cand_price": 34,
       "float_missing": 0,
       "turnover_low": 17,
@@ -2618,7 +2618,7 @@
       "float_status": "cache_ok"
     },
     "002335": {
-      "bars": 1863,
+      "bars": 1893,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -2681,11 +2681,11 @@
       "float_status": "cache_ok"
     },
     "002358": {
-      "bars": 2503,
+      "bars": 2513,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 189,
+      "skipped_member": 194,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -2699,7 +2699,7 @@
       "float_status": "cache_ok"
     },
     "002368": {
-      "bars": 2594,
+      "bars": 2605,
       "cand_price": 94,
       "float_missing": 0,
       "turnover_low": 3,
@@ -2726,7 +2726,7 @@
       "float_status": "cache_ok"
     },
     "002373": {
-      "bars": 2456,
+      "bars": 2465,
       "cand_price": 22,
       "float_missing": 0,
       "turnover_low": 0,
@@ -2771,7 +2771,7 @@
       "float_status": "cache_ok"
     },
     "002387": {
-      "bars": 2521,
+      "bars": 2532,
       "cand_price": 41,
       "float_missing": 0,
       "turnover_low": 16,
@@ -3230,7 +3230,7 @@
       "float_status": "cache_ok"
     },
     "002511": {
-      "bars": 2610,
+      "bars": 2623,
       "cand_price": 25,
       "float_missing": 0,
       "turnover_low": 8,
@@ -3239,7 +3239,7 @@
       "float_status": "cache_ok"
     },
     "002512": {
-      "bars": 2376,
+      "bars": 2389,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -3266,11 +3266,11 @@
       "float_status": "cache_ok"
     },
     "002531": {
-      "bars": 2604,
+      "bars": 2617,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 284,
+      "skipped_member": 292,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -3284,7 +3284,7 @@
       "float_status": "cache_ok"
     },
     "002544": {
-      "bars": 2540,
+      "bars": 2552,
       "cand_price": 11,
       "float_missing": 0,
       "turnover_low": 0,
@@ -3347,7 +3347,7 @@
       "float_status": "cache_ok"
     },
     "002573": {
-      "bars": 2433,
+      "bars": 2445,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -3455,7 +3455,7 @@
       "float_status": "cache_ok"
     },
     "002624": {
-      "bars": 2505,
+      "bars": 2535,
       "cand_price": 69,
       "float_missing": 0,
       "turnover_low": 21,
@@ -3518,7 +3518,7 @@
       "float_status": "cache_ok"
     },
     "002663": {
-      "bars": 2455,
+      "bars": 2468,
       "cand_price": 6,
       "float_missing": 0,
       "turnover_low": 0,
@@ -3536,7 +3536,7 @@
       "float_status": "cache_ok"
     },
     "002672": {
-      "bars": 2572,
+      "bars": 2586,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -3635,7 +3635,7 @@
       "float_status": "cache_ok"
     },
     "002738": {
-      "bars": 2466,
+      "bars": 2496,
       "cand_price": 51,
       "float_missing": 0,
       "turnover_low": 0,
@@ -3662,7 +3662,7 @@
       "float_status": "cache_ok"
     },
     "002756": {
-      "bars": 2462,
+      "bars": 2492,
       "cand_price": 58,
       "float_missing": 0,
       "turnover_low": 2,
@@ -3689,11 +3689,11 @@
       "float_status": "cache_ok"
     },
     "002791": {
-      "bars": 2556,
+      "bars": 2567,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 95,
+      "skipped_member": 98,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -3806,11 +3806,11 @@
       "float_status": "cache_ok"
     },
     "002865": {
-      "bars": 2292,
+      "bars": 2306,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 188,
+      "skipped_member": 187,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -3869,7 +3869,7 @@
       "float_status": "cache_ok"
     },
     "002936": {
-      "bars": 1946,
+      "bars": 1959,
       "cand_price": 38,
       "float_missing": 0,
       "turnover_low": 0,
@@ -3932,11 +3932,11 @@
       "float_status": "cache_ok"
     },
     "002957": {
-      "bars": 1725,
+      "bars": 1755,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 165,
+      "skipped_member": 178,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -3968,11 +3968,11 @@
       "float_status": "cache_ok"
     },
     "002985": {
-      "bars": 1541,
+      "bars": 1571,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 97,
+      "skipped_member": 101,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -4121,7 +4121,7 @@
       "float_status": "cache_ok"
     },
     "300027": {
-      "bars": 2564,
+      "bars": 2575,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -4157,11 +4157,11 @@
       "float_status": "cache_ok"
     },
     "300055": {
-      "bars": 2608,
+      "bars": 2620,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 179,
+      "skipped_member": 185,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -4193,7 +4193,7 @@
       "float_status": "cache_ok"
     },
     "300072": {
-      "bars": 2591,
+      "bars": 2603,
       "cand_price": 33,
       "float_missing": 0,
       "turnover_low": 9,
@@ -4283,7 +4283,7 @@
       "float_status": "cache_ok"
     },
     "300134": {
-      "bars": 2391,
+      "bars": 2404,
       "cand_price": 44,
       "float_missing": 0,
       "turnover_low": 0,
@@ -4337,11 +4337,11 @@
       "float_status": "cache_ok"
     },
     "300159": {
-      "bars": 2528,
+      "bars": 2539,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 183,
+      "skipped_member": 185,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -4382,7 +4382,7 @@
       "float_status": "cache_ok"
     },
     "300197": {
-      "bars": 2408,
+      "bars": 2421,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -4454,11 +4454,11 @@
       "float_status": "cache_ok"
     },
     "300257": {
-      "bars": 2591,
+      "bars": 2603,
       "cand_price": 51,
       "float_missing": 0,
       "turnover_low": 51,
-      "skipped_member": 90,
+      "skipped_member": 93,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -4499,7 +4499,7 @@
       "float_status": "cache_ok"
     },
     "300287": {
-      "bars": 2607,
+      "bars": 2618,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -4508,7 +4508,7 @@
       "float_status": "cache_ok"
     },
     "300291": {
-      "bars": 2479,
+      "bars": 2491,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -4553,7 +4553,7 @@
       "float_status": "cache_ok"
     },
     "300324": {
-      "bars": 2432,
+      "bars": 2443,
       "cand_price": 4,
       "float_missing": 0,
       "turnover_low": 0,
@@ -4598,7 +4598,7 @@
       "float_status": "cache_ok"
     },
     "300363": {
-      "bars": 1880,
+      "bars": 1892,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -4715,7 +4715,7 @@
       "float_status": "cache_ok"
     },
     "300442": {
-      "bars": 2577,
+      "bars": 2607,
       "cand_price": 13,
       "float_missing": 0,
       "turnover_low": 0,
@@ -4877,11 +4877,11 @@
       "float_status": "cache_ok"
     },
     "300568": {
-      "bars": 2388,
+      "bars": 2401,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 227,
+      "skipped_member": 233,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -4931,7 +4931,7 @@
       "float_status": "cache_ok"
     },
     "300618": {
-      "bars": 2326,
+      "bars": 2338,
       "cand_price": 8,
       "float_missing": 0,
       "turnover_low": 0,
@@ -5048,7 +5048,7 @@
       "float_status": "cache_ok"
     },
     "300724": {
-      "bars": 1957,
+      "bars": 1987,
       "cand_price": 55,
       "float_missing": 0,
       "turnover_low": 0,
@@ -5147,20 +5147,20 @@
       "float_status": "cache_ok"
     },
     "300769": {
-      "bars": 1795,
+      "bars": 1825,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 122,
+      "skipped_member": 152,
       "events": 0,
       "float_status": "cache_ok"
     },
     "300776": {
-      "bars": 1774,
+      "bars": 1804,
       "cand_price": 15,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 202,
+      "skipped_member": 207,
       "events": 1,
       "float_status": "cache_ok"
     },
@@ -5192,7 +5192,7 @@
       "float_status": "cache_ok"
     },
     "300850": {
-      "bars": 1487,
+      "bars": 1517,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -5255,7 +5255,7 @@
       "float_status": "cache_ok"
     },
     "300919": {
-      "bars": 1382,
+      "bars": 1412,
       "cand_price": 39,
       "float_missing": 0,
       "turnover_low": 14,
@@ -5264,7 +5264,7 @@
       "float_status": "cache_ok"
     },
     "300953": {
-      "bars": 1327,
+      "bars": 1357,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -5426,7 +5426,7 @@
       "float_status": "cache_ok"
     },
     "301606": {
-      "bars": 512,
+      "bars": 542,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -5471,7 +5471,7 @@
       "float_status": "cache_ok"
     },
     "600006": {
-      "bars": 2559,
+      "bars": 2574,
       "cand_price": 12,
       "float_missing": 0,
       "turnover_low": 0,
@@ -5579,7 +5579,7 @@
       "float_status": "cache_ok"
     },
     "600022": {
-      "bars": 2515,
+      "bars": 2526,
       "cand_price": 103,
       "float_missing": 0,
       "turnover_low": 52,
@@ -5723,7 +5723,7 @@
       "float_status": "cache_ok"
     },
     "600053": {
-      "bars": 2602,
+      "bars": 2615,
       "cand_price": 3,
       "float_missing": 0,
       "turnover_low": 0,
@@ -5741,7 +5741,7 @@
       "float_status": "cache_ok"
     },
     "600058": {
-      "bars": 2601,
+      "bars": 2613,
       "cand_price": 18,
       "float_missing": 0,
       "turnover_low": 8,
@@ -5795,7 +5795,7 @@
       "float_status": "cache_ok"
     },
     "600073": {
-      "bars": 2607,
+      "bars": 2623,
       "cand_price": 8,
       "float_missing": 0,
       "turnover_low": 1,
@@ -5822,7 +5822,7 @@
       "float_status": "cache_ok"
     },
     "600089": {
-      "bars": 2587,
+      "bars": 2617,
       "cand_price": 147,
       "float_missing": 0,
       "turnover_low": 18,
@@ -5831,7 +5831,7 @@
       "float_status": "cache_ok"
     },
     "600094": {
-      "bars": 2609,
+      "bars": 2621,
       "cand_price": 3,
       "float_missing": 0,
       "turnover_low": 0,
@@ -5957,7 +5957,7 @@
       "float_status": "cache_ok"
     },
     "600129": {
-      "bars": 2594,
+      "bars": 2606,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -5984,7 +5984,7 @@
       "float_status": "cache_ok"
     },
     "600138": {
-      "bars": 2600,
+      "bars": 2613,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -6056,11 +6056,11 @@
       "float_status": "cache_ok"
     },
     "600158": {
-      "bars": 2476,
+      "bars": 2489,
       "cand_price": 4,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 111,
+      "skipped_member": 113,
       "events": 2,
       "float_status": "cache_ok"
     },
@@ -6101,7 +6101,7 @@
       "float_status": "cache_ok"
     },
     "600169": {
-      "bars": 2608,
+      "bars": 2622,
       "cand_price": 6,
       "float_missing": 0,
       "turnover_low": 2,
@@ -6146,7 +6146,7 @@
       "float_status": "cache_ok"
     },
     "600179": {
-      "bars": 2558,
+      "bars": 2569,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -6164,11 +6164,11 @@
       "float_status": "cache_ok"
     },
     "600184": {
-      "bars": 2610,
+      "bars": 2623,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 201,
+      "skipped_member": 210,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -6200,7 +6200,7 @@
       "float_status": "cache_ok"
     },
     "600201": {
-      "bars": 2608,
+      "bars": 2621,
       "cand_price": 122,
       "float_missing": 0,
       "turnover_low": 27,
@@ -6281,11 +6281,11 @@
       "float_status": "cache_ok"
     },
     "600259": {
-      "bars": 2608,
+      "bars": 2621,
       "cand_price": 40,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 131,
+      "skipped_member": 132,
       "events": 3,
       "float_status": "cache_ok"
     },
@@ -6308,7 +6308,7 @@
       "float_status": "cache_ok"
     },
     "600271": {
-      "bars": 2537,
+      "bars": 2549,
       "cand_price": 74,
       "float_missing": 0,
       "turnover_low": 15,
@@ -6335,7 +6335,7 @@
       "float_status": "cache_ok"
     },
     "600280": {
-      "bars": 2607,
+      "bars": 2621,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -6389,11 +6389,11 @@
       "float_status": "cache_ok"
     },
     "600307": {
-      "bars": 2608,
+      "bars": 2623,
       "cand_price": 8,
       "float_missing": 0,
       "turnover_low": 4,
-      "skipped_member": 126,
+      "skipped_member": 129,
       "events": 2,
       "float_status": "cache_ok"
     },
@@ -6416,7 +6416,7 @@
       "float_status": "cache_ok"
     },
     "600315": {
-      "bars": 2597,
+      "bars": 2610,
       "cand_price": 131,
       "float_missing": 0,
       "turnover_low": 77,
@@ -6434,7 +6434,7 @@
       "float_status": "cache_ok"
     },
     "600325": {
-      "bars": 2603,
+      "bars": 2617,
       "cand_price": 59,
       "float_missing": 0,
       "turnover_low": 28,
@@ -6488,7 +6488,7 @@
       "float_status": "cache_ok"
     },
     "600340": {
-      "bars": 2593,
+      "bars": 2604,
       "cand_price": 41,
       "float_missing": 0,
       "turnover_low": 41,
@@ -6596,7 +6596,7 @@
       "float_status": "cache_ok"
     },
     "600376": {
-      "bars": 2609,
+      "bars": 2623,
       "cand_price": 32,
       "float_missing": 0,
       "turnover_low": 32,
@@ -6677,11 +6677,11 @@
       "float_status": "cache_ok"
     },
     "600399": {
-      "bars": 2398,
+      "bars": 2414,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 144,
+      "skipped_member": 147,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -6695,11 +6695,11 @@
       "float_status": "cache_ok"
     },
     "600409": {
-      "bars": 2603,
+      "bars": 2617,
       "cand_price": 15,
       "float_missing": 0,
       "turnover_low": 3,
-      "skipped_member": 110,
+      "skipped_member": 112,
       "events": 1,
       "float_status": "cache_ok"
     },
@@ -6722,7 +6722,7 @@
       "float_status": "cache_ok"
     },
     "600416": {
-      "bars": 2606,
+      "bars": 2618,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -6812,16 +6812,16 @@
       "float_status": "cache_ok"
     },
     "600478": {
-      "bars": 2601,
+      "bars": 2614,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 379,
+      "skipped_member": 382,
       "events": 0,
       "float_status": "cache_ok"
     },
     "600481": {
-      "bars": 2550,
+      "bars": 2564,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -6893,7 +6893,7 @@
       "float_status": "cache_ok"
     },
     "600499": {
-      "bars": 2564,
+      "bars": 2594,
       "cand_price": 32,
       "float_missing": 0,
       "turnover_low": 13,
@@ -6902,16 +6902,16 @@
       "float_status": "cache_ok"
     },
     "600500": {
-      "bars": 2573,
+      "bars": 2588,
       "cand_price": 18,
       "float_missing": 0,
       "turnover_low": 1,
-      "skipped_member": 38,
+      "skipped_member": 44,
       "events": 1,
       "float_status": "cache_ok"
     },
     "600503": {
-      "bars": 2612,
+      "bars": 2623,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -7001,7 +7001,7 @@
       "float_status": "cache_ok"
     },
     "600525": {
-      "bars": 2535,
+      "bars": 2546,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -7046,11 +7046,11 @@
       "float_status": "cache_ok"
     },
     "600545": {
-      "bars": 2489,
+      "bars": 2502,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 115,
+      "skipped_member": 117,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -7082,7 +7082,7 @@
       "float_status": "cache_ok"
     },
     "600556": {
-      "bars": 2311,
+      "bars": 2323,
       "cand_price": 5,
       "float_missing": 0,
       "turnover_low": 0,
@@ -7091,7 +7091,7 @@
       "float_status": "cache_ok"
     },
     "600557": {
-      "bars": 2606,
+      "bars": 2618,
       "cand_price": 31,
       "float_missing": 0,
       "turnover_low": 27,
@@ -7127,7 +7127,7 @@
       "float_status": "cache_ok"
     },
     "600567": {
-      "bars": 2611,
+      "bars": 2623,
       "cand_price": 38,
       "float_missing": 0,
       "turnover_low": 0,
@@ -7226,11 +7226,11 @@
       "float_status": "cache_ok"
     },
     "600594": {
-      "bars": 2609,
+      "bars": 2622,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 126,
+      "skipped_member": 129,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -7244,7 +7244,7 @@
       "float_status": "cache_ok"
     },
     "600597": {
-      "bars": 2608,
+      "bars": 2622,
       "cand_price": 62,
       "float_missing": 0,
       "turnover_low": 27,
@@ -7325,7 +7325,7 @@
       "float_status": "cache_ok"
     },
     "600623": {
-      "bars": 2612,
+      "bars": 2623,
       "cand_price": 26,
       "float_missing": 0,
       "turnover_low": 20,
@@ -7361,7 +7361,7 @@
       "float_status": "cache_ok"
     },
     "600640": {
-      "bars": 2516,
+      "bars": 2529,
       "cand_price": 13,
       "float_missing": 0,
       "turnover_low": 0,
@@ -7379,7 +7379,7 @@
       "float_status": "cache_ok"
     },
     "600643": {
-      "bars": 2518,
+      "bars": 2530,
       "cand_price": 67,
       "float_missing": 0,
       "turnover_low": 5,
@@ -7388,11 +7388,11 @@
       "float_status": "cache_ok"
     },
     "600645": {
-      "bars": 2398,
+      "bars": 2411,
       "cand_price": 14,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 260,
+      "skipped_member": 263,
       "events": 1,
       "float_status": "cache_ok"
     },
@@ -7424,7 +7424,7 @@
       "float_status": "cache_ok"
     },
     "600657": {
-      "bars": 2487,
+      "bars": 2500,
       "cand_price": 41,
       "float_missing": 0,
       "turnover_low": 13,
@@ -7451,11 +7451,11 @@
       "float_status": "cache_ok"
     },
     "600664": {
-      "bars": 2513,
+      "bars": 2525,
       "cand_price": 1,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 216,
+      "skipped_member": 226,
       "events": 1,
       "float_status": "cache_ok"
     },
@@ -7487,7 +7487,7 @@
       "float_status": "cache_ok"
     },
     "600675": {
-      "bars": 2486,
+      "bars": 2499,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -7586,7 +7586,7 @@
       "float_status": "cache_ok"
     },
     "600718": {
-      "bars": 2599,
+      "bars": 2613,
       "cand_price": 47,
       "float_missing": 0,
       "turnover_low": 0,
@@ -7667,11 +7667,11 @@
       "float_status": "cache_ok"
     },
     "600743": {
-      "bars": 2604,
+      "bars": 2617,
       "cand_price": 5,
       "float_missing": 0,
       "turnover_low": 5,
-      "skipped_member": 114,
+      "skipped_member": 123,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -7685,7 +7685,7 @@
       "float_status": "cache_ok"
     },
     "600748": {
-      "bars": 2609,
+      "bars": 2622,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -7784,20 +7784,20 @@
       "float_status": "cache_ok"
     },
     "600770": {
-      "bars": 2525,
+      "bars": 2539,
       "cand_price": 32,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 217,
+      "skipped_member": 231,
       "events": 1,
       "float_status": "cache_ok"
     },
     "600773": {
-      "bars": 2495,
+      "bars": 2507,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 152,
+      "skipped_member": 157,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -7820,7 +7820,7 @@
       "float_status": "cache_ok"
     },
     "600779": {
-      "bars": 2605,
+      "bars": 2620,
       "cand_price": 87,
       "float_missing": 0,
       "turnover_low": 24,
@@ -8036,7 +8036,7 @@
       "float_status": "cache_ok"
     },
     "600875": {
-      "bars": 2517,
+      "bars": 2547,
       "cand_price": 188,
       "float_missing": 0,
       "turnover_low": 15,
@@ -8054,11 +8054,11 @@
       "float_status": "cache_ok"
     },
     "600881": {
-      "bars": 2599,
+      "bars": 2614,
       "cand_price": 26,
       "float_missing": 0,
       "turnover_low": 6,
-      "skipped_member": 21,
+      "skipped_member": 34,
       "events": 2,
       "float_status": "cache_ok"
     },
@@ -8135,11 +8135,11 @@
       "float_status": "cache_ok"
     },
     "600903": {
-      "bars": 2146,
+      "bars": 2162,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 139,
+      "skipped_member": 148,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -8242,6 +8242,15 @@
       "events": 2,
       "float_status": "cache_ok"
     },
+    "600930": {
+      "bars": 308,
+      "cand_price": 0,
+      "float_missing": 0,
+      "turnover_low": 0,
+      "skipped_member": 0,
+      "events": 0,
+      "float_status": "cache_ok"
+    },
     "600938": {
       "bars": 1092,
       "cand_price": 48,
@@ -8252,7 +8261,7 @@
       "float_status": "cache_ok"
     },
     "600939": {
-      "bars": 2335,
+      "bars": 2349,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -8387,7 +8396,7 @@
       "float_status": "cache_ok"
     },
     "600996": {
-      "bars": 2369,
+      "bars": 2382,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -8441,7 +8450,7 @@
       "float_status": "cache_ok"
     },
     "601005": {
-      "bars": 2266,
+      "bars": 2279,
       "cand_price": 98,
       "float_missing": 0,
       "turnover_low": 22,
@@ -8558,7 +8567,7 @@
       "float_status": "cache_ok"
     },
     "601068": {
-      "bars": 1957,
+      "bars": 1972,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -8657,7 +8666,7 @@
       "float_status": "cache_ok"
     },
     "601127": {
-      "bars": 2460,
+      "bars": 2490,
       "cand_price": 89,
       "float_missing": 0,
       "turnover_low": 11,
@@ -8801,7 +8810,7 @@
       "float_status": "cache_ok"
     },
     "601200": {
-      "bars": 2307,
+      "bars": 2321,
       "cand_price": 78,
       "float_missing": 0,
       "turnover_low": 1,
@@ -8864,7 +8873,7 @@
       "float_status": "cache_ok"
     },
     "601231": {
-      "bars": 2585,
+      "bars": 2615,
       "cand_price": 103,
       "float_missing": 0,
       "turnover_low": 103,
@@ -9134,7 +9143,7 @@
       "float_status": "cache_ok"
     },
     "601615": {
-      "bars": 1839,
+      "bars": 1869,
       "cand_price": 93,
       "float_missing": 0,
       "turnover_low": 12,
@@ -9323,7 +9332,7 @@
       "float_status": "cache_ok"
     },
     "601777": {
-      "bars": 2602,
+      "bars": 2615,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -9350,7 +9359,7 @@
       "float_status": "cache_ok"
     },
     "601799": {
-      "bars": 2593,
+      "bars": 2623,
       "cand_price": 128,
       "float_missing": 0,
       "turnover_low": 115,
@@ -9422,7 +9431,7 @@
       "float_status": "cache_ok"
     },
     "601828": {
-      "bars": 2106,
+      "bars": 2118,
       "cand_price": 2,
       "float_missing": 0,
       "turnover_low": 2,
@@ -9449,11 +9458,11 @@
       "float_status": "cache_ok"
     },
     "601858": {
-      "bars": 2355,
+      "bars": 2368,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 197,
+      "skipped_member": 193,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -9791,11 +9800,11 @@
       "float_status": "cache_ok"
     },
     "603026": {
-      "bars": 2609,
+      "bars": 2623,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 184,
+      "skipped_member": 195,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -9836,7 +9845,7 @@
       "float_status": "cache_ok"
     },
     "603127": {
-      "bars": 2207,
+      "bars": 2221,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -9872,7 +9881,7 @@
       "float_status": "cache_ok"
     },
     "603169": {
-      "bars": 2526,
+      "bars": 2539,
       "cand_price": 12,
       "float_missing": 0,
       "turnover_low": 0,
@@ -9980,11 +9989,11 @@
       "float_status": "cache_ok"
     },
     "603267": {
-      "bars": 1776,
+      "bars": 1806,
       "cand_price": 29,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 230,
+      "skipped_member": 242,
       "events": 1,
       "float_status": "cache_ok"
     },
@@ -10088,7 +10097,7 @@
       "float_status": "cache_ok"
     },
     "603355": {
-      "bars": 2611,
+      "bars": 2623,
       "cand_price": 59,
       "float_missing": 0,
       "turnover_low": 48,
@@ -10106,7 +10115,7 @@
       "float_status": "cache_ok"
     },
     "603377": {
-      "bars": 2540,
+      "bars": 2556,
       "cand_price": 17,
       "float_missing": 0,
       "turnover_low": 8,
@@ -10268,7 +10277,7 @@
       "float_status": "cache_ok"
     },
     "603613": {
-      "bars": 1723,
+      "bars": 1753,
       "cand_price": 2,
       "float_missing": 0,
       "turnover_low": 2,
@@ -10277,11 +10286,11 @@
       "float_status": "cache_ok"
     },
     "603638": {
-      "bars": 2354,
+      "bars": 2366,
       "cand_price": 10,
       "float_missing": 0,
       "turnover_low": 10,
-      "skipped_member": 207,
+      "skipped_member": 189,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -10349,7 +10358,7 @@
       "float_status": "cache_ok"
     },
     "603712": {
-      "bars": 2084,
+      "bars": 2098,
       "cand_price": 23,
       "float_missing": 0,
       "turnover_low": 7,
@@ -10376,7 +10385,7 @@
       "float_status": "cache_ok"
     },
     "603737": {
-      "bars": 2491,
+      "bars": 2521,
       "cand_price": 137,
       "float_missing": 0,
       "turnover_low": 120,
@@ -10403,7 +10412,7 @@
       "float_status": "cache_ok"
     },
     "603799": {
-      "bars": 2581,
+      "bars": 2611,
       "cand_price": 106,
       "float_missing": 0,
       "turnover_low": 0,
@@ -10484,7 +10493,7 @@
       "float_status": "cache_ok"
     },
     "603882": {
-      "bars": 2197,
+      "bars": 2211,
       "cand_price": 86,
       "float_missing": 0,
       "turnover_low": 47,
@@ -10574,7 +10583,7 @@
       "float_status": "cache_ok"
     },
     "603983": {
-      "bars": 1726,
+      "bars": 1756,
       "cand_price": 10,
       "float_missing": 0,
       "turnover_low": 10,
@@ -10646,11 +10655,11 @@
       "float_status": "cache_ok"
     },
     "688005": {
-      "bars": 1725,
+      "bars": 1755,
       "cand_price": 17,
       "float_missing": 0,
       "turnover_low": 4,
-      "skipped_member": 133,
+      "skipped_member": 153,
       "events": 2,
       "float_status": "cache_ok"
     },
@@ -10736,11 +10745,11 @@
       "float_status": "cache_ok"
     },
     "688032": {
-      "bars": 1142,
+      "bars": 1172,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 17,
+      "skipped_member": 32,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -10808,7 +10817,7 @@
       "float_status": "cache_ok"
     },
     "688072": {
-      "bars": 1053,
+      "bars": 1083,
       "cand_price": 10,
       "float_missing": 0,
       "turnover_low": 3,
@@ -10862,11 +10871,11 @@
       "float_status": "cache_ok"
     },
     "688107": {
-      "bars": 1168,
+      "bars": 1198,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 96,
+      "skipped_member": 115,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -10925,7 +10934,7 @@
       "float_status": "cache_ok"
     },
     "688153": {
-      "bars": 1069,
+      "bars": 1099,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -11087,11 +11096,11 @@
       "float_status": "cache_ok"
     },
     "688249": {
-      "bars": 811,
+      "bars": 841,
       "cand_price": 13,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 57,
+      "skipped_member": 61,
       "events": 2,
       "float_status": "cache_ok"
     },
@@ -11123,7 +11132,7 @@
       "float_status": "cache_ok"
     },
     "688276": {
-      "bars": 1260,
+      "bars": 1291,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -11330,11 +11339,11 @@
       "float_status": "cache_ok"
     },
     "688390": {
-      "bars": 1455,
+      "bars": 1484,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 54,
+      "skipped_member": 66,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -11348,7 +11357,7 @@
       "float_status": "cache_ok"
     },
     "688411": {
-      "bars": 389,
+      "bars": 419,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -11375,7 +11384,7 @@
       "float_status": "cache_ok"
     },
     "688472": {
-      "bars": 786,
+      "bars": 816,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
@@ -11447,11 +11456,11 @@
       "float_status": "cache_ok"
     },
     "688536": {
-      "bars": 1423,
+      "bars": 1453,
       "cand_price": 2,
       "float_missing": 0,
       "turnover_low": 2,
-      "skipped_member": 83,
+      "skipped_member": 87,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -11483,7 +11492,7 @@
       "float_status": "cache_ok"
     },
     "688567": {
-      "bars": 1482,
+      "bars": 1512,
       "cand_price": 11,
       "float_missing": 0,
       "turnover_low": 5,
@@ -11573,11 +11582,11 @@
       "float_status": "cache_ok"
     },
     "688690": {
-      "bars": 1263,
+      "bars": 1293,
       "cand_price": 0,
       "float_missing": 0,
       "turnover_low": 0,
-      "skipped_member": 89,
+      "skipped_member": 93,
       "events": 0,
       "float_status": "cache_ok"
     },
@@ -11645,7 +11654,7 @@
       "float_status": "cache_ok"
     },
     "688778": {
-      "bars": 1232,
+      "bars": 1262,
       "cand_price": 18,
       "float_missing": 0,
       "turnover_low": 17,
