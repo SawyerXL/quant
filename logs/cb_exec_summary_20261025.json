@@ -1,0 +1,103 @@
+{
+  "generated_at": "2026-10-25T22:42:50",
+  "rows": [
+    {
+      "file": "execution_result_20260902_cb.json",
+      "date": "2026-09-02",
+      "note": "",
+      "target_buy": 0,
+      "filled_buy": 0,
+      "target_sell": null,
+      "filled_sell": null,
+      "fill_rate_pct": 100.0,
+      "avg_slip_pct": 0.0,
+      "max_slip_pct": 0.0,
+      "blocked": [],
+      "rejected": null
+    },
+    {
+      "file": "execution_result_20260903_cb.json",
+      "date": "2026-09-03",
+      "note": "",
+      "target_buy": 0,
+      "filled_buy": 0,
+      "target_sell": null,
+      "filled_sell": null,
+      "fill_rate_pct": 100.0,
+      "avg_slip_pct": 0.0,
+      "max_slip_pct": 0.0,
+      "blocked": [],
+      "rejected": null
+    },
+    {
+      "file": "execution_result_20260904_cb.json",
+      "date": "2026-09-04",
+      "note": "",
+      "target_buy": 0,
+      "filled_buy": 0,
+      "target_sell": null,
+      "filled_sell": null,
+      "fill_rate_pct": 100.0,
+      "avg_slip_pct": 0.0,
+      "max_slip_pct": 0.0,
+      "blocked": [],
+      "rejected": null
+    },
+    {
+      "file": "execution_result_20260921_cb.json",
+      "date": "2026-09-21",
+      "note": "",
+      "target_buy": 0,
+      "filled_buy": 0,
+      "target_sell": null,
+      "filled_sell": null,
+      "fill_rate_pct": 100.0,
+      "avg_slip_pct": 0.0,
+      "max_slip_pct": 0.0,
+      "blocked": [],
+      "rejected": null
+    },
+    {
+      "file": "execution_result_20260924_cb.json",
+      "date": "2026-09-24",
+      "note": "",
+      "target_buy": 3,
+      "filled_buy": 3,
+      "target_sell": null,
+      "filled_sell": null,
+      "fill_rate_pct": 100.0,
+      "avg_slip_pct": 4.0629,
+      "max_slip_pct": 7.3784,
+      "blocked": [],
+      "rejected": []
+    },
+    {
+      "file": "execution_result_20261009_cb.json",
+      "date": "20261009",
+      "note": "补录: 14:35:42 NoneType.round 崩溃前卖单已成交, 由 15:55 订单回报重建",
+      "target_buy": 19,
+      "filled_buy": 3750,
+      "target_sell": 7,
+      "filled_sell": 1101,
+      "fill_rate_pct": 100.0,
+      "avg_slip_pct": 0.076,
+      "max_slip_pct": 1.9875,
+      "blocked": null,
+      "rejected": null
+    },
+    {
+      "file": "execution_result_20261012_cb.json",
+      "date": "2026-10-12",
+      "note": "",
+      "target_buy": 0,
+      "filled_buy": 0,
+      "target_sell": null,
+      "filled_sell": null,
+      "fill_rate_pct": 100.0,
+      "avg_slip_pct": null,
+      "max_slip_pct": null,
+      "blocked": [],
+      "rejected": []
+    }
+  ]
+}
