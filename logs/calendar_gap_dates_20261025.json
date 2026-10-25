@@ -1,0 +1,130 @@
+{
+  "generated_at": "2026-10-25T21:24:18",
+  "n_codes": 5174,
+  "calendar_days": 193,
+  "codes_with_any_missing": 3500,
+  "codes_ge_5_missing_days": 3411,
+  "codes_ge_20_missing_days": 1500,
+  "top_dates": [
+    {
+      "date": "2026-07-03",
+      "missing": 3353,
+      "active": 5140,
+      "missing_pct": 0.6523
+    },
+    {
+      "date": "2026-07-02",
+      "missing": 3353,
+      "active": 5140,
+      "missing_pct": 0.6523
+    },
+    {
+      "date": "2026-06-05",
+      "missing": 3347,
+      "active": 5137,
+      "missing_pct": 0.6515
+    },
+    {
+      "date": "2026-05-15",
+      "missing": 3330,
+      "active": 5118,
+      "missing_pct": 0.6506
+    },
+    {
+      "date": "2026-05-11",
+      "missing": 3325,
+      "active": 5115,
+      "missing_pct": 0.65
+    },
+    {
+      "date": "2026-05-12",
+      "missing": 3324,
+      "active": 5115,
+      "missing_pct": 0.6499
+    },
+    {
+      "date": "2026-05-13",
+      "missing": 3320,
+      "active": 5115,
+      "missing_pct": 0.6491
+    },
+    {
+      "date": "2026-07-06",
+      "missing": 3259,
+      "active": 5140,
+      "missing_pct": 0.634
+    },
+    {
+      "date": "2026-07-01",
+      "missing": 3110,
+      "active": 5140,
+      "missing_pct": 0.6051
+    },
+    {
+      "date": "2026-06-09",
+      "missing": 2984,
+      "active": 5137,
+      "missing_pct": 0.5809
+    },
+    {
+      "date": "2026-05-21",
+      "missing": 2930,
+      "active": 5120,
+      "missing_pct": 0.5723
+    },
+    {
+      "date": "2026-05-14",
+      "missing": 1981,
+      "active": 5118,
+      "missing_pct": 0.3871
+    },
+    {
+      "date": "2026-05-18",
+      "missing": 1822,
+      "active": 5119,
+      "missing_pct": 0.3559
+    },
+    {
+      "date": "2026-05-20",
+      "missing": 1732,
+      "active": 5120,
+      "missing_pct": 0.3383
+    },
+    {
+      "date": "2026-05-19",
+      "missing": 1684,
+      "active": 5120,
+      "missing_pct": 0.3289
+    },
+    {
+      "date": "2026-05-29",
+      "missing": 1668,
+      "active": 5135,
+      "missing_pct": 0.3248
+    },
+    {
+      "date": "2026-05-22",
+      "missing": 1665,
+      "active": 5120,
+      "missing_pct": 0.3252
+    },
+    {
+      "date": "2026-06-01",
+      "missing": 1645,
+      "active": 5135,
+      "missing_pct": 0.3204
+    },
+    {
+      "date": "2026-05-25",
+      "missing": 1615,
+      "active": 5120,
+      "missing_pct": 0.3154
+    },
+    {
+      "date": "2026-05-28",
+      "missing": 1613,
+      "active": 5132,
+      "missing_pct": 0.3143
+    }
+  ]
+}

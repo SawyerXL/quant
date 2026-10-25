@@ -140,4 +140,10 @@ python scripts/personal_daily_analysis.py
   均值 +1.13 vs 下方 −0.27，但中位均负。**不部署、不做 overlay、不因
   WASHOUT_WATCH 单独买入**；模块保留为描述性观察项。详见
   `logs/washout_hw1_result_20261025.md`。
+- **2026 数据洞（2026-10-25 发现，先于引用）**：calendar scan 修假阳性后仍有
+  3500/5174 只缺 2026-05-11~06-16/07-01~07-06；CSI800 PIT **338/1335**、
+  当前官方 **30/800**；Sina 确认 601127/600875 等本地缺、外部有（非停牌）。
+  → **2026 OOS/by-year 待复核**（IS 2019–2022 不受影响）；
+  补洞前不引用 2026 全库数字、不切 100 万实盘。详见
+  `logs/washout_hw1_result_20261025.md`、`logs/coverage_scan_20261025.csv`。
 - QMT 信号链：**未改**（本模块只在个人研究侧）。
