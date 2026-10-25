@@ -683,6 +683,37 @@ def main():
     if cron_install.get("error"):
         alerts.append(f"cron安装检查异常: {cron_install['error']}")
 
+    # 数据洞周扫产物(2026-10-25 安装周日07:30): cron在≠产物新鲜; 用最新
+    # coverage_scan_*.csv 的日期/候选数对照; 缺失/过期=告警(闸门十二)
+    coverage_scan = {"error": "missing"}
+    try:
+        # 只认 coverage_scan_YYYYMMDD.csv；忽略历史 {time:...} 字面量僵尸文件
+        files = [p for p in sorted(Path("logs").glob("coverage_scan_*.csv"))
+                 if p.stem.replace("coverage_scan_", "").isdigit()]
+        if files:
+            latest = files[-1]
+            stem = latest.stem.replace("coverage_scan_", "")
+            df = pd.read_csv(latest)
+            if "active_missing" not in df.columns:
+                raise ValueError(f"{latest.name} 缺 active_missing 列")
+            am = pd.to_numeric(df["active_missing"], errors="coerce")
+            coverage_scan = {"file": latest.name, "as_of": stem,
+                             "rows": int(len(df)),
+                             "candidates": int((am.fillna(0) > 0).sum()),
+                             "missing_days_sum": int(am.fillna(0).sum())}
+            try:
+                d0 = datetime.strptime(stem, "%Y%m%d")
+                if (datetime.now() - d0).days > 8:
+                    alerts.append(f"数据洞周扫陈旧: 最新{stem} >8天")
+            except ValueError:
+                alerts.append(f"数据洞周扫文件名不可解析: {latest.name}")
+        else:
+            alerts.append("数据洞周扫产物缺失: logs/coverage_scan_*.csv")
+    except Exception as e:  # noqa: BLE001
+        coverage_scan = {"error": f"read_fail: {str(e)[:60]}"}
+    if coverage_scan.get("error"):
+        alerts.append(f"数据洞周扫状态异常: {coverage_scan['error']}")
+
     line = {"ts": now, "latest_bar": latest_bar,
             "last_trading_day": last_td, "bar_fresh": bar_fresh,
             "last_data_update": last_update, "tunnel": tunnel,
@@ -706,6 +737,7 @@ def main():
             "tick_freshness": tick_freshness,
             "cb_monthly_verify": cb_monthly_verify,
             "cron_install": cron_install,
+            "coverage_scan": coverage_scan,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
     OUT.write_text(json.dumps(line, ensure_ascii=False, indent=1),
                    encoding="utf-8")
