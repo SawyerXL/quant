@@ -63,7 +63,10 @@ def check_code(code: str) -> dict:
     factor = (a / v) / c.replace(0, np.nan)
     fmed = float(factor.median()) if factor.notna().any() else None
     fdev = float((factor / fmed - 1).abs().max()) if fmed and fmed > 0 else None
-    unit_step = bool(fdev is not None and fdev > 0.05)  # >5% 视为口径台阶/混合单位
+    # amount/volume 是 raw VWAP、close 是 qfq：日内 VWAP-close 差 5-10% 正常；
+    # 只有 >50% 或 factor 中位数远离 1（1e4/1e-4 混单位）才算台阶。
+    unit_step = bool((fdev is not None and fdev > 0.5)
+                     or (fmed is not None and not (0.2 <= fmed <= 5)))
     return {
         "code": code, "rows": int(len(d)), "first": first, "last": last,
         "missing": len(miss), "dup": dup, "ordered": ordered,
@@ -90,11 +93,13 @@ def main():
             skipped.setdefault(k, []).append(r["code"])
     logger.info(f"filled codes {len(filled)}, skipped kinds {list(skipped)}")
     checks = [check_code(c) for c in filled]
-    bad = [x for x in checks if (x.get("missing", 0) > 0 or x.get("dup", 0)
+    # missing 是残余（停牌/源失败），单独报告；bad 只列完整性异常
+    bad = [x for x in checks if (x.get("dup", 0)
                                  or not x.get("ordered", True) or x.get("ohlc_bad", 0)
                                  or x.get("bracket_bad", 0) or x.get("vol_bad", 0)
-                                 or x.get("jump_bad", 0) or x.get("pct_bad", 0)
+                                 or x.get("jump_bad", 0) or x.get("pct_bad", 0) > 5
                                  or x.get("unit_step", False))]
+    residual_missing = [x for x in checks if x.get("missing", 0) > 0]
     scan = pd.read_csv(args.scan, dtype={"code": str}) if Path(args.scan).exists() else pd.DataFrame()
     if len(scan):
         scan["code"] = scan["code"].str.zfill(6)
@@ -105,6 +110,8 @@ def main():
     out = {
         "n_filled_codes": len(filled), "n_checks": len(checks),
         "n_bad": len(bad), "bad": bad[:50],
+        "n_residual_missing": len(residual_missing),
+        "residual_missing": residual_missing[:50],
         "skipped_kinds": {k: len(v) for k, v in skipped.items()},
         "suspected_suspension": sorted(set(
             skipped.get("source_has_no_bar", []) + skipped.get("source_empty", []))),
@@ -114,8 +121,8 @@ def main():
     }
     Path(args.out).write_text(json.dumps(out, ensure_ascii=False, indent=2, default=str))
     logger.info(json.dumps({k: out[k] for k in
-                            ["n_filled_codes", "n_bad", "skipped_kinds",
-                             "residual_candidates"]}, ensure_ascii=False))
+                            ["n_filled_codes", "n_bad", "n_residual_missing",
+                             "skipped_kinds", "residual_candidates"]}, ensure_ascii=False))
     logger.info(f"-> {args.out}")
 
 
