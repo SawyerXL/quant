@@ -246,6 +246,23 @@ def _parse_time(t):
     return None
 
 
+def _order_date(t) -> str | None:
+    """委托时间 epoch → 真实交易日 YYYYMMDD；缺失/非 epoch 返回 None。
+    2026-10-25: 委托文件是累积导出且 signal_date 用导出日（节假日也导），
+    09-30 的测试批被 10-01/02/05/07 重复导出；必须按委托时间归日+去重。
+    """
+    t = str(t).strip()
+    if not t.isdigit():
+        return None
+    v = int(t)
+    if v > 10**12:
+        v //= 1000
+    try:
+        return datetime.fromtimestamp(v).strftime("%Y%m%d")
+    except Exception:
+        return None
+
+
 def load_close(code: str, d: str) -> float | None:
     # 000001/000688/000905/000906 的 parquet 被指数数据占用(INDEX_CODES 约定),
     # 个股单读到的是指数点位——宁可无参考价剔除, 不可算出垃圾滑点
@@ -282,6 +299,7 @@ def load_order_fills() -> list:
     price 优先成交价(traded_price), 缺失用限价单委托价近似。
     """
     fills = []
+    seen = set()
     for f in sorted(LOGS_DIR.glob(f"{ORDERS_PREFIX}*.json")):
         try:
             payload = json.loads(f.read_text(encoding="utf-8"))
@@ -301,8 +319,14 @@ def load_order_fills() -> list:
                 price_src = "limit"
             if price <= 0:
                 continue
+            od = _order_date(o.get("order_time")) or d
+            key = (code, o.get("direction", ""), int(o.get("filled", 0) or 0),
+                   round(price, 4), od, _parse_time(o.get("order_time", "")))
+            if key in seen:
+                continue
+            seen.add(key)
             fills.append({
-                "date": d, "code": code,
+                "date": od, "code": code,
                 "side": o.get("direction", ""),
                 "price": price, "price_src": price_src,
                 "shares": int(o.get("filled", 0) or 0),
