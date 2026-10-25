@@ -66,16 +66,28 @@
   同时报事件级 naive t（仅参考，不作判据）。
 - **MDE 两步锁**（预注册允许"仅数事件、不看收益"的 census）：
   1. 先跑 census（只输出事件数、事件月数、参数分布、覆盖率；**不 join 前向收益**）；
-  2. MDE = 2.802 × σ_resid × sqrt(2/N_eff)，σ_resid 取 **30%/年化波动先验**
-     （不取自本样本结果），N_eff = 事件月数（保守，按簇计）；
-     若事件级 N 也报一份 MDE_events 作对照。
-  3. 把 census 的 N、N_eff、MDE 写入 `logs/prereg_washout_census_20261025.md`
-     **之后**才允许跑收益。
+  2. 主口径（判定用）：配对差 `d = 事件60日超额 − 同日匹配对照60日超额`；
+     推断单位是**事件月**（月内事件相关），统计量是该月 d 的均值。
+     **MDE_cluster = 2.802 × σ_month_prior / sqrt(N_months)**，
+     σ_month_prior 取 **5%**（月度均值差的标准差先验；不是个股 30% σ——
+     个股 σ=30%、每月 ~50 个事件，月度均值 σ 约 30%/√50≈4.2%，5% 已偏保守）。
+     N_months = OOS 事件月数。配对差不再乘 sqrt(2)（sqrt(2) 只用于两独立臂）。
+  3. 诊断（不判定）：
+     - 超保守上界：若误把个股 30% σ 当月度均值 σ →
+       MDE_ultra = 2.802 × 30% / sqrt(N_months)；只报数，不作判定；
+     - 事件级 naive MDE = 2.802 × 30% / sqrt(N_events)；只报数。
+  4. 把 census 的 N、N_months、σ_month_prior=5%、MDE_cluster 写入
+     `logs/prereg_washout_census_20261025.md` **之后**才允许跑收益。
 - 判定用 **MDE_cluster（保守值）**，不是 event-level MDE。
 
 ## 6. IS / OOS 与判据矩阵
 
 - IS：2019-02~2022-12；OOS：2023-01~2026-10（**只用一次**）。
+- **幸存者上限（预注册）**：若 census 的 float 覆盖率
+  `1 − float_missing_days/price_candidate_days < 80%`，**或**
+  `codes_missing_bars/universe_codes > 20%`，主判据**封顶为
+  UNDERPOWERED**（只描述、不得 PASS）——缺失的多是退市/改名股，会系统性
+  高估形态收益；这条先于任何收益数字锁定。
 - 主判据（OOS）：符号与 IS 一致 **且** OOS 超额 ≥ MDE_cluster → **PASS**。
 - 0 < OOS 超额 < MDE_cluster → **UNDERPOWERED / FAIL**（不部署、不调参重跑）。
 - OOS 超额 ≤ 0 → **FAIL/关闭**。
