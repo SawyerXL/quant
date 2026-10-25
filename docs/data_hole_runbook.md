@@ -117,7 +117,8 @@ python3 scripts/clean_gap_skip.py
 07-13~08-21 洞是“日更窗口外无人回看”，不是白名单挡住。根因记录：
 ①05-11~06-16/07-01~07-06 已知全局 outage，旧修复只覆盖 PIT800 845 只；
 ②07-13~08-21 子集洞长于 recent window，日更恢复后不再回看。
-→ 周度 `calendar_coverage_scan.py` 是缺失的护栏；回填后清理 gap_skip。
+→ 周度 `calendar_coverage_scan.py` 已于 **2026-10-25 安装**（周日 07:30；
+deploy/实际 50/50）；回填后清理 gap_skip。
 
 **吞吐根因（代码实勘）**：`daily_data_update.py` 的自动补洞能力 =
 `GAP_MAX_REPAIR=400` 对/日 × `GAP_LOOKBACK=30` 交易日 ≈ **12,000 对**；
