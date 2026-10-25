@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-10-25T21:31:58",
+  "universe": "current800",
+  "dry_run": false,
+  "n_codes": 1,
+  "rows_filled": 30,
+  "codes_filled": 1,
+  "skipped": {},
+  "records": [
+    {
+      "code": "002756",
+      "filled": 30,
+      "skipped": null,
+      "anchors": {
+        "anchors": {
+          "pre": 0.991725,
+          "post": 0.991718
+        },
+        "bad": [
+          "pre",
+          "post"
+        ],
+        "rescaled": 1.00834761
+      },
+      "missing": 30,
+      "source_missing": 0
+    }
+  ]
+}
