@@ -87,8 +87,12 @@ python3 scripts/verify_backfill_2026.py          # 逐票完整性/异常/停牌
 - current CSI800：31 只 / 872 行，锚 1.0；002756 按 1.00835 重锚；
   残余 13 只 `source_has_no_bar`（停牌）+ 601059/601198 `source_empty`
   （待复核，疑停牌）。
-- 全库 all 回填：见 `logs/backfill_2026_holes_20261025.json`（分 universe
-  另存 `_current800.json`、`_002756.json`）。
+- 全库 all 回填完成：**1,920 只 / 36,494 行**；PIT800 新增 137 只/2,099 行。
+  残余：**anchor_mismatch 1,428 只**（qfq as-of 跨洞，未补；PIT 141 只）、
+  source_has_no_bar 118、jump/invalid 5；回填后重扫 **3,500→1,751**。
+  1,428 只的全史 qfq 重锚需单独裁定（不借补洞改口径）；PIT 141 只使
+  2026 OOS 仍带残余声明。
+- 见 `logs/backfill_2026_holes_20261025_all.json`（current800/002756 另存）。
 - 补洞前 H-W1 的 2026 OOS 标“待复核”；补洞后重跑并更新
   `logs/washout_hw1_result_20261025.md` 与多重检验账本 N=79。
 

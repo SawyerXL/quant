@@ -7,10 +7,10 @@
  ],
  "stock": {
   "single": {
-   "ann": "2.70%",
+   "ann": "2.71%",
    "sharpe": "0.39",
    "dd": "-15.07%",
-   "lot_skips": 1259,
+   "lot_skips": 1260,
    "trades": 3100
   },
   "g0": {
@@ -21,26 +21,26 @@
    "trades": 3004
   },
   "g1": {
-   "ann": "1.22%",
+   "ann": "1.26%",
    "sharpe": "0.21",
    "dd": "-14.14%",
    "lot_skips": 1368,
-   "trades": 2882
+   "trades": 2880
   },
   "two_group": {
-   "ann": "0.26%",
-   "sharpe": "0.07",
+   "ann": "0.28%",
+   "sharpe": "0.08",
    "dd": "-13.49%",
    "lot_skips": 2851,
-   "trades": 5886
+   "trades": 5884
   }
  },
  "combo": {
   "single": {
    "metrics": {
     "n": 1886,
-    "ann_pct": 13.08,
-    "sharpe": 1.596,
+    "ann_pct": 13.09,
+    "sharpe": 1.598,
     "dd_pct": -13.92
    },
    "trig": 0,
@@ -50,8 +50,8 @@
   "two_group": {
    "metrics": {
     "n": 1886,
-    "ann_pct": 11.96,
-    "sharpe": 1.535,
+    "ann_pct": 11.97,
+    "sharpe": 1.536,
     "dd_pct": -13.84
    },
    "trig": 0,
@@ -60,7 +60,7 @@
   },
   "monthly_diff": {
    "n": 93,
-   "mean_pct": -0.0828,
+   "mean_pct": -0.0826,
    "t": -1.84
   }
  },
