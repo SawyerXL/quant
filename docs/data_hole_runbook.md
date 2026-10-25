@@ -92,7 +92,30 @@ python3 scripts/verify_backfill_2026.py          # 逐票完整性/异常/停牌
 - 补洞前 H-W1 的 2026 OOS 标“待复核”；补洞后重跑并更新
   `logs/washout_hw1_result_20261025.md` 与多重检验账本 N=79。
 
-## 6. 禁止事项
+## 6. gap_skip 清理（回填后必做）
+
+`daily_data_update.py` 只修 recent window（`GAP_LOOKBACK`），**长于窗口的
+outage 会永久留洞**；同一 `(code,date)` 拉 3 次不到会写入
+`data_store/meta/gap_skip.json` 并永不重试（3 次 latch）。两者都会把
+“暂时没有源”变成“永久不修”——与“正确跳过”同型。
+
+回填后运行：
+
+```bash
+python3 scripts/clean_gap_skip.py
+```
+
+只删除“本地已有该日 bar”的 `code:date`；本地仍缺（真停牌/未补）保留，
+备份 `data_store/meta/gap_skip_backup_20261025.json`。
+
+2026-10-25 实勘：gap_skip 共 **2764** 条（2026-07 354 / 08 597 / 09 1656 /
+10 157）；**601127/600875/600499/688072 等 30 只不在 gap_skip**——它们的
+07-13~08-21 洞是“日更窗口外无人回看”，不是白名单挡住。根因记录：
+①05-11~06-16/07-01~07-06 已知全局 outage，旧修复只覆盖 PIT800 845 只；
+②07-13~08-21 子集洞长于 recent window，日更恢复后不再回看。
+→ 周度 `calendar_coverage_scan.py` 是缺失的护栏；回填后清理 gap_skip。
+
+## 7. 禁止事项
 
 - 不把扫描告警直接送入全量重拉队列（含停牌/新股/退市）；
 - 不在盘中写数据（会污染信号链）；
