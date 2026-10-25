@@ -1,0 +1,20 @@
+{
+  "as_of": "2026-07-23",
+  "generated_at": "2026-10-25T21:12:26",
+  "n_events_total": 3085,
+  "n_months_total": 90,
+  "n_events_IS": 1404,
+  "n_months_IS": 47,
+  "n_events_OOS": 1681,
+  "n_months_OOS": 43,
+  "sigma_month_prior": 0.05,
+  "formula": "MDE = 2.802 * sigma_month_prior / sqrt(N_months_OOS) * 100 (pp)",
+  "mde_cluster_pp": 2.137,
+  "mde_ultra_pp": 12.819,
+  "mde_note": "sigma_month=5% 为月度均值差先验（个股30%/√~50事件≈4.2%）；ultra=30% 仅诊断，不作判定",
+  "float_coverage": 1.0,
+  "missing_bars_rate": 0.0382,
+  "verdict_cap": null,
+  "verdict_cap_reasons": [],
+  "verdict_cap_note": "float 覆盖<80% 或 缺 bar>20% → 只描述、不得 PASS（幸存者偏差上限，预注册）"
+}
