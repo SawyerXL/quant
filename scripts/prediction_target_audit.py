@@ -18,7 +18,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from scripts.market_daily_study import _load_index
 
-OUT = ROOT / "logs" / "prediction_target_audit_20261026.json"
 LEDGER = ROOT / "logs" / "prediction_ledger.csv"
 
 
@@ -114,9 +113,11 @@ def main():
             "中证800列仅用于测量目标错位，不作为新预测。",
         ],
     }
-    OUT.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    # 文件名用数据 asof，不用运行日；避免“文件名 10-26、数据只到 10-23”的错位
+    out_path = ROOT / "logs" / f"prediction_target_audit_{m['date'].max():%Y%m%d}.json"
+    out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(out, ensure_ascii=False, indent=2))
-    print("->", OUT)
+    print("->", out_path)
 
 
 if __name__ == "__main__":
