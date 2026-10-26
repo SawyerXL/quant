@@ -126,6 +126,11 @@ def main():
     tds = sorted({str(d)[:10] for d in sh["date"]}) if not sh.empty else []
     last_td = max((d for d in tds if d <= now[:10]), default="?")
     bar_fresh = latest_bar >= last_td if last_td != "?" else True
+    # 前一交易日：消息面台账 22:45 跑在 18:40 健康行之后，检查“前一交易日”
+    prev_td = None
+    if last_td != "?" and last_td in tds:
+        i = tds.index(last_td)
+        prev_td = tds[i - 1] if i > 0 else None
 
     # CB 持仓冻结状态(2026-09-15): "停用链"在有持仓时不是稳定状态——
     # 6 只 CB 按 09-04 信号持有、冻结调整带到期日; 过期仍未处置 → 告警
@@ -572,6 +577,26 @@ def main():
             research_track["breadth"] = {"error": "missing"}
     except Exception as e:  # noqa: BLE001
         research_track["breadth"] = {"error": str(e)[:60]}
+    try:
+        news_files = sorted(Path("logs").glob("news_events_*.csv"))
+        if not news_files:
+            research_track["news_events"] = {"error": "missing"}
+        else:
+            nf = news_files[-1]
+            nd = nf.stem.replace("news_events_", "")
+            nd = f"{nd[:4]}-{nd[4:6]}-{nd[6:8]}" if len(nd) == 8 else nd
+            ne = pd.read_csv(nf)
+            research_track["news_events"] = {
+                "date": nd,
+                "rows": int(len(ne)),
+                "material": int(pd.to_numeric(ne.get("material"), errors="coerce")
+                                .fillna(0).sum()) if "material" in ne.columns else None,
+            }
+            if prev_td and nd < prev_td:
+                alerts.append(f"消息面事件台账停滞: 最新{nd} "
+                              f"< 前一交易日{prev_td} (22:45 cron?)")
+    except Exception as e:  # noqa: BLE001
+        research_track["news_events"] = {"error": str(e)[:60]}
 
     # 方向台账覆盖(2026-10-23): 下一交易日必须有登记(auto-base 18:25)
     direction_coverage = {"error": "missing"}
