@@ -65,14 +65,22 @@ def _ledger_counterfactual(m):
     rows = []
     for _, r in v.iterrows():
         day = pd.Timestamp(r["market_date"])
-        hit = m[m["date"] == day]
-        if hit.empty:
+        pos = m.index[m["date"] == day]
+        h = int(r["horizon_d"])
+        if len(pos) == 0:
             continue
-        sh_ret = float(hit.iloc[0]["sh_ret"])
-        cb_ret = float(hit.iloc[0]["cb_ret"])
+        pos = int(pos[0])
+        base = pos - 1
+        end = pos + h - 1
+        if base < 0 or end >= len(m):
+            continue
+        # 与 prediction_ledger 同口径：t-1 收盘 → t+h-1 收盘
+        sh_ret = float(m.iloc[end]["sh"] / m.iloc[base]["sh"] - 1)
+        cb_ret = float(m.iloc[end]["cb"] / m.iloc[base]["cb"] - 1)
         p = float(r["p_up"])
         rows.append({
             "market_date": str(day.date()),
+            "horizon_d": h,
             "p_up": p,
             "sh_ret_pct": round(sh_ret * 100, 3),
             "cb_ret_pct": round(cb_ret * 100, 3),
