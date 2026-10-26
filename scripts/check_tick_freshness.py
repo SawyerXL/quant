@@ -30,7 +30,10 @@ OUT = ROOT / "logs" / "tick_state.json"
 def _list_files():
     cmd = ["ssh"] + SSH_OPTS + [
         WIN_HOST, "cmd /c dir /b H:\\quant\\data_store\\intraday\\tick 2>nul"]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+    # Windows cmd 中文错误信息是 GBK；text=True 默认 UTF-8 会在重试轮询时
+    # 解码崩溃，把"文件缺失"变成"检查器自己失效"（2026-10-26 实锤）。
+    r = subprocess.run(cmd, capture_output=True, text=True, encoding="gbk",
+                       errors="replace", timeout=20)
     if r.returncode != 0:
         raise RuntimeError((r.stderr or r.stdout)[:120])
     files = [x.strip() for x in r.stdout.splitlines()
@@ -60,7 +63,8 @@ def main():
             rr = subprocess.run(
                 ["ssh"] + SSH_OPTS + [WIN_HOST,
                                       "schtasks /run /tn Quant_Tick_Collect"],
-                capture_output=True, text=True, timeout=20)
+                capture_output=True, text=True, encoding="gbk",
+                errors="replace", timeout=20)
             if rr.returncode != 0:
                 state["retry_error"] = (rr.stderr or rr.stdout)[:120]
             for _ in range(6):
