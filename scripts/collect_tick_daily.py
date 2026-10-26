@@ -53,6 +53,7 @@ def main():
     ap.add_argument("--one", help="内部：只处理单码")
     ap.add_argument("--day", default=date.today().strftime("%Y%m%d"))
     ap.add_argument("--part", help="内部：单码临时 parquet")
+    ap.add_argument("--limit", type=int, help="调试：只跑前 N 个 code")
     args = ap.parse_args()
 
     if args.one:
@@ -68,10 +69,11 @@ def main():
     # 单码子进程：xtquant 的 BSON assert 是 C++ 硬崩，Python try/except
     # 接不住；只有隔离子进程才能让 600000/600010 这类坏码不拖垮全批。
     day = args.day
+    codes = CODES[:args.limit] if args.limit else CODES
     parts_dir = OUT / ".parts" / day
     parts_dir.mkdir(parents=True, exist_ok=True)
     ok, errors = [], {}
-    for i, code in enumerate(CODES, 1):
+    for i, code in enumerate(codes, 1):
         part = parts_dir / f"{code}.parquet"
         if part.exists():
             part.unlink()
@@ -95,12 +97,13 @@ def main():
         return 1
     allx = pd.concat([pd.read_parquet(parts_dir / f"{c}.parquet") for c in ok],
                      ignore_index=True)
-    path = OUT / (day + ".parquet")
+    suffix = "_test" if args.limit else ""
+    path = OUT / (day + suffix + ".parquet")
     allx.to_parquet(path, index=False)
-    cov = {"date": day, "requested": len(CODES), "ok": len(ok),
+    cov = {"date": day, "requested": len(codes), "ok": len(ok),
            "skipped": [], "errors": errors, "rows": len(allx),
            "mode": "per_code_subprocess"}
-    (OUT / (day + "_coverage.json")).write_text(
+    (OUT / (day + suffix + "_coverage.json")).write_text(
         json.dumps(cov, ensure_ascii=False, indent=1), encoding="utf-8")
     print("DONE", json.dumps(cov, ensure_ascii=False), "->", path, flush=True)
     return 0
