@@ -69,6 +69,7 @@ def _breadth(asof: str, limit: int | None = None) -> dict:
         codes = codes[:limit]
     above20 = total = 0
     up_limit = down_limit = 0
+    pcts: list[float] = []
     for code in codes:
         p = DATA / "daily" / "2026" / f"{code}.parquet"
         if not p.exists():
@@ -91,14 +92,21 @@ def _breadth(asof: str, limit: int | None = None) -> dict:
             above20 += 1
         pct = pd.to_numeric(d["pct_chg"], errors="coerce").iloc[-1] if "pct_chg" in d.columns else np.nan
         if pd.notna(pct):
+            pcts.append(float(pct))
             band = 0.05 if code in is_st else next(
                 (b for pfx, b in _BOARD_BANDS if code.startswith(pfx)), 0.10)
             if pct >= band * 100 - 0.6:
                 up_limit += 1
             elif pct <= -band * 100 + 0.6:
                 down_limit += 1
+    n = len(pcts)
     return {"breadth_n": total,
             "breadth_ma20_pct": round(above20 / total * 100, 1) if total else None,
+            "breadth_pct_n": n,
+            "breadth_up_pct": round(sum(1 for x in pcts if x > 0) / n * 100, 1) if n else None,
+            "breadth_median_pct": round(float(np.median(pcts)), 2) if n else None,
+            "breadth_mean_pct": round(float(np.mean(pcts)), 2) if n else None,
+            "breadth_lt_neg1_pct": round(sum(1 for x in pcts if x < -1) / n * 100, 1) if n else None,
             "up_limit": up_limit, "down_limit": down_limit}
 
 
@@ -122,6 +130,14 @@ def main():
             row[f"{label}_{k}"] = v
     if not args.no_breadth:
         row.update(_breadth(args.date, args.limit))
+
+    # 指数层与广度层分家的显式标记；预测对账必须同时看两列(2026-10-26)
+    sh_pct, cb_pct = row.get("sh000001_pct"), row.get("csi800_pct")
+    if sh_pct is not None and cb_pct is not None:
+        row["sh_minus_csi800_pct"] = round(sh_pct - cb_pct, 2)
+    med = row.get("breadth_median_pct")
+    if sh_pct is not None and med is not None:
+        row["breadth_divergence"] = int((sh_pct > 0) != (med > 0))
 
     df = pd.DataFrame([row])
     if OUT.exists():
