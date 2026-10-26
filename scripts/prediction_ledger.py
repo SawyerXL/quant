@@ -29,7 +29,8 @@ LEDGER = Path("/root/quant/logs/prediction_ledger.csv")
 INDEX = Path("/data/quant_data_store/daily/2026/SH000001.parquet")
 COLS = ["registered_at", "market_date", "horizon_d", "p_up", "direction",
         "confidence", "rationale", "features", "features_hash",
-        "outcome_pct", "outcome_up", "outcome_date", "scored_at", "valid"]
+        "outcome_pct", "outcome_up", "outcome_date", "scored_at", "valid",
+        "outcome_csi800_pct", "outcome_csi800_up"]
 
 
 def _index_series() -> pd.Series:
@@ -38,6 +39,20 @@ def _index_series() -> pd.Series:
         p = Path(f"/data/quant_data_store/daily/{yr}/SH000001.parquet")
         if p.exists():
             frames.append(pd.read_parquet(p))
+    d = pd.concat(frames, ignore_index=True).drop_duplicates("date")
+    d["date"] = pd.to_datetime(d["date"])
+    return pd.to_numeric(d.set_index("date")["close"], errors="coerce").sort_index()
+
+
+def _csi800_series() -> pd.Series:
+    """同一预测在交易宇宙(中证800)上的结果；主目标仍是 SH000001。"""
+    frames = []
+    for yr in range(2018, 2027):
+        p = Path(f"/data/quant_data_store/daily/{yr}/SH000906.parquet")
+        if p.exists():
+            frames.append(pd.read_parquet(p))
+    if not frames:
+        return pd.Series(dtype=float)
     d = pd.concat(frames, ignore_index=True).drop_duplicates("date")
     d["date"] = pd.to_datetime(d["date"])
     return pd.to_numeric(d.set_index("date")["close"], errors="coerce").sort_index()
@@ -60,6 +75,7 @@ def cmd_register(args):
         "features_hash": hashlib.sha256(args.features.encode()).hexdigest()[:12],
         "outcome_pct": "", "outcome_up": "", "outcome_date": "",
         "scored_at": "", "valid": valid,
+        "outcome_csi800_pct": "", "outcome_csi800_up": "",
     }
     df = pd.DataFrame([rec], columns=COLS)
     if LEDGER.exists():
@@ -141,13 +157,22 @@ def cmd_score(_args):
         print("台账为空")
         return
     s = _index_series()
+    cb = _csi800_series()
     df = pd.read_csv(LEDGER)
     # 空结果列会被推断为 float64, 写入字符串会告警/未来报错——显式转 object
-    for col in ("outcome_pct", "outcome_up", "outcome_date", "scored_at", "valid"):
-        if col in df.columns:
-            df[col] = df[col].astype(object)
+    for col in ("outcome_pct", "outcome_up", "outcome_date", "scored_at", "valid",
+                "outcome_csi800_pct", "outcome_csi800_up"):
+        if col not in df.columns:
+            df[col] = ""
+        df[col] = df[col].astype(object)
+
+    def _done(v):
+        return str(v) not in ("", "nan") and pd.notna(v)
+
     for i, r in df.iterrows():
-        if str(r.get("outcome_up", "")) not in ("", "nan") and pd.notna(r["outcome_up"]):
+        sh_done = _done(r.get("outcome_up", ""))
+        cb_done = _done(r.get("outcome_csi800_up", ""))
+        if sh_done and cb_done:
             continue
         t = pd.Timestamp(r["market_date"])
         if t not in s.index:
@@ -155,16 +180,23 @@ def cmd_score(_args):
         pos = s.index.get_loc(t)
         h = int(r["horizon_d"])
         end_pos = pos + h - 1
-        if end_pos >= len(s):
-            continue
         base_pos = pos - 1
-        if base_pos < 0:
+        if end_pos >= len(s) or base_pos < 0:
             continue
-        ret = s.iloc[end_pos] / s.iloc[base_pos] - 1
-        df.at[i, "outcome_pct"] = round(float(ret) * 100, 2)
-        df.at[i, "outcome_up"] = int(ret > 0)
-        df.at[i, "outcome_date"] = str(s.index[end_pos].date())
-        df.at[i, "scored_at"] = datetime.now().isoformat(timespec="seconds")
+        if not sh_done:
+            ret = s.iloc[end_pos] / s.iloc[base_pos] - 1
+            df.at[i, "outcome_pct"] = round(float(ret) * 100, 2)
+            df.at[i, "outcome_up"] = int(ret > 0)
+            df.at[i, "outcome_date"] = str(s.index[end_pos].date())
+            df.at[i, "scored_at"] = datetime.now().isoformat(timespec="seconds")
+        if not cb_done and len(cb):
+            d0, d1 = s.index[base_pos], s.index[end_pos]
+            if d0 in cb.index and d1 in cb.index:
+                cb_ret = cb.loc[d1] / cb.loc[d0] - 1
+                df.at[i, "outcome_csi800_pct"] = round(float(cb_ret) * 100, 2)
+                df.at[i, "outcome_csi800_up"] = int(cb_ret > 0)
+                if not sh_done:
+                    df.at[i, "scored_at"] = datetime.now().isoformat(timespec="seconds")
     df.to_csv(LEDGER, index=False)
     print(f"已结算 {int(df['outcome_up'].notna().sum())}/{len(df)} 条")
 
@@ -195,6 +227,20 @@ def cmd_report(_args):
     print(f"有效样本 {len(d)} 条 | 实际上涨占比 {base:.1%}")
     print(f"Brier {brier:.4f} vs 基准率常值 {brier_base:.4f} vs 0.5常值 {brier_5050:.4f}")
     print(f"方向命中率 {hit:.1%}")
+    # 同一 p_up 在交易宇宙(中证800)上的反事实；主目标仍是 SH000001
+    csi = {}
+    if "outcome_csi800_up" in d.columns:
+        d["outcome_csi800_up"] = pd.to_numeric(d["outcome_csi800_up"], errors="coerce")
+        dc = d.dropna(subset=["outcome_csi800_up"])
+        if len(dc):
+            c_base = dc["outcome_csi800_up"].mean()
+            c_brier = ((dc["p_up"] - dc["outcome_csi800_up"]) ** 2).mean()
+            c_hit = ((dc["p_up"] > 0.5).astype(int) == dc["outcome_csi800_up"]).mean()
+            csi = {"n": int(len(dc)), "base_rate": round(float(c_base), 4),
+                   "brier": round(float(c_brier), 4),
+                   "hit_rate": round(float(c_hit), 4)}
+            print(f"中证800反事实: n={len(dc)} 上涨占比={c_base:.1%} "
+                  f"Brier={c_brier:.4f} 命中率={c_hit:.1%}")
     print(d[["market_date", "horizon_d", "p_up", "direction",
              "outcome_pct", "outcome_up", "valid"]].tail(15).to_string(index=False))
     out = Path("/root/quant/logs/prediction_score.json")
@@ -206,6 +252,7 @@ def cmd_report(_args):
         "brier_base_rate": round(float(brier_base), 4),
         "brier_5050": round(float(brier_5050), 4),
         "hit_rate": round(float(hit), 4),
+        "csi800_counterfactual": csi,
         "computed_at": datetime.now().isoformat(timespec="seconds"),
     }, ensure_ascii=False, indent=1))
     print(f"评分已保存: {out}")
