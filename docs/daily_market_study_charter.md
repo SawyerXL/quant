@@ -144,6 +144,37 @@
 - 事后从新闻里挑选能解释当天走势的标题（叙事偏差）；
 - 未过闸门十九/MDE/OOS 就按消息面调仓。
 
+### 6.6 外围消息/隔夜映射（2026-10-26 用户要求）
+
+**09:03 盘前必须记录以下快照（`preopen_check.py` / `overnight_market`）**：
+
+| 维度 | 字段 |
+|---|---|
+| 美股 | 标普/纳指/道指收盘（或 live 盘中，标注 as_of） |
+| 利率/汇率 | 美债10Y、美元指数、USDCNH/离岸人民币 |
+| 商品 | 油价（WTI/Brent）、LME 铜、黄金 |
+| 亚太/离岸 | 日经、恒生、A50 期货、FXI/KWEB/ASHR |
+| 隔夜新闻 | Fed/关税/制裁/地缘/中美/OPEC/非农/CPI 等 material headline |
+
+**映射规则**：
+
+1. 外围信号**只改跳空**，不改收盘方向；历史证据：外盘信号主要落在
+   gap，盘中≈抛硬币（既有 18 因子/外盘研究）。
+2. 必须拆 `gap_ret = open/prev_close−1` 与 `intraday_ret = close/open−1`；
+   不得用全天收益把 gap 和盘中混在一起。
+3. 只有已通过闸门十九/MDE/OOS 的外围事件，才可进入仓位；否则只写
+   “gap 提示/风险背景”。
+4. 未来事件（Fed/关税/OPEC/非农）**不预埋**；等事件发生，按 T+1 开盘
+   入场做条件评估。
+5. `live` 盘中快照必须标 `as_of`，不能当收盘；09:03 的收盘快照才可
+   用于次日预测的正式记录。
+
+**可回测外围事件 schema（补充）**：
+`event_time/source/category(US_index|Fed|tariff|sanction|oil|USDCNH|Asia)/
+actual_vs_expected/scope/entry=T+1_open/horizon_d=1,5/gap_ret/intraday_ret/
+control/MDE/OOS/status`。历史已有结论（美股→A股主要 gap、恒生零预测力、
+铜/金开盘操作降级）直接复用，不重复判死。
+
 ## 7. 禁止事项
 
 - 事后修改预测或挑选有利样本复盘
