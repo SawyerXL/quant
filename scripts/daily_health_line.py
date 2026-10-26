@@ -554,6 +554,24 @@ def main():
                               f"< 上一交易日{last_td} (18:25 cron?)")
     except Exception as e:  # noqa: BLE001
         research_track["direction"] = {"error": str(e)[:60]}
+    try:
+        mdp = Path("logs/market_daily_study.csv")
+        if mdp.exists():
+            md = pd.read_csv(mdp).sort_values("date").iloc[-1]
+            research_track["breadth"] = {
+                k: (None if pd.isna(md.get(k)) else md.get(k))
+                for k in ("date", "sh000001_pct", "csi800_pct",
+                          "breadth_up_pct", "breadth_median_pct",
+                          "sh_minus_csi800_pct", "breadth_divergence")
+            }
+            mdate = str(md.get("date", ""))
+            if last_td != "?" and mdate < last_td:
+                alerts.append(f"日研快照停滞: 最新{mdate} "
+                              f"< 上一交易日{last_td} (18:15 cron?)")
+        else:
+            research_track["breadth"] = {"error": "missing"}
+    except Exception as e:  # noqa: BLE001
+        research_track["breadth"] = {"error": str(e)[:60]}
 
     # 方向台账覆盖(2026-10-23): 下一交易日必须有登记(auto-base 18:25)
     direction_coverage = {"error": "missing"}
