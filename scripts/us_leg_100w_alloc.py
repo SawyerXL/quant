@@ -56,7 +56,9 @@ def load_legs():
     return legs
 
 
-def combo3(legs: pd.DataFrame, weights: dict, halt=None, cost=0.0):
+def combo3(legs: pd.DataFrame, weights: dict, halt=None, cost=0.0,
+           stock_drag: float = 0.0):
+    """stock_drag: 股票腿年化拖累(pp)，按 /252 日扣，用于 lot 恶化敏感性。"""
     cols = list(legs.columns)
     target = np.array([weights[c] for c in cols], float)
     w = target.copy()
@@ -70,7 +72,10 @@ def combo3(legs: pd.DataFrame, weights: dict, halt=None, cost=0.0):
             if not halted:
                 nav *= (1 - cost * float(np.abs(target - w).sum()) / 2)
                 w = target.copy()
-        vals = row[cols].values.astype(float)
+        vals = row[cols].values.astype(float).copy()
+        if stock_drag:
+            # stock_drag 单位=年化 pp；日收益是小数，故 /100 再 /252
+            vals[cols.index("s")] -= stock_drag / 100.0 / 252.0
         nav *= (1 + float(np.dot(w, vals)))
         peak = max(peak, nav)
         dd = nav / peak - 1
@@ -110,6 +115,8 @@ def main():
                "us_from_stock/prorata 股票腿被高估",
                "CB 腿用 60万收益序列缩放; 47.5/52.5万下整手成交未重跑",
                "US 用 DJIA 价格指数 T-1, 不含股息/溢价; 对 US 收益偏保守",
+               "haircut 是日频线性拖累、只加在 us_from_stock 的股票腿，"
+               "不是 13.75万/组 lot 引擎重跑；0.5pp 为保守敏感性下界",
            ],
            "scenarios": {}}
     base_ret = None
@@ -139,11 +146,32 @@ def main():
             }
         print(name, json.dumps(out["scenarios"][name], ensure_ascii=False),
               flush=True)
+    # 股票腿 haircut 敏感性：13.75万/组 lot 恶化不是 0；给 us_from_stock
+    # 的股票腿加 0.5/1.0/1.5/2.0pp 年化拖累，看是否跌破 MDE。
+    base_m = out["scenarios"]["base_40_60"]["metrics"]
+    sens = []
+    for h in (0.0, 0.5, 1.0, 1.5, 2.0):
+        nav, _, _ = combo3(legs, scenarios["us_from_stock"], stock_drag=h)
+        ret = nav.pct_change().fillna(0)
+        m = metrics_ret(ret)
+        hnav, ht, hd = combo3(legs, scenarios["us_from_stock"],
+                              halt=(-0.15, 0.02), stock_drag=h)
+        hm = metrics_ret(hnav.pct_change().fillna(0))
+        sens.append({
+            "stock_haircut_pp": h,
+            "metrics": m,
+            "delta_ann_pp": round(m["ann_pct"] - base_m["ann_pct"], 2),
+            "halt15": {**hm, "triggers": int(ht), "days_halted": int(hd)},
+            **te_mde(ret, base_ret),
+        })
+    out["haircut_sensitivity"] = sens
     out["verdict"] = ("base 复现 live 11.97/1.536/-13.84; "
                       "us_from_stock +1.65pp = MDE 1.65pp, 但股票腿用 20万/组"
                       "收益、13.75万/组 lot 跳票会更差 → BORDERLINE_NOT_DEPLOY; "
                       "us_from_cb 年化 -0.88pp 但夏普 +0.03/回撤 +2.52pp; "
-                      "us_prorata 无年化增益。US 暂不纳入 100 万。")
+                      "us_prorata 无年化增益。股票腿 haircut 0.5pp → Δ"
+                      f"{sens[1]['delta_ann_pp']:+.2f}pp < MDE "
+                      f"{sens[1]['MDE_pp']:.2f}pp；US 暂不纳入 100 万。")
     OUT.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     lines = ["# 100 万 + US 腿三资产配置研究（2026-10-26）", "",
              f"窗口 {out['window']}，n={out['n']}；base 复现 live 40/60="
@@ -158,7 +186,15 @@ def main():
             f"{s['halt15']['triggers']} | {vb.get('delta_ann_pp_same_window','—')} | "
             f"{vb.get('MDE_pp','—')} |")
     lines += ["", "## 判定", "", out["verdict"], "",
-              "## 近似/盲区", ""] + [f"- {x}" for x in out["caveats"]]
+              "## 股票腿 haircut 敏感性（us_from_stock）", "",
+              "| 股票腿年化拖累 | 年化 | Δ年化 | MDE | 15%熔断 |",
+              "|---:|---:|---:|---:|---:|"]
+    for x in out["haircut_sensitivity"]:
+        lines.append(
+            f"| {x['stock_haircut_pp']}pp | {x['metrics']['ann_pct']}% | "
+            f"{x['delta_ann_pp']} | {x['MDE_pp']} | "
+            f"{x['halt15']['triggers']} |")
+    lines += ["", "## 近似/盲区", ""] + [f"- {x}" for x in out["caveats"]]
     MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("->", OUT, MD)
     return 0
