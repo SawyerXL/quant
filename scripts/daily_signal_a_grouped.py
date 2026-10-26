@@ -38,7 +38,7 @@ logger.add("logs/signal_a_grouped_{time:YYYY-MM-DD}.log",
            rotation="1 day", retention="365 days")
 
 GROUPS = {"g0": 2, "g1": 7}          # 组偏移(交易日), 摊平定案{2,7}
-GROUP_CAPITAL = 500_000              # 每组50万(方案A: 股票100万=2组)
+GROUP_CAPITAL = 200_000              # 实盘100万: 股票40万=2组×20万
 N_HOLDINGS = 30                      # pool30定案
 _DRY_RUN = os.environ.get("GROUP_SIGNAL_DRY_RUN", "0") == "1"
 _BASE = Path("/tmp/signal_group_test") if _DRY_RUN else Path("data_store/meta")

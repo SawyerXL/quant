@@ -25,7 +25,7 @@ from monitoring.alerts import send_alert
 BOND_ETF = "511360"
 BOND_TICK = 0.001
 MIN_AMOUNT = 20_000          # 2万以下不折腾
-STOCK_CAPITAL = 1_000_000    # 方案A: 股票track名义100万
+STOCK_CAPITAL = 400_000      # 实盘100万: 股票track名义40万
 
 
 def _live_ref():

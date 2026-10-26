@@ -42,7 +42,7 @@ from loguru import logger
 from data.storage import load_daily
 from run_backtest_a import COMMISSION, CASH_YIELD
 
-NOTIONAL   = 1_000_000
+NOTIONAL   = 400_000
 NOTIONAL_CB = 600_000
 CB_PREFIX  = ("110", "111", "113", "118", "123", "127", "128")
 SNAP_DIR   = Path("logs")
