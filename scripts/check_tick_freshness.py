@@ -36,8 +36,10 @@ def _list_files():
                        errors="replace", timeout=20)
     if r.returncode != 0:
         raise RuntimeError((r.stderr or r.stdout)[:120])
+    # --limit 调试会写 {day}_test.parquet；不能让它冒充生产新鲜度
     files = [x.strip() for x in r.stdout.splitlines()
-             if x.strip().lower().endswith(".parquet")]
+             if x.strip().lower().endswith(".parquet")
+             and "_test" not in x.strip().lower()]
     return sorted(f[:8] for f in files if f[:8].isdigit())
 
 
