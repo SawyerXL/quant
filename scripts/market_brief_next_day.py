@@ -157,7 +157,7 @@ def main():
         ],
     }
     OUT.mkdir(exist_ok=True)
-    p = OUT / "market_brief_20261025.json"
+    p = OUT / f"market_brief_{args.asof.replace('-', '')}.json"
     p.write_text(json.dumps(out, ensure_ascii=False, indent=2, default=str))
     print(json.dumps(out, ensure_ascii=False, indent=2, default=str))
     print("->", p)
