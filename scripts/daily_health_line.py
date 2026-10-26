@@ -588,11 +588,17 @@ def main():
             tick_freshness = {k: tj.get(k) for k in
                               ("as_of", "last_trade_day", "latest_file",
                                "n_files", "ok", "error", "retried",
-                               "retry_ok")}
+                               "retry_ok", "coverage_ok", "coverage")}
             if tj.get("ok") is False:
                 alerts.append(f"tick采集缺失: 最新{tj.get('latest_file')} "
                               f"< 上一交易日{tj.get('last_trade_day')} "
                               f"(Windows 15:10任务; 自动重试={tj.get('retry_ok')})")
+            if tj.get("coverage_ok") is False:
+                cov = tj.get("coverage") or {}
+                alerts.append(
+                    f"tick采集覆盖不足: {cov.get('ok')}/{cov.get('requested')} "
+                    f"skipped={cov.get('skipped')} "
+                    f"errors={len(cov.get('errors') or {})}")
             if last_td != "?" and str(tj.get("as_of", ""))[:10] < last_td:
                 alerts.append(f"tick新鲜度检查未运行: {tj.get('as_of')} "
                               f"< 上一交易日{last_td}")
