@@ -14,7 +14,7 @@
 | 13:30 | 同上（幂等重试） | 保证 14:28 前 `cb_snapshots` 有 11-01 |
 | 14:28 | `cb_signal.py` | `rebalance=True`、`snap_date=2026-11-01`、`latest_snapshot=2026-11-01`、holdings=25 |
 | **14:30** | `QuantTrackA_Daily` → `run_daily.bat` | 先生成 `trade_plan_YYYYMMDD_{a,cb}.json`；**按档位分流**：tier1 自动；tier2 必须 `--approve`；tier3 只出清单、拒绝自动下单。两轨都走 tick 归一/单笔≤10 万/涨停禁买/跌停禁卖 |
-| **14:35** | **人工/助手复核（新增）** | 读 `trade_plan_20261102_cb.json` 的 `tier/tier_reasons/total_est`：tier2 审阅后手动 `fetch_and_execute --track cb --approve`；tier3 按清单逐笔人工执行；不得把“出清单”当成“已执行” |
+| **14:35** | **人工/助手复核（新增）** | 读 `trade_plan_20261102_cb.json` 的 `tier/tier_reasons/total_est`；跑 `python scripts/render_trade_plan.py --date 20261102` 生成人工清单/成交回填 CSV。tier2 审阅后手动 `fetch_and_execute --track cb --approve`；tier3 按清单逐笔人工执行；不得把“出清单”当成“已执行” |
 | 14:45 | `Quant-TrackACheck` → `check_exec.ps1` | **只检查/补跑 track a，不补 cb** |
 | **14:50** | `check_execution_chain.py` | 有 buy/sell/rebalance 但无当天 `execution_result` → 告警；不自动重试 |
 | 15:40 | `verify_cb_monthly_rebalance.py` | selftest 通过 + 五项字段 PASS；状态落 `logs/cb_monthly_verify_state.json`（**跳过也落**，18:40 健康行 `cb_monthly_verify` 可见；含 `next_expect_day`=下一次调仓日） |
