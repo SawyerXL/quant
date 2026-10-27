@@ -49,7 +49,7 @@
 3. 14:28 `holdings=0` → 停止（全量剔除事件，先查 `excluded`）。
 4. 15:40 verifier FAIL 或 SELFTEST_FAIL → 停止，人工核对；拒单/废单按 tick 纪律（`qmt_client._tick_price`）处理。
 5. 执行后 CB 只数 <25 或单只张数偏离信号 >1 手 → 记录对账差异。**月度口径下不在月内追补**（非调仓日 buy=[]），缺口等到 12-01 月度调仓；若差异来自拒单/废单，按执行层告警单独处理。
-6. **14:30 `trade_plan_*_cb.json` 的 `tier` 为 2/3** → 自动链不会执行：tier2 审阅后手动 `--approve`；tier3 **只能逐笔人工**，不得用 `--approve` 绕过；14:50 `check_execution_chain.py` 会告警“有信号无结果”。
+6. **14:30 `trade_plan_*_cb.json` 的 `tier` 为 2/3** → 自动链不会执行：tier2 审阅后手动 `--approve`；tier3 **只能逐笔人工**，不得用 `--approve` 绕过；14:50 `check_execution_chain.py` 会告警“有信号无结果”。**tier3 人工成交不会自动生成 `execution_result`**，14:50 告警属预期；以 15:40 验证器/持仓对账为权威，并手工记录成交张数/均价。
 
 ## 四、变更历史
 
