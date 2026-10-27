@@ -51,6 +51,8 @@ PATH=/usr/local/bin:/usr/bin:/bin
 20 8 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/qfq_drift_check.py --top 30 >> /root/quant/logs/cron_qfq_drift.log 2>&1
 # CB信号(每日14:28, 紧跟股票信号; 月度=快照日后首个交易日全量轮换, 非调仓日刷新)
 28 14 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/cb_signal.py >> /root/quant/logs/cron_cb_signal.log 2>&1
+# 14:50执行链缺失检查(2026-10-27; 14:30主执行后; 14:45只补track a, cb无自动重试; 只读告警)
+50 14 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/check_execution_chain.py >> /root/quant/logs/cron_exec_check.log 2>&1
 # CB月度调仓验证(2026-10-21; 快照日后首个交易日15:40; 非调仓日跳过; 内置已知失败selftest)
 40 15 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/verify_cb_monthly_rebalance.py >> /root/quant/logs/cron_cb_monthly_verify.log 2>&1
 2,7,12,17,22,27,32,37,42,47,52,57 * * * * cd /root/quant && /root/quant/.venv/bin/python scripts/tunnel_watchdog.py >> /root/quant/logs/cron_tunnel.log 2>&1
