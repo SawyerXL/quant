@@ -90,9 +90,24 @@ def _sell_qty(bond_shares, bond_held, target, ref, tier,
 4. 若用户不接受“单笔≤10 万”，需显式裁定 cash_sweep 的 ETF 豁免；
    在裁定前按红线执行。
 
-## 5. 现状
+## 5. 可直接应用的补丁
 
-- 代码未改；`scripts/cash_sweep.py` 写权限被拒。
+已生成统一 diff：`docs/cash_sweep_partial_sell.patch`（`git apply --check` 通过）。
+在允许写 `scripts/cash_sweep.py` 的环境执行：
+
+```bash
+git apply docs/cash_sweep_partial_sell.patch
+python3 -m pytest tests/test_cash_sweep_partial.py -q   # 若已补测试
+```
+
+补丁只改三处：导入 `MAX_SINGLE_ORDER_VALUE`、新增 `_sell_qty`、卖出分支按
+`qty` 下单。应用后先在 `STOCK_CAPITAL=400_000` 下跑 `--dry-run`，
+确认“拟卖 800 份”而不是 6,100 份。
+
+## 6. 现状
+
+- 代码未改；`scripts/cash_sweep.py` 写权限被拒（项目 settings
+  `deny: Edit(**/cash_sweep.py)`）。
 - 100 万切换已因此**延后到 11-02 收盘后**，且以本补丁 dry-run 通过为前置。
 - 相关：`docs/capital_switch_100w_checklist.md`、
   `docs/cb_monthly_rebalance_runbook.md`、`logs/preflight_1029_1102_20261025.md`。

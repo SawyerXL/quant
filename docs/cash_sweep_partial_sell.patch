@@ -1,0 +1,55 @@
+--- a/scripts/cash_sweep.py
++++ b/scripts/cash_sweep.py
+@@ -21,6 +21,7 @@
+ 
+ from loguru import logger
+ from monitoring.alerts import send_alert
++from config.settings import MAX_SINGLE_ORDER_VALUE
+ 
+ BOND_ETF = "511360"
+ BOND_TICK = 0.001
+@@ -49,6 +50,21 @@
+     return 113.9
+ 
+ 
++def _sell_qty(bond_shares, bond_held, target, ref, tier,
++              max_value=MAX_SINGLE_ORDER_VALUE):
++    """tier>0.5 才清空；降档/资本下调只卖超额，且单笔≤10万。"""
++    if bond_shares <= 0 or ref <= 0:
++        return 0
++    if tier > 0.5:
++        return int(bond_shares)
++    excess = float(bond_held) - float(target)
++    if excess <= 0:
++        return 0
++    qty = int((excess / float(ref)) / 100) * 100
++    cap = int((max_value / float(ref)) / 100) * 100
++    return max(0, min(int(bond_shares), qty, cap))
++
++
+ def _get_tier():
+     """当前档位(读最近一组信号的position_ratio, 两组一致)。"""
+     for g in ("g0", "g1"):
+@@ -140,13 +156,17 @@
+             return
+         send_alert(f"{msg}\n买入 {BOND_ETF} {qty}份 ✅已成交")
+     else:
++        ref = (bond_held / bond_shares if bond_shares else _live_ref())
++        qty = _sell_qty(bond_shares, bond_held, target, ref, tier)
++        if qty <= 0:
++            logger.info(f"{msg} 可卖数量 0，不动")
++            return
+         if dry_run:
+-            logger.info(f"{msg} [DRY] 拟卖{bond_shares}份")
++            logger.info(f"{msg} [DRY] 拟卖{qty}份")
+             return
+-        ref = (bond_held / bond_shares if bond_shares else _live_ref())
+-        oid = c.place_order(BOND_ETF, "sell", bond_shares, ref * 0.998)
+-        logger.info(f"{msg} 卖出{bond_shares}份 → {oid}")
+-        send_alert(f"{msg}\n卖出 {BOND_ETF} {bond_shares}份")
++        oid = c.place_order(BOND_ETF, "sell", qty, ref * 0.998)
++        logger.info(f"{msg} 卖出{qty}份 → {oid}")
++        send_alert(f"{msg}\n卖出 {BOND_ETF} {qty}份")
+ 
+ 
+ if __name__ == "__main__":
