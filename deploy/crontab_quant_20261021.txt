@@ -72,6 +72,8 @@ PATH=/usr/local/bin:/usr/bin:/bin
 40 22 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/check_tick_freshness.py >> /root/quant/logs/cron_tick_check.log 2>&1
 # 消息面候选事件台账(2026-10-26 用户三层预测纪律; 22:35 CCTV之后, 每日含周末)
 45 22 * * * cd /root/quant && /root/quant/.venv/bin/python scripts/news_event_ledger.py >> /root/quant/logs/cron_news_ledger.log 2>&1
+# 消息事件结果台账(2026-10-27; 22:45候选之后; T+1开盘口径; 只读不下单)
+50 22 * * * cd /root/quant && /root/quant/.venv/bin/python scripts/news_event_outcome.py >> /root/quant/logs/cron_news_outcome.log 2>&1
 # 消息层采集(2026-10-18; 新浪全球快讯每小时, 22:35 加新闻联播; 含周末)
 30 8-23 * * * cd /root/quant && /root/quant/.venv/bin/python scripts/news_capture.py --no-cctv >> /root/quant/logs/cron_news.log 2>&1
 35 22 * * * cd /root/quant && /root/quant/.venv/bin/python scripts/news_capture.py >> /root/quant/logs/cron_news.log 2>&1
