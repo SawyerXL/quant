@@ -106,8 +106,15 @@ python3 -m pytest tests/test_cash_sweep_partial.py -q   # 若已补测试
 
 ## 6. 现状
 
-- 代码未改；`scripts/cash_sweep.py` 写权限被拒（项目 settings
-  `deny: Edit(**/cash_sweep.py)`）。
-- 100 万切换已因此**延后到 11-02 收盘后**，且以本补丁 dry-run 通过为前置。
+- **2026-10-27 15:0x 已在 Windows `H:\quant` 应用补丁**（用户明确授权绕过
+  deny）：Windows HEAD `e917ed3`，`git status` 显示
+  `M scripts/cash_sweep.py`；`_sell_qty(6100,695973,280000,114,0.3)` 实测
+  **800**；`--approve-tier3` 在 Windows 亦已就位（simulation=True /
+  production=False）。
+- **Linux 源码尚未提交该补丁**（授权文字限定 Windows）；21:00 Git-Sync
+  的 53b631f..e917ed3 不含 cash_sweep，不会覆盖 Windows 本地修改。
+  但为避免双源漂移，后续应在 Linux 提交同一补丁，或确认 Windows 为唯一
+  属主；在提交前不要让其他 commit 触碰 `scripts/cash_sweep.py`。
+- 100 万切换仍**延后到 11-02 收盘后**，且以 400k dry-run 通过为前置。
 - 相关：`docs/capital_switch_100w_checklist.md`、
   `docs/cb_monthly_rebalance_runbook.md`、`logs/preflight_1029_1102_20261025.md`。
