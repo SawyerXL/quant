@@ -13,7 +13,8 @@
 | 08:10 | `build_cb_snapshot_recent.py` | 当月快照已存在→跳过；周更仍在跑→跳过并等 13:30 |
 | 13:30 | 同上（幂等重试） | 保证 14:28 前 `cb_snapshots` 有 11-01 |
 | 14:28 | `cb_signal.py` | `rebalance=True`、`snap_date=2026-11-01`、`latest_snapshot=2026-11-01`、holdings=25 |
-| 14:45 | `fetch_and_execute.py` | 按 buy/sell 增量下单；tick 归一、单笔≤10 万、涨停禁买/跌停禁卖 |
+| **14:30** | `QuantTrackA_Daily` → `run_daily.bat` | 两轨顺序执行：`fetch_and_execute --track a` → `--track cb`；按 buy/sell 增量下单；tick 归一、单笔≤10 万、涨停禁买/跌停禁卖 |
+| 14:45 | `Quant-TrackACheck` → `check_exec.ps1` | **只检查/补跑 track a，不补 cb** |
 | 15:40 | `verify_cb_monthly_rebalance.py` | selftest 通过 + 五项字段 PASS；状态落 `logs/cb_monthly_verify_state.json`（**跳过也落**，18:40 健康行 `cb_monthly_verify` 可见；含 `next_expect_day`=下一次调仓日） |
 
 关键日期核对（`trade_calendar`，2026-10-23 查）：10-30 周五交易、**11-01 周日休市**、11-02 周一交易。
@@ -31,12 +32,15 @@
 **盲区声明**（闸门七）：本 preflight 只验证日期映射、字段判据与现有工件；**未验证**（也无法在 11-02 前验证）：
 - 06:30 周更是否会实际产出 11-01 快照（取决于数据源与运行时长）；
 - 08:10 与周更的并发竞争（代码有 `pgrep` 跳过 + 13:30 兜底，但未在真实周一日实跑过）；
+- **14:45 的 `check_exec.ps1` 只补跑 track a，不补 cb**；若 14:30
+  `run_daily.bat` 在 cb 之前中断，CB 无自动重试，只能靠 15:40 验证器
+  告警后人工补跑；
 - 券商柜台对 60 万/25 只的批量委托接受度（仿真盘 11-02 才首次跑）；
 - 11-01 快照的券池与 10-01 的真实 churn（>20% 会被闸门拒写并转人工）。
 
 ## 三、停止/升级判据（任一触发即停，人工确认后才继续）
 
-1. **13:30 后** `cb_snapshots` 仍无 `2026-11-01` → 停止当日 14:45 执行（信号会用旧快照，等于不调）。
+1. **13:30 后** `cb_snapshots` 仍无 `2026-11-01` → 停止当日 14:30 执行（信号会用旧快照，等于不调）。
 2. 14:28 信号 `rebalance=False` 或 `snap_date≠2026-11-01` → 停止执行（防止用旧快照重复调仓）。
 3. 14:28 `holdings=0` → 停止（全量剔除事件，先查 `excluded`）。
 4. 15:40 verifier FAIL 或 SELFTEST_FAIL → 停止，人工核对；拒单/废单按 tick 纪律（`qmt_client._tick_price`）处理。
