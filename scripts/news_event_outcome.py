@@ -149,6 +149,11 @@ def build(asof: pd.Timestamp | None = None) -> pd.DataFrame:
         rows.append(row)
     out = pd.DataFrame(rows)
     out = out.sort_values(["pub_time", "event_id"]).reset_index(drop=True)
+    asof_val = asof if asof is not None else max(
+        d["date"].max() for d in data.values())
+    out.insert(0, "as_of", str(asof_val.date()))
+    out.insert(1, "return_basis", "price")
+    out.insert(2, "benchmark_basis", "price")
     OUT_CSV.write_text(out.to_csv(index=False), encoding="utf-8")
     _write_md(out, asof, data)
     logger.info(f"事件结果台账: {len(out)} 条 → {OUT_CSV}")
@@ -163,6 +168,7 @@ def _write_md(out: pd.DataFrame, asof, data):
         "# 消息事件结果台账（T+1 开盘入场，描述性）", "",
         f"- as_of: {asof_str}；事件数: {len(out)}；状态: {counts}",
         "- 入场=事件日之后首个交易日开盘；5d/20d 从入场开盘算；未来 bar 不足记 None（不写 0）。",
+        "- return_basis=price（不含分红，绝对收益偏低约 2.3pp/年）；benchmark_basis=price。",
         "- 本文只做结果记录，不是信号；direction=unknown 的事件不因单次涨跌改判。",
         "", "| 事件时间 | 类别 | 事件日 | 入场日 | SH gap | SH 1d | SH 5d | SH 20d | 状态 |",
         "|---|---|---|---|---:|---:|---:|---:|---|",
