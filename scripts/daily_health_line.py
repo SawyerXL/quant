@@ -673,6 +673,27 @@ def main():
     if cb_monthly_verify.get("error"):
         alerts.append(f"CB月度验证器状态异常: {cb_monthly_verify['error']}")
 
+    # 14:50 执行链检查状态(2026-10-27): 有信号无结果/信号陈旧必须可见。
+    # 检查器自己发 alert；但 SMTP 未配置时只有 state 文件，18:40 健康行兜底。
+    exec_check = {"error": "missing"}
+    ecp = Path("logs/exec_check_state.json")
+    if ecp.exists():
+        try:
+            ej = json.loads(ecp.read_text(encoding="utf-8"))
+            exec_check = {k: ej.get(k) for k in
+                          ("checked_at", "date", "issues", "warnings", "notes")}
+            ed = str(ej.get("date", ""))
+            if last_td != "?" and ed < last_td:
+                alerts.append(f"执行链检查未运行/过期: {ed} < {last_td}")
+            if ej.get("issues"):
+                alerts.append(f"执行链检查问题: {ej.get('issues')}")
+            if ej.get("warnings"):
+                alerts.append(f"执行链检查警告: {ej.get('warnings')}")
+        except Exception as e:  # noqa: BLE001
+            exec_check = {"error": f"read_fail: {str(e)[:60]}"}
+    if exec_check.get("error"):
+        alerts.append(f"执行链检查状态异常: {exec_check['error']}")
+
     # H1 regime 前向纸面(月度, 1日08:00): 只读测量; 月度cron静默失败必须可见
     regime_forward_paper = {"error": "missing"}
     rfp = Path("logs/regime_forward_paper_state.json")
@@ -785,6 +806,7 @@ def main():
             "regime_forward_paper": regime_forward_paper,
             "tick_freshness": tick_freshness,
             "cb_monthly_verify": cb_monthly_verify,
+            "exec_check": exec_check,
             "cron_install": cron_install,
             "coverage_scan": coverage_scan,
             "dep_scan": dep, "sv_harness": sv, "alerts": alerts}
