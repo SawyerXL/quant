@@ -216,6 +216,14 @@ def check_signal_fresh(signal: dict) -> bool:
     return True
 
 
+def tier3_override_allowed(env: str, approve_tier3: bool) -> bool:
+    """tier3 默认拒绝；只有用户显式授权 + 仿真账户才放行。
+
+    2026-10-27 用户授权助手执行 QMT 订单；真实账户仍禁止绕过 tier3。
+    """
+    return bool(approve_tier3) and str(env or "").lower() == "simulation"
+
+
 def classify_tier(plan: dict, sig: dict) -> tuple:
     """档位分流(2026-09-24 用户裁定):
     档3 逐笔(任一触发): 总交易额>30万 / 新增标的>8只 / 单笔>5万 / 闲置资金首次部署
@@ -243,7 +251,8 @@ def classify_tier(plan: dict, sig: dict) -> tuple:
 
 
 def execute(track: str = "a", dry_run: bool = False, setup: bool = False,
-           plan_only: bool = False, approve: bool = False):
+           plan_only: bool = False, approve: bool = False,
+           approve_tier3: bool = False):
     """
     拉取信号并执行调仓。
     setup=True：建仓模式，跳过新鲜度检查，买入全部 holdings（适合首次初始化）。
@@ -367,10 +376,18 @@ def execute(track: str = "a", dry_run: bool = False, setup: bool = False,
             if plan_only:
                 return
             if tier == 3:
-                send_alert(f"[{track}] 档3逐笔人工: 拒绝自动执行, 请按清单逐笔下单"
-                           f"({'; '.join(reasons)})", level="error")
-                logger.error(f"档3 拒绝自动执行: {reasons}")
-                return
+                if tier3_override_allowed(os.getenv("ENV", ""), approve_tier3):
+                    logger.warning(
+                        f"[{track}] 档3 仿真授权执行(--approve-tier3): {reasons}; "
+                        f"仍逐笔过 RiskGateway/tick/单笔≤10万")
+                    send_alert(
+                        f"[{track}] 档3 仿真授权执行: {reasons}；"
+                        f"用户已授权，仍逐笔风控", level="warning")
+                else:
+                    send_alert(f"[{track}] 档3逐笔人工: 拒绝自动执行, 请按清单逐笔下单"
+                               f"({'; '.join(reasons)})", level="error")
+                    logger.error(f"档3 拒绝自动执行: {reasons}")
+                    return
             if tier == 2 and not approve:
                 send_alert(f"[{track}] 档2清单确认: 已生成清单, 人工审阅后以 "
                            f"--approve 重跑执行(或拒绝)", level="warning")
@@ -597,13 +614,16 @@ def main():
                         help="只生成交易清单(档位分流), 不下单")
     parser.add_argument("--approve", action="store_true",
                         help="档2清单已人工审阅批准, 允许执行")
+    parser.add_argument("--approve-tier3", action="store_true",
+                        help="仅仿真账户：用户显式授权档3执行；仍逐笔过风控")
     args = parser.parse_args()
 
     if args.backfill:
         backfill_fills()
     else:
         execute(track=args.track, dry_run=args.dry_run, setup=args.setup,
-                plan_only=args.plan_only, approve=args.approve)
+                plan_only=args.plan_only, approve=args.approve,
+                approve_tier3=args.approve_tier3)
 
 
 if __name__ == "__main__":

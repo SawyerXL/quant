@@ -14,7 +14,7 @@
 | 13:30 | 同上（幂等重试） | 保证 14:28 前 `cb_snapshots` 有 11-01 |
 | 14:28 | `cb_signal.py` | `rebalance=True`、`snap_date=2026-11-01`、`latest_snapshot=2026-11-01`、holdings=25 |
 | **14:30** | `QuantTrackA_Daily` → `run_daily.bat` | 先生成 `trade_plan_YYYYMMDD_{a,cb}.json`；**按档位分流**：tier1 自动；tier2 必须 `--approve`；tier3 只出清单、拒绝自动下单。两轨都走 tick 归一/单笔≤10 万/涨停禁买/跌停禁卖 |
-| **14:35** | **人工/助手复核（新增）** | 读 `trade_plan_20261102_cb.json` 的 `tier/tier_reasons/total_est`；跑 `python scripts/render_trade_plan.py --date 20261102` 生成人工清单/成交回填 CSV。tier2 审阅后手动 `fetch_and_execute --track cb --approve`；tier3 按清单逐笔人工执行；不得把“出清单”当成“已执行” |
+| **14:35** | **人工/助手复核（新增）** | 读 `trade_plan_20261102_cb.json` 的 `tier/tier_reasons/total_est`；跑 `python scripts/render_trade_plan.py --date 20261102` 生成人工清单/成交回填 CSV。tier2 审阅后手动 `fetch_and_execute --track cb --approve`；tier3 默认按清单逐笔人工。**2026-10-27 用户授权助手仿真执行**：可 `fetch_and_execute --track cb --approve-tier3`（仅 `ENV=simulation`，生产一律拒绝；仍逐笔过 risk/tick/单笔≤10万）；不得把“出清单”当成“已执行” |
 | 14:45 | `Quant-TrackACheck` → `check_exec.ps1` | **只检查/补跑 track a，不补 cb** |
 | **14:50** | `check_execution_chain.py` | 有 buy/sell/rebalance 但无当天 `execution_result` → 告警；不自动重试 |
 | 15:40 | `verify_cb_monthly_rebalance.py` | selftest 通过 + 五项字段 PASS；状态落 `logs/cb_monthly_verify_state.json`（**跳过也落**，18:40 健康行 `cb_monthly_verify` 可见；含 `next_expect_day`=下一次调仓日） |
@@ -49,7 +49,7 @@
 3. 14:28 `holdings=0` → 停止（全量剔除事件，先查 `excluded`）。
 4. 15:40 verifier FAIL 或 SELFTEST_FAIL → 停止，人工核对；拒单/废单按 tick 纪律（`qmt_client._tick_price`）处理。
 5. 执行后 CB 只数 <25 或单只张数偏离信号 >1 手 → 记录对账差异。**月度口径下不在月内追补**（非调仓日 buy=[]），缺口等到 12-01 月度调仓；若差异来自拒单/废单，按执行层告警单独处理。
-6. **14:30 `trade_plan_*_cb.json` 的 `tier` 为 2/3** → 自动链不会执行：tier2 审阅后手动 `--approve`；tier3 **只能逐笔人工**，不得用 `--approve` 绕过；14:50 `check_execution_chain.py` 会告警“有信号无结果”。**tier3 人工成交不会自动生成 `execution_result`**，14:50 告警属预期；以 15:40 验证器/持仓对账为权威，并手工记录成交张数/均价。
+6. **14:30 `trade_plan_*_cb.json` 的 `tier` 为 2/3** → 自动链不会执行：tier2 审阅后手动 `--approve`；tier3 默认逐笔人工。**仅仿真 + 用户明确授权**可用 `--approve-tier3`（`ENV=production` 拒绝；仍逐笔风控）；14:50 `check_execution_chain.py` 会告警“有信号无结果”。**tier3 人工成交不会自动生成 `execution_result`**，14:50 告警属预期；以 15:40 验证器/持仓对账为权威，并手工记录成交张数/均价。
 
 ## 四、变更历史
 

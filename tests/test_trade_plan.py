@@ -103,6 +103,15 @@ def test_tier1_and_tier2():
     assert classify_tier(mid, sig)[0] == 2       # 单笔>2万 → 档2(今日实盘形态)
 
 
+def test_tier3_override_only_simulation_and_explicit():
+    from scripts.fetch_and_execute import tier3_override_allowed
+    assert tier3_override_allowed("simulation", True) is True
+    assert tier3_override_allowed("production", True) is False
+    assert tier3_override_allowed("development", True) is False
+    assert tier3_override_allowed("simulation", False) is False
+    assert tier3_override_allowed("", True) is False
+
+
 def test_maturity_band():
     from scripts.cb_signal import maturity_band
     # 剔除线 N=60: 已持有 <60 天 → 卖出
