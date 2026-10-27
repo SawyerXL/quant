@@ -164,15 +164,30 @@ def _write_md(out: pd.DataFrame, asof, data):
     asof_str = str(asof.date()) if asof is not None else str(max(
         d["date"].max() for d in data.values()).date())
     counts = out["status"].value_counts().to_dict()
+    n_dates = out["event_date"].nunique()
+    dom = out[out["category"] != "外部"]
     lines = [
         "# 消息事件结果台账（T+1 开盘入场，描述性）", "",
-        f"- as_of: {asof_str}；事件数: {len(out)}；状态: {counts}",
+        f"- as_of: {asof_str}；headline 行数: {len(out)}；唯一事件日: **{n_dates}**；状态: {counts}",
+        f"- 国内政策/监管 headline: {len(dom)} 行 / {dom['event_date'].nunique() if len(dom) else 0} 个事件日；"
+        "**同一事件的多条 headline 不是独立样本，有效样本=事件日**。",
         "- 入场=事件日之后首个交易日开盘；5d/20d 从入场开盘算；未来 bar 不足记 None（不写 0）。",
         "- return_basis=price（不含分红，绝对收益偏低约 2.3pp/年）；benchmark_basis=price。",
         "- 本文只做结果记录，不是信号；direction=unknown 的事件不因单次涨跌改判。",
-        "", "| 事件时间 | 类别 | 事件日 | 入场日 | SH gap | SH 1d | SH 5d | SH 20d | 状态 |",
-        "|---|---|---|---|---:|---:|---:|---:|---|",
+        "", "## 按事件日（独立样本）", "",
+        "| 事件日 | headline 数 | 类别 | SH gap | SH 1d | SH 5d |",
+        "|---|---:|---|---:|---:|---:|",
     ]
+    for dt, sub in out.groupby("event_date", sort=True):
+        def fv(col):
+            s = sub[col].dropna() if col in sub.columns else pd.Series(dtype=float)
+            return "—" if s.empty else f"{float(s.iloc[0]):+.2f}%"
+        cats = ",".join(sorted(set(sub["category"].dropna().astype(str))))
+        lines.append(f"| {dt} | {len(sub)} | {cats} | {fv('sh_gap_pct')} | "
+                     f"{fv('sh_ret_1d_pct')} | {fv('sh_ret_5d_pct')} |")
+    lines += ["", "## 明细（headline，不是独立样本）", "",
+              "| 事件时间 | 类别 | 事件日 | 入场日 | SH gap | SH 1d | SH 5d | SH 20d | 状态 |",
+              "|---|---|---|---|---:|---:|---:|---:|---|"]
     for _, r in out.iterrows():
         def f(k):
             v = r.get(k)
