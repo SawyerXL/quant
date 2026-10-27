@@ -241,9 +241,18 @@ class MockQMTClient:
 
 
 def get_client():
-    """工厂函数：simulation/production 用真实QMT，development（本地）用 Mock。"""
+    """工厂函数：simulation/production 必须真实 QMT；仅 development 允许 Mock。
+
+    2026-10-27 修复: 原逻辑在 ENV=simulation/production 但 xtquant 不可用时
+    静默回退 Mock，日志会显示“成交成功”但实际没有委托（与 fillna(0) 同型）。
+    仿真/生产环境 QMT 不可用必须 fail-fast，不能把 Mock 当真实账户。
+    """
     import os as _os
-    _env = _os.getenv("ENV", "development")
-    if QMT_AVAILABLE and _env in ("simulation", "production"):
+    _env = _os.getenv("ENV", "development").lower()
+    if _env in ("simulation", "production"):
+        if not QMT_AVAILABLE:
+            raise RuntimeError(
+                f"ENV={_env} 但 xtquant 不可用；拒绝回退 MockQMTClient"
+                "（请检查 Windows/QMT 环境与 xtquant 安装）")
         return QMTClient()
     return MockQMTClient()
