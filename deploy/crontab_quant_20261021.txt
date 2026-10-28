@@ -33,6 +33,9 @@ PATH=/usr/local/bin:/usr/bin:/bin
 45 15 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/settle_t_signals.py >> /root/quant/logs/cron_t_settle.log 2>&1
 # 盘前检查: 数据完整性+MA10触发清单+外盘跳空提示(9:03, 邮件送达)
 3 9 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/preopen_check.py >> /root/quant/logs/cron_preopen.log 2>&1
+# QMT终端登录探针(2026-10-28 快照6连败后补): 09:10盘前/14:55快照前; 未登录=告警
+10 9 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/qmt_health_alert.py >> /root/quant/logs/cron_qmt_health.log 2>&1
+55 14 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/qmt_health_alert.py >> /root/quant/logs/cron_qmt_health.log 2>&1
 # CB到期/强赎硬提醒(2026-09-23用户定: 持仓券最后交易日≤5日紧急/≤14日提示, 不依赖N=60过滤实装)
 5 9 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/cb_expiry_alert.py >> /root/quant/logs/cron_cb_expiry.log 2>&1
 # 5分钟线落库(持仓票+上证, 错开15:45做T结算)
