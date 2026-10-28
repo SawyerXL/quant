@@ -34,7 +34,7 @@ def load_sh_monthly():
             frames.append(d[["date", "close"]])
     d = pd.concat(frames).drop_duplicates("date").sort_values("date")
     d = d.set_index("date")["close"].astype(float)
-    return d.resample("ME").last().dropna()
+    return d.resample("ME").last().dropna(), d.index.max()
 
 
 def load_us10y():
@@ -48,7 +48,7 @@ def load_us10y():
     d = d[["date", "美国国债收益率10年"]].dropna()
     d.columns = ["date", "y10"]
     d = d.set_index("date")["y10"].astype(float)
-    return d.resample("ME").last().dropna()
+    return d.resample("ME").last().dropna(), d.index.max()
 
 
 def stats(x):
@@ -72,9 +72,12 @@ def mde(a, b):
 
 
 def main():
-    sh = load_sh_monthly()
-    y10 = load_us10y()
+    sh, sh_last = load_sh_monthly()
+    y10, y10_last = load_us10y()
+    last_actual = max(sh_last, y10_last)
     df = pd.concat({"sh": sh, "y10": y10}, axis=1).dropna()
+    # 丢弃未完成月：月线标签(月末)晚于实际最后数据日
+    df = df[df.index <= last_actual]
     df["chg12"] = df.y10 - df.y10.shift(12)
     df["ma10"] = df.y10.rolling(10).mean()
     df["rising"] = df.chg12 > 0
@@ -84,7 +87,9 @@ def main():
     for h in (1, 3, 6, 12):
         df[f"fwd{h}"] = df.sh.shift(-h) / df.sh - 1
 
-    out = {"as_of": str(df.index[-1].date()), "start": str(df.index[0].date()),
+    out = {"as_of": str(last_actual.date()),
+           "sample_end": str(df.index[-1].date()),
+           "start": str(df.index[0].date()),
            "n_months": int(len(df)), "regimes": {}}
     for name, mask in (("rising", df.rising), ("falling", ~df.rising),
                        ("above_ma", df.above_ma),
@@ -138,7 +143,8 @@ def main():
                         encoding="utf-8")
 
     lines = ["# 美债10Y状态 vs 上证前瞻收益（2000-2026，描述性）", "",
-             f"- as_of={out['as_of']}，n={out['n_months']} 个月；1m非重叠，3/6/12m重叠。",
+             f"- as_of={out['as_of']}，样本末={out['sample_end']}，n={out['n_months']} 个月；"
+             "1m非重叠，3/6/12m重叠；未完成月已丢弃。",
              "- 状态为月末已知值；不生成信号。", "",
              "## 状态均值（%）", "",
              "| 状态 | n | fwd1m | fwd3m | fwd6m | fwd12m | 1m胜率 |",
