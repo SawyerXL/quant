@@ -15,6 +15,7 @@ import argparse
 import csv
 import hashlib
 import json
+import re
 from datetime import date
 from pathlib import Path
 
@@ -85,6 +86,13 @@ ROUTINE_OMO = ("逆回购操作量为零", "今日开展", "净投放", "净回�
                "公开市场业务一级交易商", "天期逆回购操作量",
                "隔夜逆回购操作")
 RATE_ACTIONS = ("降准", "降息", "MLF", "LPR", "利率下调", "利率上调")
+# 政策“公告/发布”不应被 EXCLUDE 的“公司公告”规则误杀；只在国内政策主体
+# + 明确动作 + 无公司身份时豁免。
+POLICY_EXEMPT = ("设立", "推出", "决定", "印发", "出台", "实施",
+                 "启动", "开展", "调整", "修订", "发布")
+COMPANY_TERMS = ("公司", "股份", "业绩", "研报", "评级", "中标", "签约")
+# 日常 OMO 是背景；单日净投放/回笼超过 5000 亿元才算重大流动性事件。
+LARGE_LIQUIDITY_YI = 5000.0
 EXCLUDE = ("研报", "评级", "目标价", "盘前", "股价", "成交", "ETF成交",
            "公司", "股份", "公告", "业绩", "数据显示", "指数报",
            "期货", "上涨", "下跌", "涨幅", "跌幅", "涨停", "跌停",
@@ -123,12 +131,28 @@ HIGH_IMPACT_EXTERNAL = ("油价", "石油", "制裁", "军事", "袭击", "战�
                         "美联储", "关税", "中美", "双反")
 
 
+def _large_liquidity(title: str) -> bool:
+    vals = []
+    for m in re.findall(r"([0-9][0-9,\.]*)\s*亿元", title):
+        try:
+            vals.append(float(m.replace(",", "")))
+        except ValueError:
+            pass
+    return bool(vals) and max(vals) >= LARGE_LIQUIDITY_YI
+
+
 def _material(title: str, cat: str) -> bool:
-    if cat != "外部" and any(x in title for x in EXCLUDE):
-        return False
+    if cat != "外部":
+        policy_exempt = (
+            any(x in title for x in POLICY_EXEMPT)
+            and any(x in title for x in STRICT_BODIES)
+            and not any(x in title for x in COMPANY_TERMS))
+        if any(x in title for x in EXCLUDE) and not policy_exempt:
+            return False
     if (cat != "外部" and "央行" in title
             and any(x in title for x in ROUTINE_OMO)
-            and not any(x in title for x in RATE_ACTIONS)):
+            and not any(x in title for x in RATE_ACTIONS)
+            and not _large_liquidity(title)):
         return False
     if cat == "外部":
         # 外围只留宏观/市场级，不留海外个股/研报/纯价格播报

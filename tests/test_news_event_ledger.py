@@ -99,3 +99,23 @@ def test_exchange_system_normal_not_material():
     cat, _ = nel._classify(title)
     assert cat == "资本市场"
     assert nel._material(title, cat) is False
+
+
+def test_policy_announcement_not_killed_by_announce_exclude():
+    title = "央行公告：设立债市非银大额赎回互换便利"
+    cat, _ = nel._classify(title)
+    assert cat == "金融战略/货币"
+    assert nel._material(title, cat) is True
+
+
+def test_large_net_injection_material():
+    title = "央行逆回购今日净投放10,140.0亿元"
+    cat, _ = nel._classify(title)
+    assert cat == "金融战略/货币"
+    assert nel._material(title, cat) is True
+
+
+def test_small_net_injection_not_material():
+    title = "央行公开市场今日净投放240.0亿元"
+    cat, _ = nel._classify(title)
+    assert nel._material(title, cat) is False
