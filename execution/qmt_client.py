@@ -248,7 +248,9 @@ def get_client():
     仿真/生产环境 QMT 不可用必须 fail-fast，不能把 Mock 当真实账户。
     """
     import os as _os
-    _env = _os.getenv("ENV", "development").lower()
+    # Windows 任务里 `set ENV=simulation &&` 会把值写成 "simulation "（尾空格）；
+    # 不 strip 会落进 development 分支→静默 Mock，10-29 002028 已实锤。
+    _env = _os.getenv("ENV", "development").strip().lower()
     if _env in ("simulation", "production"):
         if not QMT_AVAILABLE:
             raise RuntimeError(

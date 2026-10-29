@@ -29,3 +29,11 @@ def test_env_is_case_insensitive(monkeypatch):
     monkeypatch.setenv("ENV", "SIMULATION")
     with pytest.raises(RuntimeError, match="拒绝回退"):
         qc.get_client()
+
+
+def test_env_trailing_space_does_not_fall_back_to_mock(monkeypatch):
+    # Windows `set ENV=simulation &&` 的尾部空格；10-29 002028 实锤
+    monkeypatch.setattr(qc, "QMT_AVAILABLE", False)
+    monkeypatch.setenv("ENV", "simulation ")
+    with pytest.raises(RuntimeError, match="拒绝回退"):
+        qc.get_client()
