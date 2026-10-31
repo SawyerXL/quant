@@ -44,6 +44,20 @@ def test_metrics_short_sample_has_no_annualized():
     assert m["cum_pct"] == pytest.approx(2.0)
 
 
+def test_tracking_beta_alpha_on_scaled_series():
+    idx = _dates(6)
+    bt_ret = pd.Series([0.01, -0.02, 0.015, 0.005, -0.01], index=idx[1:])
+    live_ret = 2 * bt_ret + 0.001
+    bt = (1 + bt_ret).cumprod()
+    live = (1 + live_ret).cumprod()
+    bt = pd.concat([pd.Series([1.0], index=idx[:1]), bt])
+    live = pd.concat([pd.Series([1.0], index=idx[:1]), live])
+    tr = mod.tracking(live, bt)
+    assert tr["beta"] == pytest.approx(2.0, abs=1e-6)
+    assert tr["alpha_ann_pct"] == pytest.approx(25.2, abs=1e-6)
+    assert tr["corr"] == pytest.approx(1.0, abs=1e-9)
+
+
 def test_cb_vs_index_relative_uses_common_window(tmp_path, monkeypatch):
     idx = pd.DataFrame({
         "date": _dates(3),

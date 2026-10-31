@@ -100,6 +100,12 @@ def tracking(live: pd.Series, bt: pd.Series) -> dict:
     cum_bt = float(j["bt"].iloc[-1] - 1)
     monthly = j.resample("ME").last().pct_change().dropna()
     mdiff = (monthly["live"] - monthly["bt"]).dropna()
+    beta = alpha_ann = corr = None
+    if len(diff) > 2 and float(br.var()) > 0:
+        cov = np.cov(lr, br, ddof=1)
+        beta = float(cov[0, 1] / cov[1, 1])
+        alpha_ann = float((lr.mean() - beta * br.mean()) * 252)
+        corr = float(lr.corr(br))
     return {
         "n": len(j),
         "start": str(j.index[0].date()),
@@ -107,6 +113,9 @@ def tracking(live: pd.Series, bt: pd.Series) -> dict:
         "cum_live_pct": round(cum_live * 100, 3),
         "cum_bt_pct": round(cum_bt * 100, 3),
         "excess_pp": round((cum_live - cum_bt) * 100, 3),
+        "beta": round(beta, 3) if beta is not None else None,
+        "alpha_ann_pct": round(alpha_ann * 100, 3) if alpha_ann is not None else None,
+        "corr": round(corr, 3) if corr is not None else None,
         "te_ann_pct": round(float(diff.std() * np.sqrt(252) * 100), 3)
         if len(diff) > 1 else None,
         "tracking_diff_ann_pct": round(float(diff.mean() * 252 * 100), 3)
@@ -235,6 +244,8 @@ def render_md(d: dict) -> str:
         f"- **跟踪差（累计）**：{tr.get('excess_pp')}pp；"
         f"跟踪误差（年化）：{tr.get('te_ann_pct')}%；"
         f"年化跟踪差：{tr.get('tracking_diff_ann_pct')}%",
+        f"- 回归：beta={tr.get('beta')}，alpha(年化)={tr.get('alpha_ann_pct')}%，"
+        f"corr={tr.get('corr')}",
         f"- 回测结束后 live 尾巴：{d.get('live_after_bt_end', {})}",
         f"- 暴露：平均投入 {d['exposure']['avg_invested_pct']}%，"
         f"最新 {d['exposure']['last_invested_pct']}%；持仓 "
