@@ -1,0 +1,7 @@
+.venv/
+models/
+data/*.m4s
+data/*.wav
+# 完整转录仅本地研究，不入库（避免转载/再分发版权内容）
+data/*.transcript.json
+data/*.transcript.md

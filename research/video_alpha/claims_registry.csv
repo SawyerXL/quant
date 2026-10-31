@@ -1,0 +1,5 @@
+claim_id,source_id,source_url,published_at,fetched_at,claim_text,mechanism,universe,signal_time,entry_time,exit_time,holding_days,data_needed,costs_accounted,testable,status,test_artifact,notes
+C0001,S0001,https://www.bilibili.com/video/BV1V7x16UEAZ,2026-10-31T19:36:43+08:00,2026-10-31T22:40:00+08:00,"开盘集合竞价9:15-9:25，9:20后不可撤单，9:25单一价格成交；隔夜信息在此定价","交易所撮合规则","A股","09:25","","",0,"交易所规则原文","N/A","yes(规则核验)","known_mechanic","","execution reference; no factor"
+C0002,S0001,https://www.bilibili.com/video/BV1V7x16UEAZ,2026-10-31T19:36:43+08:00,2026-10-31T22:40:00+08:00,"连续两个10%涨停合计21%，不是20%；消息影响分多日消化","复利/涨跌停限制","A股","","","",0,"交易所规则原文","N/A","yes","known_mechanic","","no factor"
+C0003,S0001,https://www.bilibili.com/video/BV1V7x16UEAZ,2026-10-31T19:36:43+08:00,2026-10-31T22:40:00+08:00,"T+1：买入当天不能卖；债券/ETF/跨境ETF可T+0","交易制度","A股/ETF/CB","","","",0,"交易所规则原文","N/A","yes","known_mechanic","","T0底仓约束"
+C0004,S0001,https://www.bilibili.com/video/BV1V7x16UEAZ,2026-10-31T19:36:43+08:00,2026-10-31T22:40:00+08:00,"收盘集合竞价14:57-15:00；盘后固定价格15:05-15:30","交易所撮合规则","A股","14:57","","",0,"交易所规则原文","N/A","needs_verification","needs_verification","","转录有ASR误差；先核对交易所原文"
