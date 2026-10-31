@@ -1,2 +1,3 @@
 source_id,source_type,platform,url,title,author,published_at,fetched_at,has_transcript,transcript_path,credibility_tier,notes
 S0001,video,Bilibili,https://www.bilibili.com/video/BV1V7x16UEAZ,【刻舟量化】A股每天只交易4小时，夜里的消息去哪了,刻舟量化,2026-10-31T19:36:43+08:00,2026-10-31T22:40:00+08:00,yes,data/BV1V7x16UEAZ.transcript.json,C,"制度科普，无数据/回测；ASR转录"
+S0002,paper,Journal of Financial Markets,https://research.rug.nl/nl/publications/the-overnight-return-puzzle-and-the-t1-trading-rule-in-chinese-st/,The overnight return puzzle and the T+1 trading rule in Chinese stock markets,Qiao & Dam,2020-09-01,2026-10-31T22:58:00+08:00,no,,"A","DOI 10.1016/j.finmar.2020.100534；摘要取自出版方仓库；PDF被Cloudflare拦"

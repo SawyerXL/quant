@@ -106,3 +106,5 @@ PATH=/usr/local/bin:/usr/bin:/bin
 30 7 * * 1 cd /root/quant && /root/quant/.venv/bin/python scripts/archive_index_members.py >> /root/quant/logs/cron_members_archive.log 2>&1
 # 数据洞周度扫描(2026-10-25 用户批准; 周日07:30; 只读, 输出 logs/coverage_scan_YYYYMMDD.csv)
 30 7 * * 0 cd /root/quant && /root/quant/.venv/bin/python scripts/calendar_coverage_scan.py >> /root/quant/logs/cron_coverage_scan.log 2>&1
+# 实盘vs回测跟踪(2026-10-31; 15:42 在 NAV 重建后; 只读)
+42 15 * * 1-5 cd /root/quant && /root/quant/.venv/bin/python scripts/live_performance_track.py >> /root/quant/logs/cron_live_track.log 2>&1
