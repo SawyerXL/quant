@@ -77,6 +77,24 @@ def test_exposure_segments_attributes_only_in_segment_days():
     assert seg["cash_only"]["nav_combined_pct"] == pytest.approx(0.9901, abs=1e-3)
 
 
+def test_cb_vs_index_beta_alpha_on_scaled_series(tmp_path, monkeypatch):
+    idx = _dates(5)
+    idx_ret = pd.Series([0.01, -0.02, 0.015, -0.005], index=idx[1:])
+    cb_ret = 0.5 * idx_ret + 0.001
+    idx_close = 100 * (1 + idx_ret).cumprod()
+    idx_close = pd.concat([pd.Series([100.0], index=idx[:1]), idx_close])
+    cb_nav = (1 + cb_ret).cumprod()
+    cb_nav = pd.concat([pd.Series([1.0], index=idx[:1]), cb_nav])
+    p = tmp_path / "cb_index.parquet"
+    pd.DataFrame({"date": idx, "close": idx_close.values}).to_parquet(p)
+    monkeypatch.setattr(mod, "CB_INDEX", p)
+    live = pd.DataFrame({"nav_cb": cb_nav.values}, index=idx)
+    out = mod.cb_vs_index(live)
+    assert out["beta"] == pytest.approx(0.5, abs=1e-6)
+    assert out["alpha_ann_pct"] == pytest.approx(25.2, abs=1e-6)
+    assert out["corr"] == pytest.approx(1.0, abs=1e-9)
+
+
 def test_cb_vs_index_relative_uses_common_window(tmp_path, monkeypatch):
     idx = pd.DataFrame({
         "date": _dates(3),

@@ -141,6 +141,14 @@ def cb_vs_index(live: pd.DataFrame) -> dict:
     j = j / j.iloc[0]
     cum_cb = float(j["cb"].iloc[-1] - 1)
     cum_idx = float(j["idx"].iloc[-1] - 1)
+    lr = j["cb"].pct_change().dropna()
+    ir = j["idx"].pct_change().dropna()
+    beta = alpha_ann = corr = None
+    if len(lr) > 2 and float(ir.var()) > 0:
+        cov = np.cov(lr, ir, ddof=1)
+        beta = float(cov[0, 1] / cov[1, 1])
+        alpha_ann = float((lr.mean() - beta * ir.mean()) * 252)
+        corr = float(lr.corr(ir))
     return {
         "n": len(j),
         "start": str(j.index[0].date()),
@@ -148,6 +156,9 @@ def cb_vs_index(live: pd.DataFrame) -> dict:
         "cb_cum_pct": round(cum_cb * 100, 3),
         "index_cum_pct": round(cum_idx * 100, 3),
         "relative_pp": round((cum_cb - cum_idx) * 100, 3),
+        "beta": round(beta, 3) if beta is not None else None,
+        "alpha_ann_pct": round(alpha_ann * 100, 3) if alpha_ann is not None else None,
+        "corr": round(corr, 3) if corr is not None else None,
         "benchmark_basis": "price_close; 全市场 CB 指数，非策略同宇宙",
         "caveats": "价格口径/无分红；指数只到 10-23；单路径",
     }
@@ -294,6 +305,8 @@ def render_md(d: dict) -> str:
         f"- 同窗 {cb.get('start')} → {cb.get('end')}（n={cb.get('n')}）："
         f"CB 腿 {cb.get('cb_cum_pct')}% vs 指数 {cb.get('index_cum_pct')}%，"
         f"相对 {cb.get('relative_pp')}pp",
+        f"- CB 回归：beta={cb.get('beta')}，"
+        f"alpha(年化)={cb.get('alpha_ann_pct')}%，corr={cb.get('corr')}",
         f"- 口径：{cb.get('benchmark_basis')}；{cb.get('caveats')}",
         "",
         "## 局限",
