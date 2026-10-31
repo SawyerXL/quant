@@ -153,6 +153,36 @@ def cb_vs_index(live: pd.DataFrame) -> dict:
     }
 
 
+def exposure_segments(live: pd.DataFrame) -> dict:
+    """按股票腿是否持仓拆分，归因 nav_a/nav_cb/nav_combined 的日收益。
+
+    只看段内发生的日收益（pct_change 后按 mask 取），不是两端的净值差；
+    这样不会把段外的涨跌算进来。"""
+    out = {}
+    for label, mask in (
+        ("stock_active", live["n_pos_a"] > 1),
+        ("cash_only", live["n_pos_a"] <= 1),
+    ):
+        x = live.loc[mask]
+        if len(x) < 2:
+            continue
+        r = x[["nav_a", "nav_cb", "nav_combined"]].pct_change().dropna()
+        if r.empty:
+            continue
+        out[label] = {
+            "n_days": int(len(x)),
+            "n_ret_days": int(len(r)),
+            "start": str(x.index[0].date()),
+            "end": str(x.index[-1].date()),
+            "nav_a_pct": round(float((1 + r["nav_a"]).prod() - 1) * 100, 3),
+            "nav_cb_pct": round(float((1 + r["nav_cb"]).prod() - 1) * 100, 3),
+            "nav_combined_pct": round(
+                float((1 + r["nav_combined"]).prod() - 1) * 100, 3
+            ),
+        }
+    return out
+
+
 def expected_last_bar() -> str | None:
     if not DAILY_STUDY.exists():
         return None
@@ -194,6 +224,7 @@ def build(live_path: Path = LIVE, bt_path: Path = BT) -> dict:
         "backtest_source": str(BT.relative_to(ROOT)),
         "tracking": tr,
         "live_after_bt_end": tail,
+        "exposure_segments": exposure_segments(live_w),
         "cb_vs_index": cb_vs_index(live_w),
         "exposure": {
             "last_invested_combined": float(live_w["invested_combined"].iloc[-1]),
@@ -252,6 +283,12 @@ def render_md(d: dict) -> str:
         f"{d['exposure']['min_n_pos_combined']}~"
         f"{d['exposure']['max_n_pos_combined']} 只（最新 "
         f"{d['exposure']['last_n_pos_combined']}）",
+        *[
+            f"- {label}: {e['start']}→{e['end']} n={e['n_days']}；"
+            f"nav_a {e['nav_a_pct']}% / nav_cb {e['nav_cb_pct']}% / "
+            f"combined {e['nav_combined_pct']}%"
+            for label, e in d.get("exposure_segments", {}).items()
+        ],
         "",
         "## CB 腿 vs CB 指数",
         f"- 同窗 {cb.get('start')} → {cb.get('end')}（n={cb.get('n')}）："

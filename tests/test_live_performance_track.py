@@ -58,6 +58,25 @@ def test_tracking_beta_alpha_on_scaled_series():
     assert tr["corr"] == pytest.approx(1.0, abs=1e-9)
 
 
+def test_exposure_segments_attributes_only_in_segment_days():
+    idx = _dates(5)
+    live = pd.DataFrame({
+        "n_pos_a": [20, 20, 1, 1, 1],
+        "nav_a": [1.00, 1.01, 1.02, 1.03, 1.04],
+        "nav_cb": [1.00, 0.99, 0.98, 0.97, 0.96],
+        "nav_combined": [1.000, 1.005, 1.010, 1.015, 1.020],
+    }, index=idx)
+    seg = mod.exposure_segments(live)
+    assert seg["stock_active"]["n_days"] == 2
+    assert seg["stock_active"]["nav_a_pct"] == pytest.approx(1.0)
+    assert seg["stock_active"]["nav_cb_pct"] == pytest.approx(-1.0)
+    assert seg["stock_active"]["nav_combined_pct"] == pytest.approx(0.5)
+    assert seg["cash_only"]["n_days"] == 3
+    assert seg["cash_only"]["nav_a_pct"] == pytest.approx(1.9608, abs=1e-3)
+    assert seg["cash_only"]["nav_cb_pct"] == pytest.approx(-2.0408, abs=1e-3)
+    assert seg["cash_only"]["nav_combined_pct"] == pytest.approx(0.9901, abs=1e-3)
+
+
 def test_cb_vs_index_relative_uses_common_window(tmp_path, monkeypatch):
     idx = pd.DataFrame({
         "date": _dates(3),
