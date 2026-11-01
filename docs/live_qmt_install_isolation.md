@@ -4,6 +4,26 @@
 > `userdata_mini`、`.env`、仓库、日志、信号、锁、计划任务全部隔离。
 > **先装、先 dry-run，不下单；100 万切换仍冻结。**
 
+## 0. 2026-11-01 券商约束：QMT“本地编写、本地运行”
+
+券商反馈 QMT **只支持本地编写、本地运行**。这不必然推翻当前架构，但必须先确认
+“本地”的边界：
+
+| 解释 | 对当前架构的影响 |
+|---|---|
+| A. 同机外部 Python 可调用 `xtquant/XtQuantTrader` | 兼容：`fetch_and_execute.py` 本就在 Windows 本地跑；Linux 只生成信号文件。若禁止 SSH 远程触发，改用 Windows 本地 Task Scheduler |
+| B. 只允许 QMT 内置 Python 编辑器 | 不兼容：`fetch_and_execute`/`cash_sweep`/`qmt_snapshot`/健康行都要移植到 QMT 内置策略；100 万切换重新排期 |
+| C. 外部 Python 可运行，但代码必须在本地 Windows 编辑/部署 | 兼容但流程要改：Linux 不直接改/执行 live 代码；用 Windows 本地仓 + Git/同步，Linux 只产信号 |
+
+**必须向券商书面确认**：
+1. 同机外部 Python 的 `xtquant`/`XtQuantTrader` API 是否开放？
+2. 是否允许 Windows 计划任务/本地脚本启动，禁止 SSH 远程触发？
+3. Linux 只生成信号文件、通过共享目录/scp 传到 Windows 本地，是否允许？
+4. Windows 云服务器（当前这台）是否算“本地”？
+5. miniQMT/极简模式/独立交易/API 权限如何开通？
+
+确认前**不改架构、不下单、不切 100 万**；当前仍 `result=-1`、002028 −399。
+
 ## 1. 安装（Windows 上人工做）
 
 1. 向国金客户经理申请 **实盘 QMT 权限/安装包**；确认实盘资金账号、交易权限、
