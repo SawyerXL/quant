@@ -33,6 +33,7 @@ from daily_signal_a_v2 import (
 from run_backtest_a import load_panels
 from data.storage import load_meta
 from monitoring.alerts import send_alert
+from analyst_avoid import get_blacklist
 
 logger.add("logs/signal_a_grouped_{time:YYYY-MM-DD}.log",
            rotation="1 day", retention="365 days")
@@ -169,6 +170,9 @@ def run_group(g: str, offset: int, today: str, calendar, panel, amt,
     prev_holdings = list(holdings)   # 校正前快照: 用于区分"上期就持有"vs"新目标"
     holdings, days_below = _correct_group(g, calendar, holdings, days_below,
                                           prev_holdings)
+    avoid = get_blacklist(today, calendar)
+    if avoid:
+        logger.info(f"[{g} 调低回避] {today}: {len(avoid)}只")
 
     # 熊市: 清仓信号
     if pos_ratio <= 0.30:
@@ -199,7 +203,8 @@ def run_group(g: str, offset: int, today: str, calendar, panel, amt,
             rprices = latest_prices
             budget = GROUP_CAPITAL * pos_ratio / N_HOLDINGS
             candidates = _select_top_turnover(
-                amt, rprices, budget * N_HOLDINGS, int(N_HOLDINGS * 1.5))
+                amt, rprices, budget * N_HOLDINGS, int(N_HOLDINGS * 1.5),
+                exclude=avoid)
             excluded = set(holdings) | set(ma10_exits)
             for c in candidates:
                 if c not in excluded and c not in replacements:
@@ -218,7 +223,8 @@ def run_group(g: str, offset: int, today: str, calendar, panel, amt,
     if is_rebal:
         # 组调仓日: 独立TOP30选股
         budget = capital_now
-        selected = _select_top_turnover(amt, latest_prices, budget, N_HOLDINGS)
+        selected = _select_top_turnover(amt, latest_prices, budget, N_HOLDINGS,
+                                         exclude=avoid)
         sell_list = [c for c in holdings if c not in set(selected)]
         buy_list = [c for c in selected if c not in set(holdings)]
         holdings = [c for c in holdings if c in set(selected)] + buy_list

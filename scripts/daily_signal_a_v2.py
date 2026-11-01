@@ -102,7 +102,7 @@ def _fill_missing_shares(holdings, shares, prices, capital):
             out[code] = int(budget / float(p) / min_lot) * min_lot
     return out
 
-def _select_top_turnover(amt_panel, prices, capital, n=60):
+def _select_top_turnover(amt_panel, prices, capital, n=60, exclude=None):
     """
     选成交额最大的 N 只（v2.2: TOP60），v2.1 拥挤度过滤（vol20>5% 剔除），
     再跳过买不起一手的科创板高价股。capital: 总资金 → 单只预算 = capital/n
@@ -111,11 +111,15 @@ def _select_top_turnover(amt_panel, prices, capital, n=60):
     budget = capital / n
     today = str(date.today())
     vol_start = (date.today() - timedelta(days=150)).strftime("%Y-%m-%d")
-    # 先取 2N 候补, 拥挤度过滤后逐个检查买得起, 直到凑满 N
+    # 先取 2N 候补(有排除集时放大到 3N), 拥挤度过滤后逐个检查买得起
+    ex = exclude or set()
+    scan_n = n * 2 if not ex else n * 3
     affordable = []
-    for code in avg.nlargest(n * 2).index:
+    for code in avg.nlargest(scan_n).index:
         if len(affordable) >= n:
             break
+        if code in ex:
+            continue
         # v2.1 拥挤度过滤: 只用 T-1 及以前(严格口径, 与回测 backtest_engine 一致)
         try:
             d = load_daily(code, vol_start, today)
