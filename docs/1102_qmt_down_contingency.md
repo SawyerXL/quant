@@ -21,7 +21,7 @@
   （已有 11-01 快照则跳过）；13:30 幂等重试。
 - 13:30 仍无 **2026-11-01** 快照 → **停止 CB 执行**，人工 `--force` 补建；
   不得用 10-30/旧快照替代。
-- 只读检查：`logs/cron_cb_snap_recent.log`、`logs/cb_monthly_verify.log`。
+- 只读检查：`logs/cron_cb_snap_recent.log`、`logs/cron_cb_monthly_verify.log`。
 
 ## 3. 盘中（14:25–15:40）
 
