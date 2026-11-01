@@ -62,25 +62,50 @@
   提示无需修复；**不要 --go**）。
 - 截图/记录 `userdata_mini` 路径、账号后四位、登录状态。
 
-### Phase 1：profile 层（代码）
+### Phase 1：profile 层（2026-11-01 已实装，默认 sim 不变）
 
-新增环境变量/配置，默认值保持仿真行为不变：
+已加环境变量：
+- `fetch_and_execute.py`：`ACCOUNT_PROFILE`、`LINUX_REMOTE_ROOT`、
+  `LOCAL_SIGNAL_DIR`、`REMOTE_SIGNAL_DIR`；结果 scp 与信号拉取都走 remote root。
+- `qmt_snapshot.py` / `qmt_health_alert.py` / `measure_execution_costs.py`：
+  `WIN_ROOT`（默认 `H:/quant`；live 设 `H:/quant_live`）。
+- `cb_signal.py` / `daily_signal_a_v2.py` / `daily_signal_a_grouped.py`：
+  `SIGNAL_DIR`（默认 `data_store/meta`；live 设 `signals`）。
+- 新增 5 个 profile 测试；全量 **257 passed**；默认仿真路径完全不变。
 
+### Phase 1.1：live `.env` 模板（不要提交）
+
+Windows `H:\quant_live\.env`：
+```dotenv
+ENV=production
+ACCOUNT_PROFILE=live
+QMT_PATH=F:/国金证券QMT交易端/userdata_mini
+QMT_ACCOUNT_ID=<实盘资金账号>
+LINUX_SERVER=106.15.61.81
+LINUX_PORT=12201
+LINUX_REMOTE_ROOT=/root/quant_live
+REMOTE_SIGNAL_DIR=signals
+LOCAL_SIGNAL_DIR=data_store/meta
 ```
-ACCOUNT_PROFILE=sim|live
-QMT_PATH=...
-QMT_ACCOUNT_ID=...
-WIN_ROOT=H:/quant            # live: H:/quant_live
-LINUX_REMOTE_ROOT=/root/quant # live: /root/quant_live
-SIGNAL_DIR=data_store/meta    # live: /root/quant_live/data_store/meta
-LOG_DIR=logs                  # live 独立
+
+Linux `/root/quant_live/.env`：
+```dotenv
+ACCOUNT_PROFILE=live
+SIGNAL_DIR=signals
+WIN_ROOT=H:/quant_live
 ```
 
-需要参数化/测试的文件：
-`qmt_snapshot.py`、`fetch_and_execute.py`、`daily_signal_a_v2.py`、
-`daily_signal_a_grouped.py`、`daily_health_line.py`、CB 信号输出路径。
-测试至少覆盖：路径构造、profile 默认值、结果 scp 目标、信号目录、
-健康行 profile 读取；不得改变 `ACCOUNT_PROFILE=sim` 的现有行为。
+要点：Windows 仓 `H:\quant_live` 与 Linux 仓 `/root/quant_live` 各自独立；
+信号走 `signals/`，不碰仿真 `data_store/meta` 的 signal 文件；
+`data_store` 行情数据可共享，但 `meta/signal_*` 必须分开。
+
+### Phase 1.2：尚未覆盖
+
+- `daily_health_line.py` 仍按仓库相对路径运行；live 需在 `/root/quant_live`
+  跑独立健康行（或后续加 profile），否则实盘故障不可见。
+- `LOG_DIR` 未全局参数化；靠独立仓库/目录隔离（`/root/quant_live`,
+  `H:\quant_live`）。
+- `run_daily.bat` 仍按 Windows 仓内相对路径；live 仓需单独任务/入口。
 
 ### Phase 2：实盘 dry-run
 

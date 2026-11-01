@@ -41,11 +41,13 @@ GROUPS = {"g0": 2, "g1": 7}          # 组偏移(交易日), 摊平定案{2,7}
 GROUP_CAPITAL = 500_000              # 每组50万(方案A: 股票100万=2组)
 N_HOLDINGS = 30                      # pool30定案
 _DRY_RUN = os.environ.get("GROUP_SIGNAL_DRY_RUN", "0") == "1"
-_BASE = Path("/tmp/signal_group_test") if _DRY_RUN else Path("data_store/meta")
+# 2026-11-01 实盘隔离: live Linux 仓设 SIGNAL_DIR=signals; 默认仿真不变。
+_SIGNAL_DIR = Path(os.getenv("SIGNAL_DIR", "data_store/meta"))
+_BASE = Path("/tmp/signal_group_test") if _DRY_RUN else _SIGNAL_DIR
 if _DRY_RUN:
     _BASE.mkdir(parents=True, exist_ok=True)
 GROUP_FILE = {g: _BASE / f"signal_a_{g}.json" for g in GROUPS}
-LEGACY_FILE = Path("data_store/meta/signal_a_latest.json")
+LEGACY_FILE = _SIGNAL_DIR / "signal_a_latest.json"
 
 
 def _is_base_rebalance_day(today: str, calendar: list[str]) -> bool:

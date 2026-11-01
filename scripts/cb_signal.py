@@ -18,6 +18,7 @@ Windows 端 fetch_and_execute --track cb 拉取执行（执行器已参数化 tr
 用法: python scripts/cb_signal.py
 """
 import json
+import os
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -77,7 +78,8 @@ def monthly_snapshot_trigger(prev_snap, latest_snap) -> bool:
         return False
 
 
-SIGNAL_FILE = Path("data_store/meta/signal_cb_latest.json")
+SIGNAL_DIR = Path(os.getenv("SIGNAL_DIR", "data_store/meta"))
+SIGNAL_FILE = SIGNAL_DIR / "signal_cb_latest.json"
 CB_DIR = Path("data_store/convertible_bonds")
 
 

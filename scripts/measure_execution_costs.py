@@ -25,6 +25,7 @@
 """
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -43,7 +44,7 @@ SSH_KEY   = "~/.ssh/id_rsa"
 SSH_PORT  = 2222
 SSH_USER  = "Administrator"
 SSH_HOST  = "127.0.0.1"
-WIN_QUANT = "H:/quant"
+WIN_QUANT = os.getenv("WIN_ROOT", "H:/quant")
 # Windows 上必须用装了 xtquant 的那个解释器全路径; 裸 python 在非交互 ssh
 # 里不是它 → 导出静默失败(与 qmt_snapshot.py 同一教训)
 WIN_PY = r"C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe"

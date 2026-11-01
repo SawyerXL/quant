@@ -13,7 +13,7 @@ Matrix 终端处于登录状态。终端没登录/掉线时, 自动下单会静�
 Cron(交易日): 10 9 * * 1-5  和  25 14 * * 1-5
 用法: python scripts/qmt_health_alert.py
 """
-import subprocess, sys
+import os, subprocess, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -26,11 +26,13 @@ WIN_PY = r"C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python
 SSH = ["ssh", "-p", "2222", "-i", "/root/.ssh/id_rsa",
        "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=12"]
 HOST = "Administrator@127.0.0.1"
+WIN_ROOT = os.getenv("WIN_ROOT", "H:/quant")
+WIN_ROOT_WIN = WIN_ROOT.replace("/", "\\")
 
 
 def probe():
     """返回 (state, detail): state True=连上 / False=没连上 / None=ssh都不通。"""
-    cmd = SSH + [HOST, f'"{WIN_PY}" H:\\quant\\scripts\\qmt_conn_probe.py']
+    cmd = SSH + [HOST, f'"{WIN_PY}" {WIN_ROOT_WIN}\\scripts\\qmt_conn_probe.py']
     try:
         r = subprocess.run(cmd, capture_output=True, text=True,
                            encoding="utf-8", errors="replace", timeout=60)

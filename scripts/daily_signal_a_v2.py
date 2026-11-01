@@ -30,7 +30,8 @@ TRACK_A_CAPITAL = 1_000_000  # 2026-09-02 摊平口径定案: 股票100万(2组�
 N_HOLDINGS      = 30
 MAX_VOL20       = 5.0   # v2.1 拥挤度过滤: 剔除20日波动率>5%的票(严格口径, 不含最近一日)
 MA10_EXIT_DAYS  = 4   # 2026-09-02 权威口径对齐(v2.3 MA10-4d; 原=3是遗留偏差, ptrade决策点4)
-SIGNAL_FILE     = Path("data_store/meta/signal_a_latest.json")
+SIGNAL_DIR      = Path(os.getenv("SIGNAL_DIR", "data_store/meta"))
+SIGNAL_FILE     = SIGNAL_DIR / "signal_a_latest.json"
 
 # ── 工具函数 ────────────────────────────────────────
 def _get_trade_calendar() -> list[str]:

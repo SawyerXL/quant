@@ -21,7 +21,16 @@ WIN_PORT = "2222"
 SSH_KEY = "/root/.ssh/id_rsa"
 # Windows 上必须用装了 xtquant 的那个解释器全路径; 裸 python 在非交互 ssh 里不是它 → export 静默失败
 WIN_PY = r"C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe"
-WIN_FILE = "H:/quant/logs/qmt_positions_latest.json"
+# 2026-11-01 实盘隔离: live Linux 仓设 WIN_ROOT=H:/quant_live。
+WIN_ROOT = os.getenv("WIN_ROOT", "H:/quant")
+WIN_ROOT_WIN = WIN_ROOT.replace("/", "\\")
+
+
+def win_file_for(root: str) -> str:
+    return f"{root}/logs/qmt_positions_latest.json"
+
+
+WIN_FILE = win_file_for(WIN_ROOT)
 LOCAL_LATEST = Path("logs/qmt_positions_latest.json")
 PERF_FILE = Path("logs/qmt_performance.csv")
 NAV_FILE = Path("logs/qmt_nav_history.parquet")
@@ -38,7 +47,7 @@ SSH_OPTS = ["-p", WIN_PORT, "-i", SSH_KEY, "-o", "StrictHostKeyChecking=no", "-o
 SCP_OPTS = ["-P", WIN_PORT, "-i", SSH_KEY, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
 
 def trigger_export():
-    cmd = ["ssh"] + SSH_OPTS + [WIN_HOST, f'"{WIN_PY}" H:\\quant\\scripts\\export_qmt_positions.py --no-push']
+    cmd = ["ssh"] + SSH_OPTS + [WIN_HOST, f'"{WIN_PY}" {WIN_ROOT_WIN}\\scripts\\export_qmt_positions.py --no-push']
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
     if r.returncode != 0:
         logger.error(f"Windows导出失败(rc={r.returncode}): {(r.stderr or r.stdout)[-300:]}")
@@ -75,7 +84,7 @@ def update_nav():
 def backfill_exec_record():
     """收盘后补拉成交数据, 覆盖执行记录中的fill_rate/滑点。"""
     cmd = ["ssh"] + SSH_OPTS + [WIN_HOST,
-           f'"{WIN_PY}" H:/quant/scripts/fetch_and_execute.py --backfill']
+           f'"{WIN_PY}" {WIN_ROOT}/scripts/fetch_and_execute.py --backfill']
     try:
         r = subprocess.run(cmd, capture_output=True, text=True,
                            encoding="utf-8", errors="replace", timeout=120)
@@ -108,7 +117,7 @@ def pull_missing_snapshots():
         return
     pulled = 0
     for fn in sorted(missing):
-        scp_cmd = ["scp"] + SCP_OPTS + [f"{WIN_HOST}:H:/quant/logs/{fn}", f"logs/{fn}"]
+        scp_cmd = ["scp"] + SCP_OPTS + [f"{WIN_HOST}:{WIN_ROOT}/logs/{fn}", f"logs/{fn}"]
         try:
             rr = subprocess.run(scp_cmd, capture_output=True, text=True,
                                 encoding="utf-8", errors="replace", timeout=30)

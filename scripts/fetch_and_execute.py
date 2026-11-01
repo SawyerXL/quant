@@ -35,8 +35,25 @@ LINUX_SERVER  = os.getenv("LINUX_SERVER", "106.15.61.81")  # 2026-09-02: 旧IP47
 LINUX_USER    = os.getenv("LINUX_USER",   "root")
 SSH_KEY       = os.getenv("SSH_KEY", "")
 LINUX_PORT    = os.getenv("LINUX_PORT", "12201")  # 2026-09-05 SSH从22迁移到12201, 执行链scp必须带端口(9/7执行日暴露)
-SIGNAL_DIR    = "data_store/meta"
+# 2026-11-01 实盘隔离: 默认全部指仿真; live .env 设
+# LINUX_REMOTE_ROOT=/root/quant_live, REMOTE_SIGNAL_DIR=signals。
+# LOCAL_SIGNAL_DIR 是 Windows 仓内的落盘目录, 默认不变。
+ACCOUNT_PROFILE = os.getenv("ACCOUNT_PROFILE", "sim").strip().lower()
+LINUX_REMOTE_ROOT = os.getenv("LINUX_REMOTE_ROOT", "/root/quant")
+LOCAL_SIGNAL_DIR  = os.getenv("LOCAL_SIGNAL_DIR", "data_store/meta")
+REMOTE_SIGNAL_DIR = os.getenv("REMOTE_SIGNAL_DIR", LOCAL_SIGNAL_DIR)
+SIGNAL_DIR        = LOCAL_SIGNAL_DIR  # 兼容旧引用
 EXEC_RESULT_DIR = ROOT / "logs"
+
+
+def remote_signal_path(name: str) -> str:
+    """Linux 侧信号文件的相对路径（相对 LINUX_REMOTE_ROOT）。"""
+    return f"{REMOTE_SIGNAL_DIR}/{name}"
+
+
+def local_signal_path(name: str) -> Path:
+    """Windows 仓本地信号落盘路径。"""
+    return ROOT / LOCAL_SIGNAL_DIR / name
 FILL_WAIT_SECS  = 300  # 委托后等待成交确认的秒数 (原45s太短, 填单还没撮合就取数→fill_rate=0%)
 
 
@@ -45,7 +62,7 @@ def push_result_to_linux(result_file: Path) -> bool:
     ssh_opts = ["-P", LINUX_PORT, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
     if SSH_KEY:
         ssh_opts += ["-i", SSH_KEY]
-    remote_path = f"{LINUX_USER}@{LINUX_SERVER}:/root/quant/logs/{result_file.name}"
+    remote_path = f"{LINUX_USER}@{LINUX_SERVER}:{LINUX_REMOTE_ROOT}/logs/{result_file.name}"
     cmd = ["scp"] + ssh_opts + [str(result_file), remote_path]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -69,14 +86,14 @@ def fetch_group_signals() -> dict | None:
     merged = {"holdings": [], "shares": {}, "prices": {},
               "sell": [], "buy": [], "position_ratio": 1.0}
     for g in ("g0", "g1"):
-        remote_file = f"{SIGNAL_DIR}/signal_a_{g}.json"
-        local_file = ROOT / f"data_store/meta/signal_a_{g}.json"
+        remote_file = remote_signal_path(f"signal_a_{g}.json")
+        local_file = local_signal_path(f"signal_a_{g}.json")
         local_file.parent.mkdir(parents=True, exist_ok=True)
         ssh_opts = ["-P", LINUX_PORT, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
         if SSH_KEY:
             ssh_opts += ["-i", SSH_KEY]
         cmd = ["scp"] + ssh_opts + [
-            f"{LINUX_USER}@{LINUX_SERVER}:/root/quant/{remote_file}",
+            f"{LINUX_USER}@{LINUX_SERVER}:{LINUX_REMOTE_ROOT}/{remote_file}",
             str(local_file)]
         try:
             r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -120,8 +137,8 @@ def fetch_group_signals() -> dict | None:
 
 def fetch_signal_from_linux(track: str = "a") -> dict | None:
     """通过 SSH 从 Linux 服务器拉取最新信号文件。"""
-    remote_file = f"{SIGNAL_DIR}/signal_{track}_latest.json"
-    local_file  = ROOT / f"data_store/meta/signal_{track}_latest.json"
+    remote_file = remote_signal_path(f"signal_{track}_latest.json")
+    local_file  = local_signal_path(f"signal_{track}_latest.json")
     local_file.parent.mkdir(parents=True, exist_ok=True)
 
     ssh_opts = ["-P", LINUX_PORT, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
@@ -129,7 +146,7 @@ def fetch_signal_from_linux(track: str = "a") -> dict | None:
         ssh_opts += ["-i", SSH_KEY]
 
     cmd = ["scp"] + ssh_opts + [
-        f"{LINUX_USER}@{LINUX_SERVER}:/root/quant/{remote_file}",
+        f"{LINUX_USER}@{LINUX_SERVER}:{LINUX_REMOTE_ROOT}/{remote_file}",
         str(local_file)
     ]
 
