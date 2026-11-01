@@ -31,12 +31,17 @@ POLICY_PAT = ("座谈会", "召开会议", "资本市场工具", "回购增持�
 
 def scan(days: list[str]) -> dict:
     rows = []
+    n_feed_rows = 0
+    feed_latest = ""
     if FEED.exists():
         with FEED.open(encoding="utf-8") as f:
             for r in csv.DictReader(f):
                 pt = str(r.get("pub_time", ""))
+                if pt:
+                    feed_latest = max(feed_latest, pt)
                 if pt[:10] not in days:
                     continue
+                n_feed_rows += 1
                 title = (r.get("title") or "").strip()
                 if not title:
                     continue
@@ -55,14 +60,27 @@ def scan(days: list[str]) -> dict:
                     })
     rows.sort(key=lambda x: x["pub_time"])
     material = [r for r in rows if r["material"]]
+    now = datetime.now()
+    stale_h = None
+    if feed_latest:
+        try:
+            stale_h = round((now - datetime.strptime(
+                feed_latest[:19], "%Y-%m-%d %H:%M:%S")).total_seconds() / 3600, 2)
+        except ValueError:
+            stale_h = None
     return {
         "days": days,
+        "n_feed_rows": n_feed_rows,
         "n_scanned": len(rows),
         "n_material": len(material),
         "n_policy_hit": sum(r["policy_hit"] for r in rows),
         "material": material,
         "policy_hits": [r for r in rows if r["policy_hit"]],
         "no_material_event": len(material) == 0,
+        "feed_latest": feed_latest,
+        "feed_stale_hours": stale_h,
+        "feed_stale": bool(stale_h is not None and stale_h > 12),
+        "no_data": n_feed_rows == 0,
     }
 
 
@@ -82,9 +100,16 @@ def main() -> int:
     lines = [
         f"# 消息面预检 {args.date}（lookback={args.lookback}）",
         "",
-        f"- 扫描日：{', '.join(days)}；候选/关键词命中：{out['n_scanned']}；"
-        f"material=1：{out['n_material']}；policy_hit：{out['n_policy_hit']}。",
+        f"- 扫描日：{', '.join(days)}；feed行：{out['n_feed_rows']}；"
+        f"候选/关键词命中：{out['n_scanned']}；"
+        f"material=1：{out['n_material']}；policy_hit：{out['n_policy_hit']}；"
+        f"feed_latest={out['feed_latest']}；"
+        f"stale={out['feed_stale_hours']}h。",
     ]
+    if out["no_data"]:
+        lines.append("- **NO_DATA**：目标窗口 feed 无行，不能声称“无事件”。")
+    elif out["feed_stale"]:
+        lines.append("- **FEED_STALE**：feed 超过 12h 未更新，不能声称“无事件”。")
     if out["no_material_event"]:
         lines.append("- **no_material_event**：未发现重大国内政策事件。")
     else:
