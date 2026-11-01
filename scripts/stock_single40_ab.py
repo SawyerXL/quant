@@ -81,8 +81,14 @@ def combo_metrics(stock_nav: pd.Series, cb: pd.DataFrame, col: str) -> dict:
                      join="inner").dropna()
     nav, trig, days = combo(legs)
     m = metrics_ret(nav.pct_change().fillna(0))
-    return {"metrics": m, "trig": int(trig), "days_halted": int(days),
-            "n": int(len(legs))}
+    periods = {}
+    for label, (s, e) in (("IS", ("2019-01-03", "2023-12-31")),
+                          ("OOS", ("2024-01-01", "2026-10-19"))):
+        sub = nav.loc[(nav.index >= s) & (nav.index <= e)]
+        if len(sub) > 2:
+            periods[label] = metrics_ret(sub.pct_change().fillna(0))
+    return {"metrics": m, "periods": periods, "trig": int(trig),
+            "days_halted": int(days), "n": int(len(legs))}
 
 
 def main() -> int:
@@ -157,6 +163,20 @@ def main() -> int:
             f"| {label} | {s['ann_pct']}% | {s['sharpe']} | {s['dd_pct']}% | "
             f"{s['lot_skips']} | {cp['ann_pct']}%/{cp['sharpe']}/{cp['dd_pct']}% | "
             f"{cz['ann_pct']}%/{cz['sharpe']}/{cz['dd_pct']}% |"
+        )
+    lines += [
+        "",
+        "| 腿 | par IS | par OOS | zero IS | zero OOS |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    for label in ("current", "single20", "single40"):
+        p = out["combo"][label]["par"]["periods"]
+        z = out["combo"][label]["zero"]["periods"]
+        lines.append(
+            f"| {label} | {p.get('IS', {}).get('ann_pct', '—')}% | "
+            f"{p.get('OOS', {}).get('ann_pct', '—')}% | "
+            f"{z.get('IS', {}).get('ann_pct', '—')}% | "
+            f"{z.get('OOS', {}).get('ann_pct', '—')}% |"
         )
     lines += [
         "",
