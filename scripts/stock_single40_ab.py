@@ -58,12 +58,25 @@ def build_panel():
     idx = load_meta("csi800_index")
     idx_c = idx.set_index("date")["close"].sort_index()
     idx_c.index = pd.to_datetime(idx_c.index)
-    return panel, ap, idx_c, base
+    return panel, ap, idx_c, base, cal
 
 
-def run_stock(panel, ap, idx_c, base, cap: float):
+def shift_dates(cal: list, base: list, off: int) -> list:
+    idx = {d: i for i, d in enumerate(cal)}
+    out = []
+    for d in base:
+        i = idx.get(d)
+        if i is None or i + off >= len(cal):
+            continue
+        x = cal[i + off]
+        if START <= x <= END:
+            out.append(x)
+    return sorted(set(out))
+
+
+def run_stock(panel, ap, idx_c, dates, cap: float):
     cfg = replace(DEFAULT_CONFIG, lot_size=100, initial_capital=cap)
-    nav, m = run_backtest(panel, ap, base, cfg, idx_c)
+    nav, m = run_backtest(panel, ap, dates, cfg, idx_c)
     cm = calc_metrics(nav)
     return nav, {
         "ann_pct": round(float(cm["年化_float"]) * 100, 3),
@@ -92,13 +105,18 @@ def combo_metrics(stock_nav: pd.Series, cb: pd.DataFrame, col: str) -> dict:
 
 
 def main() -> int:
-    panel, ap, idx_c, base = build_panel()
+    panel, ap, idx_c, base, cal = build_panel()
     print(f"panel {panel.shape[0]}×{panel.shape[1]} rebal {len(base)}", flush=True)
     stock = {}
-    for label, cap in (("single20", 200_000.0), ("single40", 400_000.0)):
-        nav, meta = run_stock(panel, ap, idx_c, base, cap)
+    runs = [("single20", base, 200_000.0),
+            ("single40", base, 400_000.0),
+            ("single40_g0", shift_dates(cal, base, 2), 400_000.0),
+            ("single40_g1", shift_dates(cal, base, 7), 400_000.0)]
+    for label, dates, cap in runs:
+        nav, meta = run_stock(panel, ap, idx_c, dates, cap)
         stock[label] = {"nav": nav, **meta}
-        print(label, stock[label]["ann_pct"], stock[label]["lot_skips"], flush=True)
+        print(label, stock[label]["ann_pct"], stock[label]["lot_skips"],
+              f"rebal={len(dates)}", flush=True)
     cur = pd.read_csv(CURRENT_STOCK, index_col=0, parse_dates=True)["nav"]
     stock["current"] = {
         "nav": cur,
@@ -155,7 +173,8 @@ def main() -> int:
         "| 股票腿 | 年化 | 夏普 | 最大回撤 | lot跳票 | 40/60 par | 40/60 zero |",
         "|---|---:|---:|---:|---:|---:|---:|",
     ]
-    for label in ("current", "single20", "single40"):
+    for label in ("current", "single20", "single40",
+                  "single40_g0", "single40_g1"):
         s = out["stock"][label]
         cp = out["combo"][label]["par"]["metrics"]
         cz = out["combo"][label]["zero"]["metrics"]
@@ -169,7 +188,8 @@ def main() -> int:
         "| 腿 | par IS | par OOS | zero IS | zero OOS |",
         "|---|---:|---:|---:|---:|",
     ]
-    for label in ("current", "single20", "single40"):
+    for label in ("current", "single20", "single40",
+                  "single40_g0", "single40_g1"):
         p = out["combo"][label]["par"]["periods"]
         z = out["combo"][label]["zero"]["periods"]
         lines.append(
