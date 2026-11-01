@@ -5,3 +5,7 @@ data/*.wav
 # 完整转录仅本地研究，不入库（避免转载/再分发版权内容）
 data/*.transcript.json
 data/*.transcript.md
+data/toutiao/*.mp4
+data/toutiao/*.wav
+data/toutiao/*.transcript.json
+data/toutiao/*.transcript.md
