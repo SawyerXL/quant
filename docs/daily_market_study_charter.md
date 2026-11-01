@@ -133,6 +133,7 @@
 | 22:35 | `news_capture.py` 抓 CCTV/全球快讯 |
 | 22:40 后 | `news_event_ledger.py` 产当日候选事件（只读，候选非信号） |
 | 次日 09:03 | 盘前检查把隔夜外盘/消息映射为**跳空提示**，不改收盘方向 |
+| **预测登记前** | **必须跑 `news_precheck.py --date <公告日> --lookback 1`**；全量扫描 `news_feed` 的 material=1 与 policy 关键词命中，无事件也要有 `no_material_event`；禁止只看前一日事件文件或新闻尾部 |
 | 09:30 前 | 预测卡必须含 A/B/C 三层；B 层无事件写“无重大事件” |
 | 收盘后 | `news_event_outcome.py` 计算 T+1 开盘入场的 gap/1d/5d/20d → `logs/news_event_outcomes.csv`；未来 bar 不足记 None/pending，不写 0；通过闸门才登记为研究假设 |
 

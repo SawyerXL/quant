@@ -56,7 +56,15 @@ STRICT_BODIES = ("国务院", "国常会", "政治局", "全会", "央行",
 STRICT_POLICY = ("降准", "降息", "MLF", "LPR", "专项债", "特别国债",
                  "中长期资金", "汇金", "印花税", "注册制", "减持新规",
                  "分红", "退市", "化债", "以旧换新", "出口管制",
-                 "房地产政策", "楼市政策", "现房销售")
+                 "房地产政策", "楼市政策", "现房销售",
+                 "座谈会", "召开会议", "资本市场工具", "回购增持再贷款")
+# 2026-11-01 漏检修复：政策主体 + 会议动作 + 资本市场工具，
+# 即使标题正文提到“证券公司/基金公司”（受众）也不能被 EXCLUDE 的
+# “公司”误杀。例：央行、证监会11-02座谈会研究资本市场工具。
+POLICY_MEETING = ("座谈会", "召开会议", "研究推动", "工作会议",
+                  "专题会议", "部署会")
+CAPITAL_TOOL = ("资本市场工具", "股票回购", "增持再贷款",
+                "回购增持再贷款", "中长期资金", "平准基金")
 EXTERNAL_MATERIAL = ("美联储", "FOMC", "鲍威尔", "点阵图", "关税",
                      "中美", "制裁", "伊朗", "中东", "油价", "石油",
                      "俄乌", "欧洲央行", "日本央行", "双反", "美股",
@@ -143,6 +151,14 @@ def _large_liquidity(title: str) -> bool:
 
 def _material(title: str, cat: str) -> bool:
     if cat != "外部":
+        # 政策主体召开的资本市场工具会议：正文出现“证券公司/基金公司”
+        # 是受众，不是公司新闻；必须在 EXCLUDE 之前豁免。
+        policy_meeting = (
+            any(x in title for x in POLICY_MEETING)
+            and any(x in title for x in CAPITAL_TOOL)
+            and any(x in title for x in STRICT_BODIES))
+        if policy_meeting:
+            return True
         policy_exempt = (
             any(x in title for x in POLICY_EXEMPT)
             and any(x in title for x in STRICT_BODIES)

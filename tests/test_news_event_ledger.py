@@ -101,6 +101,21 @@ def test_exchange_system_normal_not_material():
     assert nel._material(title, cat) is False
 
 
+def test_policy_meeting_with_company_audience_material():
+    title = ("【央行、证监会将于明天召开座谈会】一些证券公司和基金公司接到通知，"
+             "明天上午央行、证监会召开会议，研究推动支持资本市场工具使用。")
+    cat, _ = nel._classify(title)
+    assert cat == "金融战略/货币"
+    assert nel._material(title, cat) is True
+
+
+def test_company_meeting_not_material():
+    title = "某公司召开座谈会研究资本市场工具"
+    cat, _ = nel._classify(title)
+    assert cat is None
+    assert nel._material(title, cat) is False
+
+
 def test_policy_announcement_not_killed_by_announce_exclude():
     title = "央行公告：设立债市非银大额赎回互换便利"
     cat, _ = nel._classify(title)
