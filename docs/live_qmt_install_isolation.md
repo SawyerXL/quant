@@ -24,6 +24,28 @@
 
 确认前**不改架构、不下单、不切 100 万**；当前仍 `result=-1`、002028 −399。
 
+### 0.1 本机 QMT 帮助文档核对（2026-11-01）
+
+已读取 `F:\国金证券QMT交易端\config\help`：
+
+- `python\迅投QMT极速策略交易系统_模型教程_Python_API_说明文档_Python3.pdf`
+  （171 页，doc 3.3.6 / Python 3.6.8 / 2021.12.20）。
+- 文档明确：QMT 支持 **VBA / Python 内置模型**；模型在 QMT 客户端内
+  `init(ContextInfo)` → `handlebar(ContextInfo)` 逐 K 线运行，点击【运行】
+  启动；下单用 `passorder`、查持仓/委托用 `get_trade_detail_data`、
+  定时器用 `run_time`，可读本地篮子文件（`load_stk_list`/
+  `load_stk_vol_list`）。
+- 该文档 **没有出现 `xtquant`/`XtQuantTrader`**；官方文档路径是内置
+  Python 模型，不是外部 Python 调用。因此：
+  - 若券商确认“本地”=QMT 内置模型，则 **现产 `fetch_and_execute + xtquant`
+    不是可交付路径**，执行层必须移植为 QMT 内置模型；
+  - Linux 仍可做研究/信号，但要把信号落成本地 CSV/篮子文件给内置模型读；
+  - 快照/健康/对账需由内置模型写本地文件，或另找官方允许的本地进程。
+- 仍待券商确认：同机外部 Python 的 xtquant API 是否另外开放；内置模型
+  是否允许标准 `open()` 读 JSON（文档只保证篮子 txt/csv）。
+- 结论：**先按内置模型做 port spike（只读/模拟，不下单）**，不把现产
+  xtquant 链当默认；100 万继续冻结。
+
 ## 1. 安装（Windows 上人工做）
 
 1. 向国金客户经理申请 **实盘 QMT 权限/安装包**；确认实盘资金账号、交易权限、
