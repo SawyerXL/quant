@@ -116,7 +116,21 @@ LOG_DIR=logs                  # live 独立
 4. 确认实盘佣金/权限/风控参数。
 5. 明确 live pilot 的资金规模与开始日期。
 
-## 7. 参考
+## 7. 当前实盘安装状态（2026-11-01）
+
+- 用户已安装到 **`F:\国金证券QMT交易端`**；`XtItClient.exe` 已运行。
+- `XtMiniQmt.exe` 存在于 `F:\国金证券QMT交易端\bin.x64\`，但**未运行**；
+  根目录只有 `userdata`，**没有 `userdata_mini`**。
+- 用 `userdata` 路径做只读连接：**QMT_CONN_FAIL result=-1**。
+- 账号目录：`userdata\users\3994****`（这是登录用户目录，**基金账号需用户确认**；
+  `accountInfo.ini` 是加密/二进制，未读取）。
+- 结论：**主客户端已开，但 API 用的极简终端/`userdata_mini` 还没起来**。
+  需在 QMT 登录界面选择**极简模式**（或启动 `bin.x64\XtMiniQmt.exe`）并用
+  实盘账号登录，生成 `userdata_mini`；然后才能用 `QMT_PATH=...\userdata_mini`
+  做只读 probe。
+- 未改 `H:\quant\.env`；未下任何单。
+
+## 8. 参考
 
 - `docs/capital_switch_100w_checklist.md`（100 万切换前置，仍冻结）
 - `docs/1102_qmt_down_contingency.md`
