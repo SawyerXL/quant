@@ -6,8 +6,11 @@
 
 ## 1. 现状与硬约束
 
-- 已加 `config/qmt_builtin_only.flag`：simulation/production 下
-  `get_client()` fail-closed；development 仍 Mock（测试用）。
+- **现有执行链保留**：`execution/qmt_client.py`、`fetch_and_execute.py`、
+  `trader.py`、`cash_sweep`、`qmt_snapshot` 等不修改、不删除、不改变默认
+  行为；内置模型移植在独立 `qmt_builtin/` 目录/独立模型中并行开发。
+  外部 xtquant 仍是“现状/参考”，但**不作为最终交付承诺**；不用于新增
+  真实下单，100 万冻结。
 - 内置模型：QMT 客户端内 Python 3.6.8；`init(ContextInfo)` /
   `handlebar(ContextInfo)`；`passorder` 下单、`get_trade_detail_data`
   查持仓/委托、`run_time` 定时、`load_stk_list`/`load_stk_vol_list`
@@ -37,7 +40,7 @@
 
 ## 3. 阶段
 
-- **P0（已完成）**：外部链 fail-closed；文档/记忆；不改账户。
+- **P0（已完成）**：保留现有执行链原样；建立独立移植目录/文档；不改账户。
 - **P1 只读 spike**：内置模型用 `load_stk_vol_list` 读本地篮子 CSV、
   `get_trade_detail_data` 打日志、`run_time` 定时；不调用 `passorder`；
   同时测试 `open()` 写本地日志/快照、客户端重启后模型是否自动恢复。

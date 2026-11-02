@@ -7,9 +7,9 @@
 ## 0. 2026-11-02 券商最终确认：只能用内置 Python
 
 券商已明确：**只能用 QMT 内置 Python，外部 Python/xtquant 不允许**。
-因此当前 `fetch_and_execute + xtquant` 执行链**不是可交付路径**，已加
-`config/qmt_builtin_only.flag`：simulation/production 下 `get_client()`
-见旗标即 RuntimeError，不再走外部客户端（development 测试仍可用 Mock）。
+因此当前 `fetch_and_execute + xtquant` 执行链**不是最终可交付路径**，但按
+用户 2026-11-02 要求：**保留现有执行链，不修改、不删除、不改变其行为**；
+内置模型移植在独立目录/独立模型中并行开发，完成验证后再决定切换。
 100 万切换继续冻结；QMT 仍是主路径，不转 pTrade。
 
 2026-11-01 曾记录“本地编写、本地运行”的三种解释；现收口为 B（内置模型）：
