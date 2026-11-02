@@ -9,9 +9,11 @@
 
 - `model_p1_readonly.py`：P1 只读 spike（无 `passorder`）：
   - `init` 注册 `run_time` 定时器；
-  - **标准 `open()` 读本地篮子 CSV**（实盘 2026-11-02 实测：
-    `ContextInfo.load_stk_vol_list` 会重命名/消费源文件，不能每轮重读）；
+  - **`ContextInfo.load_stk_vol_list` 只读一次并缓存**（2026-11-02 实测：
+    该 API 会重命名/消费源文件；不能每轮重读）；
   - 调 `get_trade_detail_data` 打印持仓数量；
+  - 标准 `open()` 只用于 heartbeat 写文件探测；模型交易模拟里可能
+    `Foribdden FileIO`，不把它当主路径。
   - 不做任何下单。
 - 后续 P2/P3 模型另开文件；不修改现有执行链。
 

@@ -18,33 +18,28 @@ def init(ContextInfo):
     ContextInfo.run_time("p1_timer", "30nSecond", "2026-01-01 09:30:00", "SH")
 
 
-def read_basket(path):
-    """Read code,volume pairs with standard open().
+BASKET_CACHE = {}
 
-    QMT's ContextInfo.load_stk_vol_list renames/consumes the source file
-    (observed 2026-11-02: target_a_g0.csv -> target_a_g0<timestamp>_4.csv),
-    so it cannot be called every timer. Standard open() works in simulation
-    (heartbeat_ok); use it here and test live separately.
+
+def load_basket_once(ContextInfo, name):
+    """QMT's documented basket loader is one-shot: it renames/consumes the
+    source file after reading. Cache the dict so later timers do not miss the
+    renamed file. Create exact source files again before each fresh P1 run.
     """
-    if not os.path.exists(path):
-        return None
-    with open(path, "r") as f:
-        raw = f.read().strip()
-    parts = [x.strip() for x in raw.split(",") if x.strip()]
-    out = {}
-    for i in range(0, len(parts) - 1, 2):
-        out[parts[i]] = parts[i + 1]
-    return out
+    if name in BASKET_CACHE:
+        return BASKET_CACHE[name]
+    data = ContextInfo.load_stk_vol_list(SIGNAL_DIR, name)
+    BASKET_CACHE[name] = data
+    return data
 
 
 def p1_timer(ContextInfo):
     print("[P1] timer", ContextInfo.barpos)
     for name in BASKETS:
-        path = os.path.join(SIGNAL_DIR, name)
         try:
-            data = read_basket(path)
-            if data is None:
-                print("[P1] missing", path)
+            data = load_basket_once(ContextInfo, name)
+            if not data:
+                print("[P1] missing_or_empty", name)
             else:
                 print("[P1] basket", name, data)
         except Exception as e:
