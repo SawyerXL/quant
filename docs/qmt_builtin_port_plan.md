@@ -15,9 +15,13 @@
   `handlebar(ContextInfo)`；`passorder` 下单、`get_trade_detail_data`
   查持仓/委托、`run_time` 定时、`load_stk_list`/`load_stk_vol_list`
   读本地篮子文件。
-- **信号格式用篮子 CSV/TXT**（`code,volume`，`load_stk_vol_list` 明确支持），
-  不用 JSON；方向由“目标持仓 vs 当前持仓”推导，价格/涨跌停/风控在模型内算。
-  标准 `open()`/JSON 未在文档保证，P1 只作附加测试，不作主路径。
+- **信号格式用 CSV 篮子**（`code,volume`）；方向由“目标持仓 vs 当前持仓”推导，
+  价格/涨跌停/风控在模型内算。
+- **2026-11-02 实测：`ContextInfo.load_stk_vol_list` 会重命名/消费源文件**
+  （`target_a_g0.csv` → `target_a_g0<timestamp>_4.csv`），不能每轮重读同文件。
+  P1 改用标准 `open()` 读 CSV；仿真下 `open()` 可用（heartbeat_ok），
+  backtest 下被沙箱禁止（Foribdden FileIO）。生产需再测 live `open()`；
+  若 live 不允许，改用 QMT 篮子管理/一次性读入缓存。
 - 系统说明文档 §3.6.3.1.5：QMT 客户端支持**开机自动启动/自动重启**；
   但“模型在客户端重启后是否自动恢复运行”文档未明说，P1 实测。
 - 模型必须在 QMT 客户端本地运行；Linux 只做研究/信号，不能直接触发 QMT 代码。
