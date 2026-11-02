@@ -6,10 +6,10 @@
 
 import os
 
-SIGNAL_DIR = "C:/quant_live/signals"
+SIGNAL_DIR = "C:/quant_live/p1_baskets"
 ACCOUNT_ID = "REPLACE_WITH_ACCOUNT_ID"
 BASKETS = ("target_a_g0.csv", "target_a_g1.csv", "target_cb.csv")
-HEARTBEAT = "C:/quant_live/signals/p1_heartbeat.txt"
+HEARTBEAT = "C:/quant_live/p1_baskets/p1_heartbeat.txt"
 
 
 def init(ContextInfo):
