@@ -4,10 +4,15 @@
 > `userdata_mini`、`.env`、仓库、日志、信号、锁、计划任务全部隔离。
 > **先装、先 dry-run，不下单；100 万切换仍冻结。**
 
-## 0. 2026-11-01 券商约束：QMT“本地编写、本地运行”
+## 0. 2026-11-02 券商最终确认：只能用内置 Python
 
-券商反馈 QMT **只支持本地编写、本地运行**。这不必然推翻当前架构，但必须先确认
-“本地”的边界：
+券商已明确：**只能用 QMT 内置 Python，外部 Python/xtquant 不允许**。
+因此当前 `fetch_and_execute + xtquant` 执行链**不是可交付路径**，已加
+`config/qmt_builtin_only.flag`：simulation/production 下 `get_client()`
+见旗标即 RuntimeError，不再走外部客户端（development 测试仍可用 Mock）。
+100 万切换继续冻结；QMT 仍是主路径，不转 pTrade。
+
+2026-11-01 曾记录“本地编写、本地运行”的三种解释；现收口为 B（内置模型）：
 
 | 解释 | 对当前架构的影响 |
 |---|---|
