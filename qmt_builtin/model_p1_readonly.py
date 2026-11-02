@@ -18,16 +18,35 @@ def init(ContextInfo):
     ContextInfo.run_time("p1_timer", "30nSecond", "2026-01-01 09:30:00", "SH")
 
 
+def read_basket(path):
+    """Read code,volume pairs with standard open().
+
+    QMT's ContextInfo.load_stk_vol_list renames/consumes the source file
+    (observed 2026-11-02: target_a_g0.csv -> target_a_g0<timestamp>_4.csv),
+    so it cannot be called every timer. Standard open() works in simulation
+    (heartbeat_ok); use it here and test live separately.
+    """
+    if not os.path.exists(path):
+        return None
+    with open(path, "r") as f:
+        raw = f.read().strip()
+    parts = [x.strip() for x in raw.split(",") if x.strip()]
+    out = {}
+    for i in range(0, len(parts) - 1, 2):
+        out[parts[i]] = parts[i + 1]
+    return out
+
+
 def p1_timer(ContextInfo):
     print("[P1] timer", ContextInfo.barpos)
     for name in BASKETS:
         path = os.path.join(SIGNAL_DIR, name)
-        if not os.path.exists(path):
-            print("[P1] missing", path)
-            continue
         try:
-            data = ContextInfo.load_stk_vol_list(SIGNAL_DIR, name)
-            print("[P1] basket", name, data)
+            data = read_basket(path)
+            if data is None:
+                print("[P1] missing", path)
+            else:
+                print("[P1] basket", name, data)
         except Exception as e:
             print("[P1] basket_error", name, str(e))
     npos = -1
