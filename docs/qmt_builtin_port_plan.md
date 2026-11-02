@@ -12,8 +12,14 @@
   `handlebar(ContextInfo)`；`passorder` 下单、`get_trade_detail_data`
   查持仓/委托、`run_time` 定时、`load_stk_list`/`load_stk_vol_list`
   读本地篮子文件。
-- 文档未保证标准 `open()` 读 JSON；优先用 CSV/篮子格式。
+- **信号格式用篮子 CSV/TXT**（`code,volume`，`load_stk_vol_list` 明确支持），
+  不用 JSON；方向由“目标持仓 vs 当前持仓”推导，价格/涨跌停/风控在模型内算。
+  标准 `open()`/JSON 未在文档保证，P1 只作附加测试，不作主路径。
+- 系统说明文档 §3.6.3.1.5：QMT 客户端支持**开机自动启动/自动重启**；
+  但“模型在客户端重启后是否自动恢复运行”文档未明说，P1 实测。
 - 模型必须在 QMT 客户端本地运行；Linux 只做研究/信号，不能直接触发 QMT 代码。
+- Python API §3.1：内置 NumPy/Pandas/Patsy/SciPy/Statsmodels/TA_Lib；
+  另装第三方库到 `bin.x64/Lib/site-packages`，且需券商管理端白名单。
 
 ## 2. 移植范围（不能只改配置）
 
@@ -32,8 +38,10 @@
 ## 3. 阶段
 
 - **P0（已完成）**：外部链 fail-closed；文档/记忆；不改账户。
-- **P1 只读 spike**：内置模型读本地 CSV、`get_trade_detail_data` 打日志、
-  `run_time` 定时；不调用 `passorder`。需 QMT 模型交易权限/登录。
+- **P1 只读 spike**：内置模型用 `load_stk_vol_list` 读本地篮子 CSV、
+  `get_trade_detail_data` 打日志、`run_time` 定时；不调用 `passorder`；
+  同时测试 `open()` 写本地日志/快照、客户端重启后模型是否自动恢复。
+  需 QMT 模型交易权限/登录。
 - **P2 风控/下单**：移植纯函数并写 Python 3.6 兼容单测；QMT 仿真小额
   `passorder`；验废单/tick/涨跌停/在途修正。
 - **P3 全链**：双轨、CB、cash_sweep、002028、快照、健康、对账；
@@ -46,14 +54,24 @@
 - 计划/成交/持仓/NAV 对账；健康行可见；无外部 xtquant 调用；
 - 任何阶段未过闸门不得进入下一阶段；100 万不得提前。
 
-## 5. 未确认项（继续问券商）
+## 5. 文档已答 vs 仍需券商/实测
 
-1. 内置模型是否支持标准 `open()` 读本地 CSV/JSON？还是只能用
-   `load_stk_list`/`load_stk_vol_list` 篮子格式？
-2. 模型交易是否需要单独权限？与当前“要开权限”是同一项吗？
-3. QMT 模型能否开机自启/无人值守常驻？
-4. 云 Windows 是否算本地（是，但需书面确认）。
-5. 模型内 Python 3.6 可用的第三方库清单（numpy/pandas？）。
+**文档已答**：
+- 信号文件：`load_stk_list`/`load_stk_vol_list` 支持本地篮子 txt/csv；
+  JSON/标准 `open()` 未文档化 → 主路径用篮子 CSV。
+- 第三方库：内置 NumPy/Pandas/Patsy/SciPy/Statsmodels/TA_Lib；自定义
+  库可装到 `bin.x64/Lib/site-packages`，但需券商管理端白名单。
+- 客户端支持开机自动启动/自动重启（系统说明 §3.6.3.1.5）；模型自身
+  重启后是否自动恢复，文档未明说 → P1 实测。
+- 模拟/实盘下单必须把模型加入“**模型交易**”，不是普通“运行”。
+
+**仍需确认/实测**：
+1. 模型交易（模拟/实盘）的账户权限是否就是之前“要开权限”那一项？
+2. Windows 云服务器是否算券商定义的“本地”（书面确认）。
+3. 内置模型写本地日志/快照（标准 `open()`）是否允许；若不允许，用
+   QMT 日志/`customDll`/Windows 本地文件监控替代。
+4. 客户端重启后模型是否自动恢复“运行中”；若不，Windows 任务计划
+   能否自动登录并启动模型。
 
 **结论**：这不是“切个开关”，而是把执行/风控/对账链重做一遍；在 P2
 通过前，100 万和所有外部 QMT 下单保持冻结。
