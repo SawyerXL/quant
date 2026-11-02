@@ -1,0 +1,3 @@
+# 2026-11-02 券商书面确认：QMT 仅支持内置 Python（模型编辑器 + 本地运行）。
+# 外部 Python xtquant 交易链在 simulation/production 下 fail-closed。
+# 只有券商书面允许外部 API 后，才可删除本文件；删除前必须先完成内置模型移植与演练。

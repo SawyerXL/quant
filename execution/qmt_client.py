@@ -13,6 +13,9 @@ from config.settings import QMT_PATH, QMT_ACCOUNT_ID, IS_PROD
 # 故锁文件由人工会话在**执行侧**(Windows)与本地同步设置——人工执行
 # 时无自动任务并行, Windows 侧锁为真拦截点, Linux 侧锁为双保险)。
 MANUAL_EXEC_LOCK = "logs/manual_exec_lock.json"
+# 2026-11-02 券商确认：QMT 只允许内置 Python；外部 xtquant 交易链必须
+# fail-closed。development 测试仍可用 Mock；simulation/production 见旗标即拒绝。
+BUILTIN_ONLY_FLAG = Path(__file__).resolve().parents[1] / "config" / "qmt_builtin_only.flag"
 
 try:
     # 注意：不导入 xtdata（行情模块，需要QMT行情服务，会导致ImportError）
@@ -256,5 +259,10 @@ def get_client():
             raise RuntimeError(
                 f"ENV={_env} 但 xtquant 不可用；拒绝回退 MockQMTClient"
                 "（请检查 Windows/QMT 环境与 xtquant 安装）")
+        if BUILTIN_ONLY_FLAG.exists():
+            raise RuntimeError(
+                "券商已确认 QMT 只支持内置 Python；外部 xtquant 交易链禁用。"
+                "请改用 QMT 内置模型，删除 config/qmt_builtin_only.flag 仅限"
+                "券商书面允许外部 API 后。")
         return QMTClient()
     return MockQMTClient()
