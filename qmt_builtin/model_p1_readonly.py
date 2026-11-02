@@ -9,6 +9,7 @@ import os
 SIGNAL_DIR = "C:/quant_live/signals"
 ACCOUNT_ID = "REPLACE_WITH_ACCOUNT_ID"
 BASKETS = ("target_a_g0.csv", "target_a_g1.csv", "target_cb.csv")
+HEARTBEAT = "C:/quant_live/signals/p1_heartbeat.txt"
 
 
 def init(ContextInfo):
@@ -29,11 +30,22 @@ def p1_timer(ContextInfo):
             print("[P1] basket", name, data)
         except Exception as e:
             print("[P1] basket_error", name, str(e))
+    npos = -1
     try:
         pos = get_trade_detail_data(ACCOUNT_ID, "stock", "position")
-        print("[P1] positions", len(pos) if pos else 0)
+        npos = len(pos) if pos else 0
+        print("[P1] positions", npos)
     except Exception as e:
         print("[P1] position_error", str(e))
+    # P1 file-I/O test: standard open is not documented; try/except makes
+    # the result explicit instead of assuming it works.
+    try:
+        f = open(HEARTBEAT, "a")
+        f.write("barpos=%s positions=%s\n" % (ContextInfo.barpos, npos))
+        f.close()
+        print("[P1] heartbeat_ok")
+    except Exception as e:
+        print("[P1] file_error", str(e))
 
 
 def handlebar(ContextInfo):
